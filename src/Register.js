@@ -14,7 +14,7 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('處理中...');
 
@@ -28,7 +28,12 @@ const Register = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setQrValue(data.qr_code);
+        // --- 關鍵修改處 ---
+        // 不要用 data.qr_code，直接用 data.id (數字)
+        // 確保你的後端註冊 API 有回傳 insertId 或 id
+        setQrValue(String(data.id)); 
+        // -----------------
+        
         setMessage('登記成功！請截圖保存下方的二維碼以便簽到。');
       } else {
         setMessage(`失敗: ${data.error}`);
