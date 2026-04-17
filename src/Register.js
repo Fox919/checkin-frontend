@@ -25,19 +25,19 @@ const handleSubmit = async (e) => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      // --- 這段代碼要放在這裡 (response 拿到之後) ---
+      const data = await response.json(); 
 
       if (response.ok) {
-        // --- 關鍵修改處 ---
-        // 不要用 data.qr_code，直接用 data.id (數字)
-        // 確保你的後端註冊 API 有回傳 insertId 或 id
+        // 使用後端回傳的 id 作為二維碼內容
+        // 如果後端回傳的是 { success: true, id: 25 }, 這裡 setQrValue 就會變成 "25"
         setQrValue(String(data.id)); 
-        // -----------------
-        
-        setMessage('登記成功！請截圖保存下方的二維碼以便簽到。');
+        setMessage('登記成功！請截圖保存下方的二維碼。');
       } else {
         setMessage(`失敗: ${data.error}`);
       }
+      // ------------------------------------------
+
     } catch (error) {
       setMessage('連線錯誤，請檢查後端網址');
     }
