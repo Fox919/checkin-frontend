@@ -19,7 +19,7 @@ const Register = () => {
     setMessage('處理中...');
 
     try {
-      const response = await fetch('https://your-backend-url.railway.app/register', {
+      const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
