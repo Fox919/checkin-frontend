@@ -8,7 +8,7 @@ function Checkin() {
     if (result) {
       const userId = result[0].symbol.value; // 取得二維碼內容
       try {
-        const response = await fetch(`https://你的後端網址.up.railway.app/checkin/${userId}`, {
+        const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${userId}`, {
           method: 'POST'
         });
         const data = await response.json();
