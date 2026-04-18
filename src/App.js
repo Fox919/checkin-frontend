@@ -1,27 +1,24 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Register from './Register'; // 引入你剛寫好的登記組件
-import Checkin from './Checkin';   // 假設你原本的簽到代碼叫 Checkin.js
+import Register from './components/Register';
+import Scanner from './components/Scanner';
+import AdminList from './components/AdminList'; // 1. 引入新頁面
 
 function App() {
   return (
     <Router>
-      <div className="App">
-        {/* 簡單的導航選單，方便測試 */}
-        <nav style={{ padding: '10px', background: '#eee', marginBottom: '20px' }}>
-          <Link to="/" style={{ marginRight: '15px' }}>管理員簽到</Link>
-          <Link to="/register">來賓/義工登記</Link>
-        </nav>
+      <nav style={{ padding: '10px', textAlign: 'center', background: '#f0f0f0' }}>
+        <Link to="/" style={{ margin: '10px' }}>登記</Link>
+        <Link to="/scanner" style={{ margin: '10px' }}>簽到掃描</Link>
+        {/* 為了安全，管理連結可以不放在導覽列，你自己記住網址就好 */}
+      </nav>
 
-        {/* 頁面路徑配置 */}
-        <Routes>
-          {/* 首頁：原本的掃碼簽到功能 */}
-          <Route path="/" element={<Checkin />} />
-          
-          {/* 登記頁：新增加的首次登記功能 */}
-          <Route path="/register" element={<Register />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<Register />} />
+        <Route path="/scanner" element={<Scanner />} />
+        
+        {/* 2. 設定管理頁面的網址路徑 */}
+        <Route path="/admin-list-999" element={<AdminList />} /> 
+      </Routes>
     </Router>
   );
 }
