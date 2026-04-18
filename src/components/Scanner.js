@@ -1,28 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const Scanner = () => {
   const [scanResult, setScanResult] = useState(null);
   const [status, setStatus] = useState('準備掃描...');
-  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // 使用 useRef 來追蹤是否正在處理，這樣就不會導致組件重新渲染
+  const isProcessing = useRef(false);
 
   useEffect(() => {
+    // 1. 初始化掃描器 (此區塊只會執行一次)
     const scanner = new Html5QrcodeScanner('reader', {
       fps: 10,
       qrbox: { width: 250, height: 250 },
-    });
+    }, false);
 
-    scanner.render(onScanSuccess, onScanError);
-
+    // 2. 定義掃描成功後的邏輯
     async function onScanSuccess(decodedText) {
-      if (isProcessing) return; // 防止重複觸發
+      if (isProcessing.current) return; // 使用 .current 檢查
       
-      setIsProcessing(true);
+      isProcessing.current = true; // 鎖定掃描
       setScanResult(decodedText);
       setStatus('正在驗證簽到...');
 
       try {
-        // 發送到你的 Railway 後端
         const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${decodedText}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
@@ -31,29 +32,33 @@ const Scanner = () => {
         const data = await response.json();
 
         if (response.ok) {
-          setStatus(`✅ 簽到成功：${data.name} (${data.user_type === 'guest' ? '來賓' : '工作人員'})`);
-          // 3秒後恢復掃描狀態
+          setStatus(`✅ 簽到成功：${data.name}`);
+          // 3秒後解鎖
           setTimeout(() => {
-            setIsProcessing(false);
+            isProcessing.current = false;
             setStatus('準備掃描下一個...');
           }, 3000);
         } else {
           setStatus(`❌ 錯誤：${data.error || '簽到失敗'}`);
-          setIsProcessing(false);
+          isProcessing.current = false;
         }
       } catch (error) {
-        console.error(error);
         setStatus('❌ 連線後端失敗');
-        setIsProcessing(false);
+        isProcessing.current = false;
       }
     }
 
     function onScanError(err) {
-      // 掃描中的正常噴錯（沒對準時），通常忽略
+      // 忽略錯誤
     }
 
-    return () => scanner.clear();
-  }, [isProcessing]);
+    scanner.render(onScanSuccess, onScanError);
+
+    // 3. 清理函數：只在組件卸載時執行
+    return () => {
+      scanner.clear().catch(e => console.error("清理失敗", e));
+    };
+  }, []); // <--- 重點：這裡必須是空的陣列 []
 
   return (
     <div style={{ maxWidth: '500px', margin: 'auto', textAlign: 'center', padding: '20px' }}>
@@ -64,13 +69,6 @@ const Scanner = () => {
         <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>狀態：{status}</p>
         {scanResult && <p>最後掃描 ID: {scanResult}</p>}
       </div>
-
-      <button 
-        onClick={() => window.location.reload()} 
-        style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}
-      >
-        重置掃描器
-      </button>
     </div>
   );
 };
