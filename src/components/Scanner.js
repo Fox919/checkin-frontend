@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const Scanner = () => {
-  const [scanResult, setScanResult] = useState(null);
+  // 移除 scanResult，只保留 status，這樣就不會觸發警告
   const [status, setStatus] = useState('準備掃描...');
   
   const isProcessing = useRef(false);
@@ -22,7 +22,6 @@ const Scanner = () => {
       if (isProcessing.current) return;
       
       isProcessing.current = true;
-      setScanResult(decodedText);
       setStatus('正在驗證...');
 
       audio.play().catch(e => console.log("需點擊頁面以播放聲音"));
@@ -37,7 +36,6 @@ const Scanner = () => {
         const data = await response.json();
 
         if (response.ok) {
-          // 這裡顯示清楚的姓名與狀態
           setStatus(`✅ ${data.name} 簽到成功！`);
           setTimeout(() => {
             isProcessing.current = false;
@@ -62,7 +60,6 @@ const Scanner = () => {
     };
   }, [audio]);
 
-  // 判斷狀態顏色，方便視覺識別
   const getStatusStyle = () => {
     if (status.includes('✅')) return { backgroundColor: '#d4edda', color: '#155724', borderColor: '#c3e6cb' };
     if (status.includes('❌')) return { backgroundColor: '#f8d7da', color: '#721c24', borderColor: '#f5c6cb' };
@@ -74,7 +71,6 @@ const Scanner = () => {
       <h2>🔍 簽到掃描器</h2>
       <div id="reader" style={{ width: '100%' }}></div>
       
-      {/* 這裡是放大後的顯示區域 */}
       <div style={{ 
         marginTop: '20px', 
         padding: '30px', 
@@ -89,4 +85,4 @@ const Scanner = () => {
   );
 };
 
-export default Scanner;;
+export default Scanner;
