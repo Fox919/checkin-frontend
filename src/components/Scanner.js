@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const Scanner = () => {
-  // 移除 scanResult，只保留 status，這樣就不會觸發警告
   const [status, setStatus] = useState('準備掃描...');
   
   const isProcessing = useRef(false);
@@ -69,18 +68,21 @@ const Scanner = () => {
   return (
     <div style={{ maxWidth: '500px', margin: 'auto', textAlign: 'center', padding: '20px' }}>
       <h2>🔍 簽到掃描器</h2>
-      <div id="reader" style={{ width: '100%' }}></div>
       
+      {/* 關鍵修改：將狀態提示框移到這裡 (攝影機上方) */}
       <div style={{ 
-        marginTop: '20px', 
-        padding: '30px', 
+        marginBottom: '20px', // 與攝影機拉開一點距離
+        padding: '20px', 
         borderRadius: '15px', 
         border: '3px solid',
         transition: 'all 0.3s ease',
         ...getStatusStyle() 
       }}>
-        <p style={{ fontSize: '1.8rem', fontWeight: '900', margin: '0' }}>{status}</p>
+        <p style={{ fontSize: '1.5rem', fontWeight: '900', margin: '0' }}>{status}</p>
       </div>
+
+      {/* 攝影機鏡頭放在下方 */}
+      <div id="reader" style={{ width: '100%' }}></div>
     </div>
   );
 };
