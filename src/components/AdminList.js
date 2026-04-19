@@ -28,8 +28,18 @@ const AdminList = () => {
   // --- 篩選邏輯 ---
   // 如果有選擇日期，就篩選符合該日期的記錄；若清空日期，則顯示全部
   const filteredList = filterDate 
-    ? list.filter(item => item.checkin_time.startsWith(filterDate)) 
-    : list;
+  ? list.filter(item => {
+      // 1. 將資料庫的原始時間轉為 JavaScript Date 物件
+      const dateObj = new Date(item.checkin_time);
+      
+      // 2. 使用 toLocaleDateString 並指定 'en-CA' 格式 (YYYY-MM-DD)
+      // 這會自動依照使用者瀏覽器所在的時區（加州）轉換
+      const itemDateString = dateObj.toLocaleDateString('en-CA'); 
+      
+      // 3. 現在兩個都是 YYYY-MM-DD 格式，比對就會完全準確
+      return itemDateString === filterDate;
+    })
+  : list;
 
   return (
     <div style={{ padding: '20px' }}>
