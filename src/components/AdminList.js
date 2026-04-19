@@ -50,7 +50,7 @@ const AdminList = () => {
 
         <div>
           <button onClick={fetchList} style={{ marginRight: '10px' }}>🔄 重整</button>
-          <ExportButton />
+          <ExportButton selectedDate={filterDate} />
         </div>
       </div>
 

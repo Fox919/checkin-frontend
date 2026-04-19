@@ -1,18 +1,24 @@
+// ExportButton.js
 import React, { useState } from 'react';
 
-const ExportButton = () => {
+const ExportButton = ({ selectedDate }) => { // 接收從父元件傳來的日期
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://checkin-system-production-2a74.up.railway.app/admin/export-excel');
+      // 在網址後面加上 ?date=YYYY-MM-DD
+      const url = selectedDate 
+        ? `https://checkin-system-production-2a74.up.railway.app/admin/export-excel?date=${selectedDate}`
+        : `https://checkin-system-production-2a74.up.railway.app/admin/export-excel`;
+
+      const response = await fetch(url);
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'checkin_list.xlsx';
+        a.href = downloadUrl;
+        a.download = selectedDate ? `checkin_${selectedDate}.xlsx` : 'checkin_all.xlsx';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -27,19 +33,8 @@ const ExportButton = () => {
   };
 
   return (
-    <button 
-      onClick={handleExport}
-      disabled={loading}
-      style={{
-        padding: '10px 20px',
-        backgroundColor: loading ? '#ccc' : '#28a745',
-        color: 'white',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer'
-      }}
-    >
-      {loading ? '處理中...' : '📥 匯出 Excel'}
+    <button onClick={handleExport} disabled={loading} style={{ /* ...你的樣式... */ }}>
+      {loading ? '產生中...' : '📥 匯出 Excel'}
     </button>
   );
 };
