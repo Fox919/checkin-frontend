@@ -13,7 +13,7 @@ const AdminList = () => {
   // 登入邏輯
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === '123456') { // 設定你的管理密碼
+    if (password === 'Only321') { // 設定你的管理密碼
       sessionStorage.setItem('adminAuth', 'true');
       setIsAuthenticated(true);
     } else {
