@@ -4,22 +4,8 @@ import ExportButton from './ExportButton';
 const AdminList = () => {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
-  // 檢查是否有登入紀錄 (從 sessionStorage 讀取)
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    sessionStorage.getItem('adminAuth') === 'true'
-  );
-  const [password, setPassword] = useState('');
-
-  // 登入邏輯
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (password === 'Only321') { // 設定你的管理密碼
-      sessionStorage.setItem('adminAuth', 'true');
-      setIsAuthenticated(true);
-    } else {
-      alert('密碼錯誤');
-    }
-  };
+  // 新增狀態：篩選日期，預設為「今天」
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchList = async () => {
     setLoading(true);
@@ -29,41 +15,40 @@ const AdminList = () => {
       setList(data);
     } catch (err) {
       console.error("讀取失敗", err);
+      alert("無法讀取簽到名單");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated) fetchList();
-  }, [isAuthenticated]);
+    fetchList();
+  }, []);
 
-  // 如果尚未登入，顯示輸入密碼畫面
-  if (!isAuthenticated) {
-    return (
-      <div style={{ padding: '50px', textAlign: 'center' }}>
-        <h2>管理員登入</h2>
-        <form onSubmit={handleLogin}>
-          <input 
-            type="password" 
-            placeholder="請輸入管理密碼" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ padding: '10px', fontSize: '16px' }}
-          />
-          <button type="submit" style={{ padding: '10px 20px', marginLeft: '10px' }}>進入</button>
-        </form>
-      </div>
-    );
-  }
+  // --- 篩選邏輯 ---
+  // 如果有選擇日期，就篩選符合該日期的記錄；若清空日期，則顯示全部
+  const filteredList = filterDate 
+    ? list.filter(item => item.checkin_time.startsWith(filterDate)) 
+    : list;
 
-  // 已經登入，顯示名單 (原本的邏輯)
   return (
     <div style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
         <h2>📋 簽到名單管理</h2>
+        
+        {/* 新增：篩選區塊 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label>篩選日期：</label>
+          <input 
+            type="date" 
+            value={filterDate} 
+            onChange={(e) => setFilterDate(e.target.value)}
+            style={{ padding: '8px' }}
+          />
+          <button onClick={() => setFilterDate('')} style={{ padding: '8px' }}>顯示全部</button>
+        </div>
+
         <div>
-          <button onClick={() => {sessionStorage.removeItem('adminAuth'); window.location.reload();}} style={{ marginRight: '10px' }}>登出</button>
           <button onClick={fetchList} style={{ marginRight: '10px' }}>🔄 重整</button>
           <ExportButton />
         </div>
@@ -71,18 +56,28 @@ const AdminList = () => {
 
       {loading ? <p>載入中...</p> : (
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
-          {/* ...原本的表格結構... */}
           <thead>
-            <tr><th>姓名</th><th>電話</th><th>時間</th></tr>
+            <tr style={{ backgroundColor: '#f4f4f4' }}>
+              <th style={{ padding: '10px', border: '1px solid #ddd' }}>姓名</th>
+              <th style={{ padding: '10px', border: '1px solid #ddd' }}>電話</th>
+              <th style={{ padding: '10px', border: '1px solid #ddd' }}>簽到時間</th>
+            </tr>
           </thead>
           <tbody>
-            {list.map(item => (
+            {filteredList.map(item => (
               <tr key={item.id}>
-                <td>{item.name}</td>
-                <td>{item.phone}</td>
-                <td>{new Date(item.checkin_time).toLocaleString()}</td>
+                <td style={{ padding: '10px', border: '1px solid #ddd' }}>{item.name}</td>
+                <td style={{ padding: '10px', border: '1px solid #ddd' }}>{item.phone}</td>
+                <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                  {new Date(item.checkin_time).toLocaleString()}
+                </td>
               </tr>
             ))}
+            {filteredList.length === 0 && (
+              <tr>
+                <td colSpan="3" style={{ padding: '20px', textAlign: 'center' }}>查無資料</td>
+              </tr>
+            )}
           </tbody>
         </table>
       )}
