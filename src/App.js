@@ -2,23 +2,33 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Register from './components/Register';
 import AdminList from './components/AdminList';
+// 1. 匯入 Checkin 元件 (請確認檔案路徑是否正確，假設在 components 資料夾內)
+import Checkin from './Checkin'; 
 
 function App() {
   return (
     <BrowserRouter>
-      {/* 這部分放在 Routes 外面，所以它會一直存在於所有頁面 */}
+      {/* 導航列 */}
       <nav style={{ padding: '15px', borderBottom: '1px solid #ccc', textAlign: 'center' }}>
-  <Link to="/">
-    <button>前往登記</button>
-  </Link>
-  <Link to="/admin" style={{ marginLeft: '10px' }}>
-    <button>前往管理員後台</button>
-  </Link>
-</nav>
+        <Link to="/" style={{ marginRight: '10px' }}>
+          <button>前往登記</button>
+        </Link>
+        
+        {/* 2. 新增掃碼簽到連結 */}
+        <Link to="/checkin" style={{ marginRight: '10px' }}>
+          <button>掃碼簽到</button>
+        </Link>
+        
+        <Link to="/admin">
+          <button>前往管理員後台</button>
+        </Link>
+      </nav>
 
-      {/* 這是頁面切換區 */}
+      {/* 頁面路由區 */}
       <Routes>
         <Route path="/" element={<Register />} />
+        {/* 3. 新增掃碼簽到路由 */}
+        <Route path="/checkin" element={<Checkin />} />
         <Route path="/admin" element={<AdminList />} />
       </Routes>
     </BrowserRouter>
