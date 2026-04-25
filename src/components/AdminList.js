@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react'; // 1. 確保匯入了這個套件
+import { QRCodeCanvas } from 'qrcode.react'; // 記得先執行 npm install qrcode.react
 import ExportButton from './ExportButton';
 
 const AdminList = () => {
@@ -7,8 +7,9 @@ const AdminList = () => {
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // 2. 新增狀態：用來儲存當前點選要顯示 QR 的用戶 ID
-  const [selectedQrId, setSelectedQrId] = useState(null); 
+  // 新增狀態：搜尋關鍵字 與 點選顯示的 QR ID
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedQrId, setSelectedQrId] = useState(null);
 
   const fetchList = async () => {
     setLoading(true);
@@ -28,33 +29,45 @@ const AdminList = () => {
     fetchList();
   }, []);
 
-  const filteredList = filterDate 
-    ? list.filter(item => {
-        const dateObj = new Date(item.checkin_time);
-        const itemDateString = dateObj.toLocaleDateString('en-CA'); 
-        return itemDateString === filterDate;
-      })
-    : list;
+  // 結合「日期」與「關鍵字搜尋」的過濾邏輯
+  const filteredList = list.filter(item => {
+    const dateObj = new Date(item.checkin_time);
+    const itemDateString = dateObj.toLocaleDateString('en-CA');
+    
+    const matchesDate = filterDate ? itemDateString === filterDate : true;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (item.phone && item.phone.includes(searchTerm));
+    
+    return matchesDate && matchesSearch;
+  });
 
   return (
     <div style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-        <h2>📋 簽到名單管理</h2>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label>篩選日期：</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <h2>📋 簽到名單管理</h2>
+          <div>
+            <button onClick={fetchList} style={{ marginRight: '10px' }}>🔄 重整</button>
+            <ExportButton selectedDate={filterDate} />
+          </div>
+        </div>
+
+        {/* 搜尋與篩選區塊 */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input 
             type="date" 
             value={filterDate} 
             onChange={(e) => setFilterDate(e.target.value)}
             style={{ padding: '8px' }}
           />
-          <button onClick={() => setFilterDate('')} style={{ padding: '8px' }}>顯示全部</button>
-        </div>
-
-        <div>
-          <button onClick={fetchList} style={{ marginRight: '10px' }}>🔄 重整</button>
-          <ExportButton selectedDate={filterDate} />
+          <input 
+            type="text" 
+            placeholder="🔍 搜尋姓名或電話..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ padding: '8px', flexGrow: 1 }}
+          />
+          <button onClick={() => { setFilterDate(''); setSearchTerm(''); }} style={{ padding: '8px' }}>清除篩選</button>
         </div>
       </div>
 
@@ -65,20 +78,19 @@ const AdminList = () => {
               <th style={{ padding: '10px', border: '1px solid #ddd' }}>姓名</th>
               <th style={{ padding: '10px', border: '1px solid #ddd' }}>電話</th>
               <th style={{ padding: '10px', border: '1px solid #ddd' }}>簽到時間</th>
-              <th style={{ padding: '10px', border: '1px solid #ddd' }}>操作</th> {/* 3. 新增標題 */}
+              <th style={{ padding: '10px', border: '1px solid #ddd' }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {filteredList.map(item => (
-              <tr key={item.id}>
+              <tr key={item.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedQrId(item.id)}>
                 <td style={{ padding: '10px', border: '1px solid #ddd' }}>{item.name}</td>
                 <td style={{ padding: '10px', border: '1px solid #ddd' }}>{item.phone}</td>
                 <td style={{ padding: '10px', border: '1px solid #ddd' }}>
                   {new Date(item.checkin_time).toLocaleString()}
                 </td>
-                {/* 4. 新增按鈕 */}
                 <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                  <button onClick={() => setSelectedQrId(item.id)}>顯示 QR</button>
+                  <button>顯示 QR</button>
                 </td>
               </tr>
             ))}
@@ -91,7 +103,7 @@ const AdminList = () => {
         </table>
       )}
 
-      {/* 5. 彈出視窗 Modal */}
+      {/* 彈出視窗 (Modal) */}
       {selectedQrId && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
