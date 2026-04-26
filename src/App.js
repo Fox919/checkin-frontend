@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Register from './components/Register';
 import AdminList from './components/AdminList';
+import Kiosk from './components/Kiosk';
 // 1. 匯入 Checkin 元件 (請確認檔案路徑是否正確，假設在 components 資料夾內)
 import Checkin from './Checkin'; 
 
@@ -28,6 +29,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Register />} />
         {/* 3. 新增掃碼簽到路由 */}
+       <Route path="/kiosk" element={<Kiosk />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/admin" element={<AdminList />} />
       </Routes>
