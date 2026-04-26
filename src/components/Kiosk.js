@@ -6,13 +6,14 @@ const Kiosk = () => {
   const [message, setMessage] = useState('請輸入電話後 4 碼進行簽到');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 初始化時讀取所有名單 (用於搜尋)
-  useEffect(() => {
-    fetch(`https://checkin-system-production-2a74.up.railway.app/admin/checkins`)
-      .then(res => res.json())
-      .then(data => setList(data))
-      .catch(err => console.error("無法載入名單", err));
-  }, []);
+  // 在 Kiosk.js 中修改 useEffect
+useEffect(() => {
+  // 改成呼叫剛剛新增的 /users 路由
+  fetch(`https://checkin-system-production-2a74.up.railway.app/users`)
+    .then(res => res.json())
+    .then(data => setList(data))
+    .catch(err => console.error("無法載入名單", err));
+}, []);
 
   // 篩選出符合電話後 4 碼的人
   const filtered = phoneQuery.length >= 3 
