@@ -20,6 +20,12 @@ function App() {
           <button>掃碼簽到</button>
         </Link>
         
+<Link to="/Kiost" style={{ marginRight: '10px' }}>
+          <button>快速簽到</button>
+        </Link>
+
+
+
         <Link to="/admin">
           <button>前往管理員後台</button>
         </Link>
