@@ -93,9 +93,15 @@ const AdminList = () => {
     // 狀態篩選
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
     
-    // 日期篩選 (動態判斷)
-    // 如果選「已簽到」，比對 checkin_date；否則比對 created_at
+    // 日期篩選
     const targetDate = viewMode === 'checked-in' ? user.checkin_date : user.created_at;
+
+    // --- 【除錯區塊：請看 Console 印出的結果】 ---
+    if (selectedDate && targetDate) {
+      console.log(`[比對] 資料庫日期: "${targetDate}", 篩選日期: "${selectedDate}", 符合? ${targetDate.startsWith(selectedDate)}`);
+    }
+    // ------------------------------------------
+
     const matchesDate = !selectedDate || (targetDate && targetDate.startsWith(selectedDate));
     
     return matchesSearch && matchesStatus && matchesDate;
