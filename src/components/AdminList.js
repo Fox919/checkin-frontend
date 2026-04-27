@@ -96,14 +96,13 @@ const AdminList = () => {
     // 狀態篩選
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
     
-    // 日期篩選
-    const targetDate = viewMode === 'checked-in' ? user.checkin_date : user.created_at;
-
-    // --- 關鍵偵錯：當你選了日期，這行會強制顯示比對結果 ---
-    if (selectedDate) {
-        console.log(`[偵錯] 名稱: ${user.name}, 來源日期: "${targetDate}", 篩選日期: "${selectedDate}", 符合? ${targetDate?.startsWith(selectedDate)}`);
-    }
-    // ----------------------------------------------------
+    // --- 關鍵偵錯：我們直接讓瀏覽器告訴我們該用什麼欄位 ---
+    // 這行會印出每個 user 物件裡到底有什麼 key
+    console.log("該用戶擁有的欄位名稱:", Object.keys(user));
+    // --------------------------------------------------
+    
+    // 暫時將 targetDate 設為空字串，防止報錯
+    const targetDate = ""; 
 
     const matchesDate = !selectedDate || (targetDate && targetDate.startsWith(selectedDate));
     
