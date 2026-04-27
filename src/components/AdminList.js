@@ -5,7 +5,7 @@ const AdminList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('all'); // all, active, checked-in
+  const [viewMode, setViewMode] = useState('all'); 
   const [selectedQrId, setSelectedQrId] = useState(null);
   const [authorized, setAuthorized] = useState(false);
 
@@ -47,7 +47,28 @@ const AdminList = () => {
     }
   };
 
-  // 4. 過濾邏輯 (唯一的一份)
+  // 4. CSV 匯出功能
+  const exportToCSV = () => {
+    const headers = ["姓名", "電話", "狀態", "備註"];
+    const csvRows = filteredList.map(u => [
+      `"${u.name || ''}"`,
+      `"${u.phone || ''}"`,
+      `"${u.status || ''}"`,
+      `"${u.notes || ''}"`
+    ].join(","));
+    
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "user_list.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 5. 過濾邏輯
   const filteredList = users.filter(user => {
     const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (user.phone && user.phone.includes(searchTerm));
@@ -59,31 +80,26 @@ const AdminList = () => {
     fetchUsers();
   }, []);
 
-  // --- 渲染部分 ---
+  // --- 渲染 ---
 
-  // 如果未授權，顯示登入畫面
   if (!authorized) {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
         <h2>管理後台</h2>
-        <button onClick={checkPassword} style={{ padding: '10px 20px', fontSize: '16px' }}>
-          點擊進入管理後台
-        </button>
+        <button onClick={checkPassword} style={{ padding: '10px 20px', fontSize: '16px' }}>點擊進入管理後台</button>
       </div>
     );
   }
 
-  // 授權後顯示主畫面 (包含搜尋、篩選和列表)
   return (
     <div style={{ padding: '20px' }}>
       <h2>📋 用戶管理與備註</h2>
       
-      {/* 篩選與搜尋區 */}
       <div style={{ marginBottom: '20px', backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
         <div style={{ marginBottom: '10px' }}>
           <button onClick={() => setViewMode('all')} style={{ fontWeight: viewMode === 'all' ? 'bold' : 'normal', marginRight: '5px' }}>全部</button>
-          <button onClick={() => setViewMode('active')} style={{ fontWeight: viewMode === 'active' ? 'bold' : 'normal', marginRight: '5px' }}>僅顯示已登記</button>
-          <button onClick={() => setViewMode('checked-in')} style={{ fontWeight: viewMode === 'checked-in' ? 'bold' : 'normal' }}>僅顯示已簽到</button>
+          <button onClick={() => setViewMode('active')} style={{ fontWeight: viewMode === 'active' ? 'bold' : 'normal', marginRight: '5px' }}>已登記</button>
+          <button onClick={() => setViewMode('checked-in')} style={{ fontWeight: viewMode === 'checked-in' ? 'bold' : 'normal' }}>已簽到</button>
         </div>
         
         <input 
@@ -91,9 +107,10 @@ const AdminList = () => {
           placeholder="🔍 搜尋姓名或電話..." 
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ padding: '8px', width: '300px' }}
+          style={{ padding: '8px', width: '250px' }}
         />
-        <button onClick={fetchUsers} style={{ marginLeft: '10px', padding: '8px' }}>🔄 重整資料</button>
+        <button onClick={fetchUsers} style={{ marginLeft: '10px', padding: '8px' }}>🔄 重整</button>
+        <button onClick={exportToCSV} style={{ marginLeft: '10px', padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>📥 匯出 CSV</button>
       </div>
 
       {loading ? <p>載入中...</p> : (
@@ -128,7 +145,6 @@ const AdminList = () => {
         </table>
       )}
 
-      {/* Modal 視窗 */}
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
