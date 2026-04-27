@@ -95,17 +95,20 @@ const AdminList = () => {
     
     // 日期篩選
     const targetDate = viewMode === 'checked-in' ? user.checkin_date : user.created_at;
-
-    // --- 【除錯區塊：請看 Console 印出的結果】 ---
+    
+    // --- 這裡就是關鍵的除錯訊息 ---
     if (selectedDate && targetDate) {
-      console.log(`[比對] 資料庫日期: "${targetDate}", 篩選日期: "${selectedDate}", 符合? ${targetDate.startsWith(selectedDate)}`);
+        console.log(`[日期比對] 資料庫日期: "${targetDate}", 篩選日期: "${selectedDate}", 符合? ${targetDate.startsWith(selectedDate)}`);
     }
-    // ------------------------------------------
+    // ----------------------------
 
     const matchesDate = !selectedDate || (targetDate && targetDate.startsWith(selectedDate));
     
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+
+
 
   useEffect(() => {
     fetchUsers();
