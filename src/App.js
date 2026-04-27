@@ -13,12 +13,12 @@ function App() {
         
         {/* 新增的現場登記頁面 (自動簽到) */}
         <Link to="/on-site" style={{ marginRight: '10px' }}>
-          <button>現場登記簽到 (禪堂用)</button>
+          <button>活動登記簽到 </button>
         </Link>
 
         {/* 原有的登記頁面 (不自動簽到) */}
         <Link to="/register" style={{ marginRight: '10px' }}>
-          <button>一般預約登記 (外場用)</button>
+          <button>登記</button>
         </Link>
         
         <Link to="/checkin" style={{ marginRight: '10px' }}>
