@@ -3,19 +3,20 @@ import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Register from './components/Register';
 import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
-import Checkin from './Checkin';
+import Checkin from './Checkin'; 
+
 function App() {
   return (
     <BrowserRouter>
       {/* 導航列 */}
       <nav style={{ padding: '15px', borderBottom: '1px solid #ccc', textAlign: 'center' }}>
         
-        {/* 現場登記頁面 */}
+        {/* 現場登記 (Link) */}
         <Link to="/on-site" style={{ marginRight: '10px' }}>
           <button>活動登記簽到</button>
         </Link>
 
-        {/* 登記頁面 (使用 NavLink，點擊後會有樣式變化) */}
+        {/* 登記頁面 (NavLink - 有選中狀態) */}
         <NavLink 
           to="/register" 
           style={({ isActive }) => ({ 
@@ -27,6 +28,7 @@ function App() {
           <button>登記</button>
         </NavLink>
 
+        {/* 其他頁面連結 (Link) */}
         <Link to="/checkin" style={{ marginRight: '10px' }}>
           <button>掃碼簽到</button>
         </Link>
