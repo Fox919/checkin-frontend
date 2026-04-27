@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-//gfhfhfghfghf
-//fhfghfghfhgfgh
-//hkjhjkhjkhj
+
 const AdminList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,23 +88,23 @@ const AdminList = () => {
   };
 
  // 5. 過濾邏輯 (根據狀態動態選擇對應的日期欄位)
-  const filteredList = users.filter(user => {
-    // 搜尋功能
+const filteredList = users.filter(user => {
+    // 1. 搜尋功能 (姓名或電話)
     const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (user.phone && user.phone.includes(searchTerm));
     
-    // 狀態篩選
+    // 2. 狀態篩選
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
     
-    // --- 關鍵偵錯：我們直接讓瀏覽器告訴我們該用什麼欄位 ---
-    // 這行會印出每個 user 物件裡到底有什麼 key
-    console.log("該用戶擁有的欄位名稱:", Object.keys(user));
-    // --------------------------------------------------
+    // 3. 日期篩選 (根據模式選擇欄位)
+    // 如果 viewMode 是 'checked-in' 就比對 checkin_date，否則比對 created_at
+    const rawDate = viewMode === 'checked-in' ? user.checkin_date : user.created_at;
     
-    // 暫時將 targetDate 設為空字串，防止報錯
-    const targetDate = ""; 
+    // 將日期轉為字串並確保不為 null/undefined，以免發生錯誤
+    const targetDate = rawDate ? String(rawDate) : ''; 
 
-    const matchesDate = !selectedDate || (targetDate && targetDate.startsWith(selectedDate));
+    // 比對日期 (如果是空字串代表沒選日期，則視為全部符合)
+    const matchesDate = !selectedDate || targetDate.startsWith(selectedDate);
     
     return matchesSearch && matchesStatus && matchesDate;
   });
