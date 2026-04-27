@@ -2,16 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 const AdminList = () => {
-  const [users, setUsers] = useState([]); // 改用 users 來存取完整名單
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQrId, setSelectedQrId] = useState(null);
+  const [authorized, setAuthorized] = useState(false);
 
-  // 獲取所有用戶資料 (包含備註)
+  // 1. 密碼檢查邏輯
+  const checkPassword = () => {
+    const pass = prompt("請輸入管理員密碼");
+    if (pass === "123456") {
+      setAuthorized(true);
+    } else {
+      alert("密碼錯誤！");
+    }
+  };
+
+  // 2. 獲取資料函式
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // 確保這裡的 API 路徑與你後端設定的一致
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
       const data = await res.json();
       setUsers(data);
@@ -23,11 +33,12 @@ const AdminList = () => {
     }
   };
 
+  // 3. 頁面初始化
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  // 更新備註的函式
+  // 4. 更新備註
   const handleNoteChange = async (userId, newNote) => {
     try {
       await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
@@ -35,7 +46,6 @@ const AdminList = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, note: newNote })
       });
-      // 更新成功後，不需要重新整理整頁，但為了確保資料一致，可選執行 fetchUsers()
     } catch (err) {
       alert("更新備註失敗");
     }
@@ -43,11 +53,26 @@ const AdminList = () => {
 
   // 過濾邏輯
   const filteredList = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (user.phone && user.phone.includes(searchTerm));
     return matchesSearch;
   });
 
+  // --- 渲染部分 ---
+
+  // 如果未授權，只顯示登入按鈕
+  if (!authorized) {
+    return (
+      <div style={{ padding: '50px', textAlign: 'center' }}>
+        <h2>管理後台</h2>
+        <button onClick={checkPassword} style={{ padding: '10px 20px', fontSize: '16px' }}>
+          點擊進入管理後台
+        </button>
+      </div>
+    );
+  }
+
+  // 授權後顯示主畫面
   return (
     <div style={{ padding: '20px' }}>
       <h2>📋 用戶管理與備註</h2>
@@ -69,7 +94,7 @@ const AdminList = () => {
             <tr style={{ backgroundColor: '#f4f4f4' }}>
               <th style={{ padding: '10px', border: '1px solid #ddd' }}>姓名</th>
               <th style={{ padding: '10px', border: '1px solid #ddd' }}>電話</th>
-              <th style={{ padding: '10px', border: '1px solid #ddd' }}>備註 (可點擊修改)</th>
+              <th style={{ padding: '10px', border: '1px solid #ddd' }}>備註</th>
               <th style={{ padding: '10px', border: '1px solid #ddd' }}>操作</th>
             </tr>
           </thead>
@@ -95,7 +120,7 @@ const AdminList = () => {
         </table>
       )}
 
-      {/* 彈出視窗 (Modal) */}
+      {/* Modal 視窗 */}
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
