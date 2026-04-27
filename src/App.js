@@ -1,7 +1,9 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
+import Register from './components/Register';
 import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
-import Checkin from './Checkin'; 
-
+import Checkin from './Checkin';
 function App() {
   return (
     <BrowserRouter>
