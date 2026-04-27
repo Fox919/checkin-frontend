@@ -5,10 +5,11 @@ const AdminList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('all'); // all, active, checked-in
   const [selectedQrId, setSelectedQrId] = useState(null);
   const [authorized, setAuthorized] = useState(false);
 
-  // 1. 密碼檢查邏輯
+  // 1. 密碼檢查
   const checkPassword = () => {
     const pass = prompt("請輸入管理員密碼");
     if (pass === "123456") {
@@ -18,7 +19,7 @@ const AdminList = () => {
     }
   };
 
-  // 2. 獲取資料函式
+  // 2. 獲取資料
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -33,12 +34,7 @@ const AdminList = () => {
     }
   };
 
-  // 3. 頁面初始化
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  // 4. 更新備註
+  // 3. 更新備註
   const handleNoteChange = async (userId, newNote) => {
     try {
       await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
@@ -51,16 +47,21 @@ const AdminList = () => {
     }
   };
 
-  // 過濾邏輯
+  // 4. 過濾邏輯 (唯一的一份)
   const filteredList = users.filter(user => {
     const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (user.phone && user.phone.includes(searchTerm));
-    return matchesSearch;
+    const matchesStatus = viewMode === 'all' || user.status === viewMode;
+    return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // --- 渲染部分 ---
 
-  // 如果未授權，只顯示登入按鈕
+  // 如果未授權，顯示登入畫面
   if (!authorized) {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
@@ -72,12 +73,19 @@ const AdminList = () => {
     );
   }
 
-  // 授權後顯示主畫面
+  // 授權後顯示主畫面 (包含搜尋、篩選和列表)
   return (
     <div style={{ padding: '20px' }}>
       <h2>📋 用戶管理與備註</h2>
       
-      <div style={{ marginBottom: '20px' }}>
+      {/* 篩選與搜尋區 */}
+      <div style={{ marginBottom: '20px', backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <button onClick={() => setViewMode('all')} style={{ fontWeight: viewMode === 'all' ? 'bold' : 'normal', marginRight: '5px' }}>全部</button>
+          <button onClick={() => setViewMode('active')} style={{ fontWeight: viewMode === 'active' ? 'bold' : 'normal', marginRight: '5px' }}>僅顯示已登記</button>
+          <button onClick={() => setViewMode('checked-in')} style={{ fontWeight: viewMode === 'checked-in' ? 'bold' : 'normal' }}>僅顯示已簽到</button>
+        </div>
+        
         <input 
           type="text" 
           placeholder="🔍 搜尋姓名或電話..." 
