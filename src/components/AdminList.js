@@ -43,7 +43,13 @@ const AdminList = () => {
       
       // 這一行最重要！看看資料長什麼樣子
       console.log("從後端抓到的資料內容:", data);
-      
+    
+
+const data = await res.json();
+console.log("【檢查欄位】第一筆資料的完整結構:", data[0]); // <--- 加入這行
+setUsers(data);
+
+  
       setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗，詳細錯誤:", err);
