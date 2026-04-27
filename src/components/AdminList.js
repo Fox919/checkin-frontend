@@ -31,12 +31,22 @@ const AdminList = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      // 在 fetch 之前印出網址，確保路徑正確
+      console.log("正在請求資料: https://checkin-system-production-2a74.up.railway.app/admin/users");
+      
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
+      
+      // 看看收到的狀態
+      console.log("後端回應狀態:", res.status); 
+      
       const data = await res.json();
+      
+      // 這一行最重要！看看資料長什麼樣子
+      console.log("從後端抓到的資料內容:", data);
+      
       setUsers(data);
     } catch (err) {
-      console.error("讀取資料失敗", err);
-      alert("無法讀取名單");
+      console.error("讀取資料失敗，詳細錯誤:", err);
     } finally {
       setLoading(false);
     }
