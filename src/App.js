@@ -4,7 +4,7 @@ import Register from './components/Register';
 import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
 import Checkin from './Checkin'; 
-
+// trigger
 function App() {
   return (
     <BrowserRouter>
