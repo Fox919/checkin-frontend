@@ -95,18 +95,17 @@ const AdminList = () => {
     
     // 日期篩選
     const targetDate = viewMode === 'checked-in' ? user.checkin_date : user.created_at;
-    
-    // --- 這裡就是關鍵的除錯訊息 ---
-    if (selectedDate && targetDate) {
-        console.log(`[日期比對] 資料庫日期: "${targetDate}", 篩選日期: "${selectedDate}", 符合? ${targetDate.startsWith(selectedDate)}`);
+
+    // --- 關鍵偵錯：當你選了日期，這行會強制顯示比對結果 ---
+    if (selectedDate) {
+        console.log(`[偵錯] 名稱: ${user.name}, 來源日期: "${targetDate}", 篩選日期: "${selectedDate}", 符合? ${targetDate?.startsWith(selectedDate)}`);
     }
-    // ----------------------------
+    // ----------------------------------------------------
 
     const matchesDate = !selectedDate || (targetDate && targetDate.startsWith(selectedDate));
     
     return matchesSearch && matchesStatus && matchesDate;
   });
-
 
 
 
