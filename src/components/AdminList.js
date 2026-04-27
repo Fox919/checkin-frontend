@@ -9,7 +9,7 @@ const AdminList = () => {
   const [selectedQrId, setSelectedQrId] = useState(null);
   const [authorized, setAuthorized] = useState(false);
 
-  // 1. 密碼檢查
+  // 1. 密碼檢查 (登入用)
   const checkPassword = () => {
     const pass = prompt("請輸入管理員密碼");
     if (pass === "123456") {
@@ -19,7 +19,17 @@ const AdminList = () => {
     }
   };
 
-  // 2. 獲取資料
+  // 2. 安全匯出函式 (驗證身份用)
+  const handleExportClick = () => {
+    const pass = prompt("請輸入密碼以驗證身份並匯出資料：");
+    if (pass === "123456") {
+      exportToCSV();
+    } else {
+      alert("密碼錯誤，拒絕匯出！");
+    }
+  };
+
+  // 3. 獲取資料
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -34,7 +44,7 @@ const AdminList = () => {
     }
   };
 
-  // 3. 更新備註
+  // 4. 更新備註
   const handleNoteChange = async (userId, newNote) => {
     try {
       await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
@@ -47,7 +57,7 @@ const AdminList = () => {
     }
   };
 
-  // 4. CSV 匯出功能
+  // 5. CSV 匯出功能
   const exportToCSV = () => {
     const headers = ["姓名", "電話", "狀態", "備註"];
     const csvRows = filteredList.map(u => [
@@ -68,7 +78,7 @@ const AdminList = () => {
     document.body.removeChild(link);
   };
 
-  // 5. 過濾邏輯
+  // 6. 過濾邏輯
   const filteredList = users.filter(user => {
     const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (user.phone && user.phone.includes(searchTerm));
@@ -82,15 +92,19 @@ const AdminList = () => {
 
   // --- 渲染 ---
 
+  // 修正點：未登入時，只顯示登入按鈕
   if (!authorized) {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
         <h2>管理後台</h2>
-        <button onClick={checkPassword} style={{ padding: '10px 20px', fontSize: '16px' }}>點擊進入管理後台</button>
+        <button onClick={checkPassword} style={{ padding: '10px 20px', fontSize: '16px' }}>
+          點擊進入管理後台
+        </button>
       </div>
     );
   }
 
+  // 登入後顯示完整內容
   return (
     <div style={{ padding: '20px' }}>
       <h2>📋 用戶管理與備註</h2>
@@ -110,7 +124,14 @@ const AdminList = () => {
           style={{ padding: '8px', width: '250px' }}
         />
         <button onClick={fetchUsers} style={{ marginLeft: '10px', padding: '8px' }}>🔄 重整</button>
-        <button onClick={exportToCSV} style={{ marginLeft: '10px', padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>📥 匯出 CSV</button>
+        
+        {/* 修正點：匯出按鈕只在登入後顯示，並綁定安全函式 */}
+        <button 
+          onClick={handleExportClick} 
+          style={{ marginLeft: '10px', padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}
+        >
+          📥 匯出 CSV
+        </button>
       </div>
 
       {loading ? <p>載入中...</p> : (
