@@ -5,6 +5,7 @@ import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
 import Checkin from './Checkin'; 
 // trigger
+// test
 function App() {
   return (
     <BrowserRouter>
