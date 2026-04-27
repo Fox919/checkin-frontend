@@ -3,39 +3,45 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Register from './components/Register';
 import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
-// 1. 匯入 Checkin 元件 (請確認檔案路徑是否正確，假設在 components 資料夾內)
 import Checkin from './Checkin'; 
 
 function App() {
   return (
     <BrowserRouter>
-      {/* 導航列 */}
+      {/* 導航列：將 Link 平行放置，不要互相包住 */}
       <nav style={{ padding: '15px', borderBottom: '1px solid #ccc', textAlign: 'center' }}>
-        <Link to="/" style={{ marginRight: '10px' }}>
-          <button>前往登記</button>
+        
+        {/* 新增的現場登記頁面 (自動簽到) */}
+        <Link to="/on-site" style={{ marginRight: '10px' }}>
+          <button>現場登記簽到 (禪堂用)</button>
+        </Link>
+
+        {/* 原有的登記頁面 (不自動簽到) */}
+        <Link to="/register" style={{ marginRight: '10px' }}>
+          <button>一般預約登記 (外場用)</button>
         </Link>
         
-        {/* 2. 新增掃碼簽到連結 */}
         <Link to="/checkin" style={{ marginRight: '10px' }}>
           <button>掃碼簽到</button>
         </Link>
         
-<Link to="/Kiosk" style={{ marginRight: '10px' }}>
+        <Link to="/kiosk" style={{ marginRight: '10px' }}>
           <button>快速簽到</button>
         </Link>
 
-
-
         <Link to="/admin">
-          <button>前往管理員後台</button>
+          <button>簽到管理</button>
         </Link>
       </nav>
 
       {/* 頁面路由區 */}
       <Routes>
-        <Route path="/" element={<Register />} />
-        {/* 3. 新增掃碼簽到路由 */}
-       <Route path="/kiosk" element={<Kiosk />} />
+        {/* 設定預設頁面，如果不設定的話，網址輸入 / 時會是一片空白 */}
+        <Route path="/" element={<Register autoCheckin={true} />} />
+        
+        <Route path="/register" element={<Register autoCheckin={false} />} />
+        <Route path="/on-site" element={<Register autoCheckin={true} />} />
+        <Route path="/kiosk" element={<Kiosk />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/admin" element={<AdminList />} />
       </Routes>
