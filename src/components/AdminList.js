@@ -31,25 +31,19 @@ const AdminList = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // 在 fetch 之前印出網址，確保路徑正確
       console.log("正在請求資料: https://checkin-system-production-2a74.up.railway.app/admin/users");
       
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
       
-      // 看看收到的狀態
-      console.log("後端回應狀態:", res.status); 
-      
+      // 只宣告一次 data
       const data = await res.json();
       
-      // 這一行最重要！看看資料長什麼樣子
-      console.log("從後端抓到的資料內容:", data);
-    
-
-const data = await res.json();
-console.log("【檢查欄位】第一筆資料的完整結構:", data[0]); // <--- 加入這行
-setUsers(data);
-
-  
+      // 這裡檢查欄位，幫你解決篩選不到資料的問題
+      if (data && data.length > 0) {
+        console.log("【檢查欄位】第一筆資料完整內容:", data[0]);
+        console.log("【檢查欄位】請確認這當中有沒有類似 created_at 的欄位名稱:", Object.keys(data[0]));
+      }
+      
       setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗，詳細錯誤:", err);
@@ -57,6 +51,9 @@ setUsers(data);
       setLoading(false);
     }
   };
+
+
+
 
   const handleNoteChange = async (userId, newNote) => {
     try {
