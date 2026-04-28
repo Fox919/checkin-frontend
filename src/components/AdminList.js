@@ -9,22 +9,24 @@ const AdminList = () => {
   const [selectedDate, setSelectedDate] = useState(''); // 新增：日期篩選
   const [selectedQrId, setSelectedQrId] = useState(null);
   const [authorized, setAuthorized] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [actionType, setActionType] = useState(''); // 'login' 或 'export'
+  const [tempPassword, setTempPassword] = useState('');
 
-  const checkPassword = () => {
-    const pass = prompt("請輸入管理員密碼");
-    if (pass === "123456") {
-      setAuthorized(true);
-    } else {
-      alert("密碼錯誤！");
-    }
+  const handleOpenModal = (type) => {
+    setActionType(type);
+    setIsModalOpen(true);
   };
 
-  const handleExportClick = () => {
-    const pass = prompt("請輸入密碼以驗證身份並匯出資料：");
-    if (pass === "123456") {
-      exportToCSV();
+  const handlePasswordSubmit = () => {
+    if (tempPassword === "123456") {
+      if (actionType === 'login') setAuthorized(true);
+      if (actionType === 'export') exportToCSV();
+      
+      setIsModalOpen(false);
+      setTempPassword('');
     } else {
-      alert("密碼錯誤，拒絕匯出！");
+      alert("密碼錯誤！");
     }
   };
 
@@ -119,7 +121,7 @@ const filteredList = users.filter(user => {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
         <h2>管理後台</h2>
-        <button onClick={checkPassword} style={{ padding: '10px 20px', fontSize: '16px' }}>點擊進入管理後台</button>
+        <button onClick={() => handleOpenModal('login')}>點擊進入管理後台</button>
       </div>
     );
   }
@@ -155,7 +157,9 @@ const filteredList = users.filter(user => {
           <button onClick={() => setSelectedDate('')} style={{ padding: '8px' }}>重置日期</button>
 
           <button onClick={fetchUsers} style={{ padding: '8px' }}>🔄 重整</button>
-          <button onClick={handleExportClick} style={{ padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>📥 匯出 CSV</button>
+         <button onClick={() => handleOpenModal('export')} style={{ padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>📥 匯出 CSV</button>
+
+
         </div>
       </div>
 
@@ -190,6 +194,34 @@ const filteredList = users.filter(user => {
           </tbody>
         </table>
       )}
+
+    {/* 密碼輸入 Modal */}
+      {isModalOpen && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', 
+          justifyContent: 'center', alignItems: 'center', zIndex: 1000 
+        }}>
+          <div style={{ 
+            background: 'white', padding: '30px', borderRadius: '10px', 
+            textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' 
+          }}>
+            <h3>請輸入管理員密碼</h3>
+            <input 
+              type="password" 
+              value={tempPassword} 
+              onChange={(e) => setTempPassword(e.target.value)}
+              style={{ padding: '10px', marginBottom: '15px', width: '200px' }}
+            />
+            <br />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button onClick={() => setIsModalOpen(false)}>取消</button>
+              <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white', padding: '5px 15px', border: 'none', borderRadius: '4px' }}>確認</button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={() => setSelectedQrId(null)}>
