@@ -3,11 +3,34 @@ import { QRCodeCanvas } from 'qrcode.react';
 
 // 多語言字典
 const t = {
-  'zh-TW': { title: "活動人員登記", name: "姓名", phone: "電話", email: "電子郵件 (選填)", type: "身分", submit: "提交登記並生成碼", success: "登記成功！請截圖保存下方的二維碼。", guest: "來賓", volunteer: "義工", student: "學員", retry: "重新登記", error: "失敗" },
-  'zh-CN': { title: "活动人员登记", name: "姓名", phone: "电话", email: "电子邮件 (选填)", type: "身分", submit: "提交登记并生成码", success: "登记成功！请截图保存下方的二维码。", guest: "来宾", volunteer: "义工", student: "学员", retry: "重新登记", error: "失败" },
-  'en-US': { title: "Registration", name: "Name", phone: "Phone", email: "Email (Optional)", type: "Role", submit: "Submit & Generate QR", success: "Registration successful! Please save the QR code below.", guest: "Guest", volunteer: "Volunteer", student: "Student", retry: "Register Again", error: "Error" }
+  'zh-TW': { 
+    title: "活動人員登記", 
+    checkinTitle: "現場登記與簽到", 
+    name: "姓名", phone: "電話", email: "電子郵件 (選填)", 
+    type: "身分", submit: "提交登記並生成碼", 
+    success: "登記成功！請截圖保存下方的二維碼。", 
+    guest: "來賓", volunteer: "義工", student: "學員", 
+    retry: "重新登記", error: "失敗" 
+  },
+  'zh-CN': { 
+    title: "活动人员登记", 
+    checkinTitle: "现场登记与签到", 
+    name: "姓名", phone: "电话", email: "电子邮件 (选填)", 
+    type: "身分", submit: "提交登记并生成码", 
+    success: "登记成功！请截图保存下方的二维码。", 
+    guest: "来宾", volunteer: "义工", student: "学员", 
+    retry: "重新登记", error: "失败" 
+  },
+  'en-US': { 
+    title: "Registration", 
+    checkinTitle: "On-site Registration", 
+    name: "Name", phone: "Phone", email: "Email (Optional)", 
+    type: "Role", submit: "Submit & Generate QR", 
+    success: "Registration successful! Please save the QR code below.", 
+    guest: "Guest", volunteer: "Volunteer", student: "Student", 
+    retry: "Register Again", error: "Error" 
+  }
 };
-
 // 統一合併為一個元件，透過 { autoCheckin } 接收來自 App.js 的參數
 const Register = ({ autoCheckin }) => {
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
@@ -72,7 +95,7 @@ const Register = ({ autoCheckin }) => {
 
       {/* 根據 autoCheckin 顯示不同的標題 */}
       <h2 style={{ color: '#333' }}>
-        {autoCheckin ? "現場登記與簽到" : translations.title}
+        {autoCheckin ? translations.checkinTitle : translations.title}
       </h2>
       
       {!qrValue ? (
