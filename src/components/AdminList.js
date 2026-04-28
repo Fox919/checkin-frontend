@@ -6,7 +6,7 @@ const AdminList = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('all'); 
-  const [selectedDate, setSelectedDate] = useState(''); // 新增：日期篩選
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedQrId, setSelectedQrId] = useState(null);
   const [authorized, setAuthorized] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,29 +33,15 @@ const AdminList = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      console.log("正在請求資料: https://checkin-system-production-2a74.up.railway.app/admin/users");
-      
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
-      
-      // 只宣告一次 data
       const data = await res.json();
-      
-      // 這裡檢查欄位，幫你解決篩選不到資料的問題
-      if (data && data.length > 0) {
-        console.log("【檢查欄位】第一筆資料完整內容:", data[0]);
-        console.log("【檢查欄位】請確認這當中有沒有類似 created_at 的欄位名稱:", Object.keys(data[0]));
-      }
-      
       setUsers(data);
     } catch (err) {
-      console.error("讀取資料失敗，詳細錯誤:", err);
+      console.error("讀取資料失敗:", err);
     } finally {
       setLoading(false);
     }
   };
-
-
-
 
   const handleNoteChange = async (userId, newNote) => {
     try {
@@ -89,39 +75,53 @@ const AdminList = () => {
     document.body.removeChild(link);
   };
 
- // 5. 過濾邏輯 (根據狀態動態選擇對應的日期欄位)
-const filteredList = users.filter(user => {
-    // 1. 搜尋功能 (姓名或電話)
+  const filteredList = users.filter(user => {
     const matchesSearch = (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (user.phone && user.phone.includes(searchTerm));
-    
-    // 2. 狀態篩選
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
-    
-    // 3. 日期篩選 (根據模式選擇欄位)
-    // 如果 viewMode 是 'checked-in' 就比對 checkin_date，否則比對 created_at
     const rawDate = viewMode === 'checked-in' ? user.checkin_date : user.created_at;
-    
-    // 將日期轉為字串並確保不為 null/undefined，以免發生錯誤
     const targetDate = rawDate ? String(rawDate) : ''; 
-
-    // 比對日期 (如果是空字串代表沒選日期，則視為全部符合)
     const matchesDate = !selectedDate || targetDate.startsWith(selectedDate);
-    
     return matchesSearch && matchesStatus && matchesDate;
   });
-
-
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // 定義 Modal UI
+  const modalElement = isModalOpen && (
+    <div style={{ 
+      position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
+      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', 
+      justifyContent: 'center', alignItems: 'center', zIndex: 1000 
+    }}>
+      <div style={{ 
+        background: 'white', padding: '30px', borderRadius: '10px', 
+        textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' 
+      }}>
+        <h3>請輸入管理員密碼</h3>
+        <input 
+          type="password" 
+          value={tempPassword} 
+          onChange={(e) => setTempPassword(e.target.value)}
+          style={{ padding: '10px', marginBottom: '15px', width: '200px' }}
+        />
+        <br />
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <button onClick={() => setIsModalOpen(false)}>取消</button>
+          <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white', padding: '5px 15px', border: 'none', borderRadius: '4px' }}>確認</button>
+        </div>
+      </div>
+    </div>
+  );
 
   if (!authorized) {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
         <h2>管理後台</h2>
         <button onClick={() => handleOpenModal('login')}>點擊進入管理後台</button>
+        {modalElement}
       </div>
     );
   }
@@ -131,14 +131,12 @@ const filteredList = users.filter(user => {
       <h2>📋 用戶管理與備註</h2>
       
       <div style={{ marginBottom: '20px', backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
-        {/* 狀態切換 */}
         <div style={{ marginBottom: '10px' }}>
           <button onClick={() => setViewMode('all')} style={{ fontWeight: viewMode === 'all' ? 'bold' : 'normal', marginRight: '5px' }}>全部</button>
           <button onClick={() => setViewMode('active')} style={{ fontWeight: viewMode === 'active' ? 'bold' : 'normal', marginRight: '5px' }}>已登記</button>
           <button onClick={() => setViewMode('checked-in')} style={{ fontWeight: viewMode === 'checked-in' ? 'bold' : 'normal' }}>已簽到</button>
         </div>
         
-        {/* 搜尋與日期篩選 */}
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <input 
             type="text" 
@@ -147,7 +145,6 @@ const filteredList = users.filter(user => {
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ padding: '8px', width: '200px' }}
           />
-          
           <input 
             type="date" 
             value={selectedDate}
@@ -155,11 +152,8 @@ const filteredList = users.filter(user => {
             style={{ padding: '8px' }}
           />
           <button onClick={() => setSelectedDate('')} style={{ padding: '8px' }}>重置日期</button>
-
           <button onClick={fetchUsers} style={{ padding: '8px' }}>🔄 重整</button>
-         <button onClick={() => handleOpenModal('export')} style={{ padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>📥 匯出 CSV</button>
-
-
+          <button onClick={() => handleOpenModal('export')} style={{ padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>📥 匯出 CSV</button>
         </div>
       </div>
 
@@ -195,33 +189,7 @@ const filteredList = users.filter(user => {
         </table>
       )}
 
-    {/* 密碼輸入 Modal */}
-      {isModalOpen && (
-        <div style={{ 
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', 
-          justifyContent: 'center', alignItems: 'center', zIndex: 1000 
-        }}>
-          <div style={{ 
-            background: 'white', padding: '30px', borderRadius: '10px', 
-            textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' 
-          }}>
-            <h3>請輸入管理員密碼</h3>
-            <input 
-              type="password" 
-              value={tempPassword} 
-              onChange={(e) => setTempPassword(e.target.value)}
-              style={{ padding: '10px', marginBottom: '15px', width: '200px' }}
-            />
-            <br />
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button onClick={() => setIsModalOpen(false)}>取消</button>
-              <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white', padding: '5px 15px', border: 'none', borderRadius: '4px' }}>確認</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {modalElement}
 
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={() => setSelectedQrId(null)}>
