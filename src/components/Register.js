@@ -40,6 +40,14 @@ const Register = ({ autoCheckin }) => {
 
   const translations = t[lang];
 
+
+const handleReset = () => {
+  setQrValue(''); // 清除二維碼，讓畫面切回表單
+  setFormData({ name: '', phone: '', user_type: 'guest', email: '' }); // 清空輸入框內容
+  setMessage(''); // 清除「登記成功」的訊息 (這是關鍵，它可能正擋在畫面上)
+};
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'phone') {
@@ -120,9 +128,12 @@ const Register = ({ autoCheckin }) => {
           <h3 style={{ marginTop: '15px', color: '#28a745' }}>{formData.name}</h3>
           <p style={{ margin: '5px 0' }}>{translations.type}：{translations.guest}</p>
           <p style={{ color: '#d9534f', fontSize: '0.85rem', fontWeight: 'bold' }}>※ 請截圖此畫面保存</p>
-          <button onClick={() => setQrValue('')} style={{ marginTop: '10px', background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}>
-            {translations.retry}
-          </button>
+          <button 
+       onClick={handleReset} 
+        style={{ marginTop: '10px', background: 'none', border: 'none', color: '#007bff', cursor:           'pointer', textDecoration: 'underline' }}
+>
+  {translations.retry}
+</button>
         </div>
       )}
 
