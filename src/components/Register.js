@@ -174,12 +174,17 @@ const Register = ({ autoCheckin }) => {
 
       {message && (
         <p style={{ 
-          marginTop: '15px', padding: '10px', borderRadius: '4px', 
-          backgroundColor: (message.includes('失敗') || message.includes('錯誤') || message.includes('登記過')) ? '#f8d7da' : '#e2e3e5',
-          color: (message.includes('失敗') || message.includes('錯誤') || message.includes('登記過')) ? '#721c24' : '#383d41'
-        }}>
-          {message}
-        </p>
+  marginTop: '15px', 
+  padding: '12px', 
+  borderRadius: '8px', 
+  // 如果是重複登記，用橘黃色背景提醒
+  backgroundColor: message.includes('登記過') ? '#fff3cd' : (message.includes('失敗') ? '#f8d7da' : '#e2e3e5'),
+  color: message.includes('登記過') ? '#856404' : (message.includes('失敗') ? '#721c24' : '#383d41'),
+  border: message.includes('登記過') ? '1px solid #ffeeba' : 'none',
+  fontWeight: 'bold'
+}}>
+  {message}
+</p>
       )}
     </div>
   );
