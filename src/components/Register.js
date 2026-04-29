@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-//test
-//sdfsfsdfsdfsd
+
 // 多語言字典
 const t = {
   'zh-TW': { 
     title: "我是最新版本 123活動人員登記", 
-    checkinTitle: "現場登記與簽到", 
+    checkinTitle: "我是最新 123現場登記與簽到", 
     name: "姓名", phone: "電話", email: "電子郵件 (選填)", 
     type: "身分", submit: "提交登記並生成碼", 
     success: "登記成功！請截圖保存下方的二維碼。", 
@@ -32,7 +31,7 @@ const t = {
     retry: "Register Again", error: "Error" 
   }
 };
-// 統一合併為一個元件，透過 { autoCheckin } 接收來自 App.js 的參數
+
 const Register = ({ autoCheckin }) => {
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const [formData, setFormData] = useState({ name: '', phone: '', user_type: 'guest', email: '' });
@@ -41,27 +40,17 @@ const Register = ({ autoCheckin }) => {
 
   const translations = t[lang];
 
-
-const handleReset = () => {
-    console.log("=== 重置功能已啟動 ==="); // 讓你在 Console 看到紀錄
+  const handleReset = () => {
+    alert("重置按鈕點擊成功！"); 
+    console.log("=== 重置功能已啟動 ===");
     
-    // 1. 清空所有表單資料
-    setFormData({
-        name: '',
-        phone: '',
-        user_type: 'guest',
-        email: ''
-    });
-
-    // 2. 徹底清空 QR Code 值
+    setFormData({ name: '', phone: '', user_type: 'guest', email: '' });
     setQrValue('');
-
-    // 3. 清空提示訊息
     setMessage('');
-
-    // 4. (選修) 如果你想更暴力一點，可以加上這行強制重新整理網頁
+    
+    // 如果點擊後 UI 沒反應，可以取消下面這行的註解
     // window.location.reload(); 
-};
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,7 +72,6 @@ const handleReset = () => {
     setMessage('處理中...');
 
     try {
-      // 傳送包含 autoCheckin 的請求
       const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +104,6 @@ const handleReset = () => {
         <button onClick={() => handleLangChange('en-US')} style={{ margin: '0 5px' }}>EN</button>
       </div>
 
-      {/* 根據 autoCheckin 顯示不同的標題 */}
       <h2 style={{ color: '#333' }}>
         {autoCheckin ? translations.checkinTitle : translations.title}
       </h2>
@@ -144,12 +131,12 @@ const handleReset = () => {
           <p style={{ margin: '5px 0' }}>{translations.type}：{translations.guest}</p>
           <p style={{ color: '#d9534f', fontSize: '0.85rem', fontWeight: 'bold' }}>※ 請截圖此畫面保存</p>
           <button 
-    type="button" 
-    onClick={handleReset} 
-    className="reset-button"
->
-    重新登記
-</button>
+            type="button" 
+            onClick={handleReset} 
+            style={{ marginTop: '15px', padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}
+          >
+            {translations.retry}
+          </button>
         </div>
       )}
 
