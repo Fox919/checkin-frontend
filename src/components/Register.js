@@ -5,7 +5,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 // 多語言字典
 const t = {
   'zh-TW': { 
-    title: "活動人員登記", 
+    title: "我是最新版本 123活動人員登記", 
     checkinTitle: "現場登記與簽到", 
     name: "姓名", phone: "電話", email: "電子郵件 (選填)", 
     type: "身分", submit: "提交登記並生成碼", 
