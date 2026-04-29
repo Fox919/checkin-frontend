@@ -76,40 +76,47 @@ const Register = ({ autoCheckin }) => {
 
       const data = await response.json();
 
+      // 1. 先處理重複登記的情況 (無論 response.ok 與否，只要 error 對了就攔截)
+      if (data.error === 'already_registered' || response.status === 409) {
+        setIsSubmitting(false); 
+        setMessage(''); 
+
+        const confirmGo = window.confirm(
+          `提醒：系統偵測到「${formData.name}」與「${formData.phone}」已經登記過了。\n\n是否直接前往「掃碼簽到」頁面？`
+        );
+        
+        if (confirmGo) {
+          window.location.href = '/checkin';
+          return; 
+        } else {
+          setMessage("該人員已登記，您可以直接使用原有的 QR Code。");
+          return;
+        }
+      }
+
+      // 2. 處理成功的情況
       if (response.ok) {
         if (data.id) {
           setQrValue(String(data.id));
           setMessage(translations.success);
         }
       } else {
-        // 判斷重複登記
-        if (data.error === 'already_registered' || response.status === 409) {
-          const confirmGo = window.confirm(
-            `提醒：系統偵測到「${formData.name}」與「${formData.phone}」已經登記過了。\n\n是否直接前往「掃碼簽到」頁面？`
-          );
-          
-          if (confirmGo) {
-            window.location.href = '/checkin';
-          } else {
-            setMessage("該人員已登記，您可以直接使用原有的 QR Code。");
-          }
-        } else {
-          setMessage(`${translations.error}: ${data.error || '未知錯誤'}`);
-        }
+        // 3. 處理其他一般錯誤
+        setMessage(`${translations.error}: ${data.error || '未知錯誤'}`);
       }
     } catch (error) {
       console.error("Fetch Error:", error);
       setMessage('連線錯誤。');
     } finally {
-      setIsSubmitting(false); // 確保最後一定會關閉提交狀態
+      setIsSubmitting(false);
     }
-  }; // <--- 補上原本漏掉的括號
+  };
 
   return (
     <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto', textAlign: 'center', fontFamily: 'sans-serif' }}>
       <div style={{ marginBottom: '15px' }}>
         {['zh-TW', 'zh-CN', 'en-US'].map((l) => (
-          <button key={l} onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '5px 10px' }}>
+          <button key={l} onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '5px 10px', cursor: 'pointer' }}>
             {l === 'zh-TW' ? '繁' : l === 'zh-CN' ? '简' : 'EN'}
           </button>
         ))}
@@ -168,7 +175,8 @@ const Register = ({ autoCheckin }) => {
       {message && (
         <p style={{ 
           marginTop: '15px', padding: '10px', borderRadius: '4px', 
-          backgroundColor: message.includes('失敗') || message.includes('錯誤') || message.includes('登記過') ? '#f8d7da' : '#e2e3e5' 
+          backgroundColor: (message.includes('失敗') || message.includes('錯誤') || message.includes('登記過')) ? '#f8d7da' : '#e2e3e5',
+          color: (message.includes('失敗') || message.includes('錯誤') || message.includes('登記過')) ? '#721c24' : '#383d41'
         }}>
           {message}
         </p>
