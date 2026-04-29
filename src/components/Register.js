@@ -36,7 +36,7 @@ const Register = ({ autoCheckin }) => {
   const [formData, setFormData] = useState({ name: '', phone: '', user_type: 'guest', email: '' });
   const [qrValue, setQrValue] = useState('');
   const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // 新增：防止重複提交狀態
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const translations = t[lang];
 
@@ -63,8 +63,6 @@ const Register = ({ autoCheckin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // 提交前清空狀態
     setQrValue(''); 
     setMessage('處理中...');
     setIsSubmitting(true);
@@ -84,39 +82,31 @@ const Register = ({ autoCheckin }) => {
           setMessage(translations.success);
         }
       } else {
-        // --- 核心邏輯：判斷重複登記 ---
-        // 檢查後端回傳的錯誤訊息，是否提到該用戶已存在
-        const isDuplicate = data.error && (
-          data.error.includes('already registered') || 
-          data.error.includes('exists') || 
-          data.error.includes('重複')
-        );
-
-        if (isDuplicate) {
-          // 彈出對話框詢問使用者
-          const confirmGo = window.confirm(`提醒：系統偵測到姓名「${formData.name}」與電話「${formData.phone}」已登記過。\n\n是否直接前往「掃碼簽到」頁面進行簽到？`);
+        // 判斷重複登記
+        if (data.error === 'already_registered' || response.status === 409) {
+          const confirmGo = window.confirm(
+            `提醒：系統偵測到「${formData.name}」與「${formData.phone}」已經登記過了。\n\n是否直接前往「掃碼簽到」頁面？`
+          );
           
           if (confirmGo) {
-            window.location.href = '/checkin'; // 直接導向簽到頁面
+            window.location.href = '/checkin';
           } else {
-            setMessage("該人員已登記，您可以直接使用之前的二維碼或前往簽到。");
+            setMessage("該人員已登記，您可以直接使用原有的 QR Code。");
           }
         } else {
-          // 一般錯誤處理
           setMessage(`${translations.error}: ${data.error || '未知錯誤'}`);
         }
       }
     } catch (error) {
       console.error("Fetch Error:", error);
-      setMessage('連線錯誤，請檢查網路。');
+      setMessage('連線錯誤。');
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // 確保最後一定會關閉提交狀態
     }
-  };
+  }; // <--- 補上原本漏掉的括號
 
   return (
     <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto', textAlign: 'center', fontFamily: 'sans-serif' }}>
-      {/* 語言切換 */}
       <div style={{ marginBottom: '15px' }}>
         {['zh-TW', 'zh-CN', 'en-US'].map((l) => (
           <button key={l} onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '5px 10px' }}>
@@ -129,7 +119,6 @@ const Register = ({ autoCheckin }) => {
         {autoCheckin ? translations.checkinTitle : translations.title}
       </h2>
       
-      {/* 核心判斷：qrValue 為空時，「只」顯示表單 */}
       {!qrValue ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <input name="name" placeholder={translations.name} value={formData.name} onChange={handleChange} required style={{ padding: '12px', borderRadius: '4px', border: '1px solid #ccc' }} />
@@ -156,7 +145,6 @@ const Register = ({ autoCheckin }) => {
           </button>
         </form>
       ) : (
-        /* 當 qrValue 有值時，「只」顯示結果區，表單會完全從 DOM 中移除 */
         <div style={{ marginTop: '20px', padding: '20px', border: '2px dashed #28a745', borderRadius: '10px', background: '#f9f9f9' }}>
           <QRCodeCanvas value={qrValue} size={200} />
           <h3 style={{ marginTop: '15px', color: '#28a745' }}>{formData.name}</h3>
@@ -177,11 +165,10 @@ const Register = ({ autoCheckin }) => {
         </div>
       )}
 
-      {/* 訊息提示區 */}
       {message && (
         <p style={{ 
           marginTop: '15px', padding: '10px', borderRadius: '4px', 
-          backgroundColor: message.includes('失敗') || message.includes('錯誤') ? '#f8d7da' : '#e2e3e5' 
+          backgroundColor: message.includes('失敗') || message.includes('錯誤') || message.includes('登記過') ? '#f8d7da' : '#e2e3e5' 
         }}>
           {message}
         </p>
