@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 //test
+//sdfsfsdfsdfsd
 // 多語言字典
 const t = {
   'zh-TW': { 
