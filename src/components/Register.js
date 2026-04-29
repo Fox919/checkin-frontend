@@ -64,11 +64,11 @@ const Register = ({ autoCheckin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // --- 強力清理步驟 ---
-    setQrValue('');        // 1. 立刻清空舊的 QR Code 值，迫使畫面回到表單模式
-    setMessage('處理中...'); // 2. 顯示處理訊息
-    setIsSubmitting(true); // 3. 進入提交狀態
-    
+    // 提交前清空狀態
+    setQrValue(''); 
+    setMessage('處理中...');
+    setIsSubmitting(true);
+
     try {
       const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', {
         method: 'POST',
@@ -78,16 +78,37 @@ const Register = ({ autoCheckin }) => {
 
       const data = await response.json();
 
-      if (response.ok && data.id) {
-        // 成功後才給予新值，這時 {!qrValue} 會變成 false，切換到 QR Code 畫面
-        setQrValue(String(data.id));
-        setMessage(translations.success);
+      if (response.ok) {
+        if (data.id) {
+          setQrValue(String(data.id));
+          setMessage(translations.success);
+        }
       } else {
-        setMessage(`${translations.error}: ${data.error || '未知錯誤'}`);
+        // --- 核心邏輯：判斷重複登記 ---
+        // 檢查後端回傳的錯誤訊息，是否提到該用戶已存在
+        const isDuplicate = data.error && (
+          data.error.includes('already registered') || 
+          data.error.includes('exists') || 
+          data.error.includes('重複')
+        );
+
+        if (isDuplicate) {
+          // 彈出對話框詢問使用者
+          const confirmGo = window.confirm(`提醒：系統偵測到姓名「${formData.name}」與電話「${formData.phone}」已登記過。\n\n是否直接前往「掃碼簽到」頁面進行簽到？`);
+          
+          if (confirmGo) {
+            window.location.href = '/checkin'; // 直接導向簽到頁面
+          } else {
+            setMessage("該人員已登記，您可以直接使用之前的二維碼或前往簽到。");
+          }
+        } else {
+          // 一般錯誤處理
+          setMessage(`${translations.error}: ${data.error || '未知錯誤'}`);
+        }
       }
     } catch (error) {
       console.error("Fetch Error:", error);
-      setMessage('連線錯誤。');
+      setMessage('連線錯誤，請檢查網路。');
     } finally {
       setIsSubmitting(false);
     }
