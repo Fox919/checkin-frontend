@@ -43,11 +43,25 @@ const Register = ({ autoCheckin }) => {
 
 
 const handleReset = () => {
-  setQrValue(''); // 清除二維碼，讓畫面切回表單
-  setFormData({ name: '', phone: '', user_type: 'guest', email: '' }); // 清空輸入框內容
-  setMessage(''); // 清除「登記成功」的訊息 (這是關鍵，它可能正擋在畫面上)
-};
+    console.log("=== 重置功能已啟動 ==="); // 讓你在 Console 看到紀錄
+    
+    // 1. 清空所有表單資料
+    setFormData({
+        name: '',
+        phone: '',
+        user_type: 'guest',
+        email: ''
+    });
 
+    // 2. 徹底清空 QR Code 值
+    setQrValue('');
+
+    // 3. 清空提示訊息
+    setMessage('');
+
+    // 4. (選修) 如果你想更暴力一點，可以加上這行強制重新整理網頁
+    // window.location.reload(); 
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -130,10 +144,11 @@ const handleReset = () => {
           <p style={{ margin: '5px 0' }}>{translations.type}：{translations.guest}</p>
           <p style={{ color: '#d9534f', fontSize: '0.85rem', fontWeight: 'bold' }}>※ 請截圖此畫面保存</p>
           <button 
-       onClick={handleReset} 
-        style={{ marginTop: '10px', background: 'none', border: 'none', color: '#007bff', cursor:           'pointer', textDecoration: 'underline' }}
+    type="button" 
+    onClick={handleReset} 
+    className="reset-button"
 >
-  {translations.retry}
+    重新登記
 </button>
         </div>
       )}
