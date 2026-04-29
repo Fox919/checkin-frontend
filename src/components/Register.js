@@ -40,12 +40,17 @@ const Register = ({ autoCheckin }) => {
 
   const translations = t[lang];
 
+  // 補回漏掉的語言切換函數
+  const handleLangChange = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('userLang', newLang);
+  };
+
   const handleReset = () => {
-    // 移除 alert，保留邏輯即可
     setFormData({ name: '', phone: '', user_type: 'guest', email: '' });
     setQrValue('');
     setMessage('');
-};
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,13 +62,11 @@ const Register = ({ autoCheckin }) => {
     }
   };
 
-  const handleLangChange = (newLang) => {
-    setLang(newLang);
-    localStorage.setItem('userLang', newLang);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 提交瞬間清空舊碼，避免遮擋
+    setQrValue(''); 
     setMessage('處理中...');
 
     try {
@@ -80,23 +83,23 @@ const Register = ({ autoCheckin }) => {
           setQrValue(String(data.id));
           setMessage(translations.success);
         } else {
-          setMessage('登記成功，但未收到用戶 ID，請聯繫管理員。');
+          setMessage('登記成功，但未收到用戶 ID。');
         }
       } else {
         setMessage(`${translations.error}: ${data.error || '未知錯誤'}`);
       }
     } catch (error) {
       console.error("Fetch Error:", error);
-      setMessage('連線錯誤，請檢查網路。');
+      setMessage('連線錯誤。');
     }
   };
 
   return (
     <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto', textAlign: 'center', fontFamily: 'sans-serif' }}>
       <div style={{ marginBottom: '15px' }}>
-        <button onClick={() => handleLangChange('zh-TW')} style={{ margin: '0 5px' }}>繁</button>
-        <button onClick={() => handleLangChange('zh-CN')} style={{ margin: '0 5px' }}>简</button>
-        <button onClick={() => handleLangChange('en-US')} style={{ margin: '0 5px' }}>EN</button>
+        <button onClick={() => handleLangChange('zh-TW')} style={{ margin: '0 5px', padding: '5px 10px' }}>繁</button>
+        <button onClick={() => handleLangChange('zh-CN')} style={{ margin: '0 5px', padding: '5px 10px' }}>简</button>
+        <button onClick={() => handleLangChange('en-US')} style={{ margin: '0 5px', padding: '5px 10px' }}>EN</button>
       </div>
 
       <h2 style={{ color: '#333' }}>
