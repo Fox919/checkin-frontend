@@ -45,13 +45,15 @@ function App() {
 
       {/* 頁面路由區 */}
       <Routes>
-        <Route path="/" element={<Register autoCheckin={true} />} />
-        <Route path="/register" element={<Register autoCheckin={false} />} />
-        <Route path="/on-site" element={<Register autoCheckin={true} />} />
-        <Route path="/kiosk" element={<Kiosk />} />
-        <Route path="/checkin" element={<Checkin />} />
-        <Route path="/admin" element={<AdminList />} />
-      </Routes>
+  {/* 加上 key 屬性，確保切換時狀態會徹底重置 */}
+  <Route path="/" element={<Register key="home" autoCheckin={true} />} />
+  <Route path="/register" element={<Register key="reg" autoCheckin={false} />} />
+  <Route path="/on-site" element={<Register key="onsite" autoCheckin={true} />} />
+  
+  <Route path="/kiosk" element={<Kiosk />} />
+  <Route path="/checkin" element={<Checkin />} />
+  <Route path="/admin" element={<AdminList />} />
+</Routes>
     </BrowserRouter>
   );
 }
