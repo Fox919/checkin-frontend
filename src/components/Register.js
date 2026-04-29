@@ -4,8 +4,8 @@ import { QRCodeCanvas } from 'qrcode.react';
 // 多語言字典
 const t = {
   'zh-TW': { 
-    title: "我是最新版本 123活動人員登記", 
-    checkinTitle: "我是最新 123現場登記與簽到", 
+    title: "活動人員登記", 
+    checkinTitle: "現場登記與簽到", 
     name: "姓名", phone: "電話", email: "電子郵件 (選填)", 
     type: "身分", submit: "提交登記並生成碼", 
     success: "登記成功！請截圖保存下方的二維碼。", 
@@ -41,16 +41,11 @@ const Register = ({ autoCheckin }) => {
   const translations = t[lang];
 
   const handleReset = () => {
-    alert("重置按鈕點擊成功！"); 
-    console.log("=== 重置功能已啟動 ===");
-    
+    // 移除 alert，保留邏輯即可
     setFormData({ name: '', phone: '', user_type: 'guest', email: '' });
     setQrValue('');
     setMessage('');
-    
-    // 如果點擊後 UI 沒反應，可以取消下面這行的註解
-    // window.location.reload(); 
-  };
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
