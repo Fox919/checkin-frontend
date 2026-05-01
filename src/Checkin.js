@@ -44,6 +44,7 @@ function Checkin() {
 
   // 2. 處理電話搜尋
  // 2. 處理電話搜尋
+ // 2. 處理電話搜尋
   const handlePhoneSearch = async (e) => {
     if (e) e.preventDefault();
     if (phoneLastFour.length !== 4) return;
@@ -55,20 +56,18 @@ function Checkin() {
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
       const data = await response.json();
 
-      // --- 關鍵診斷點 ---
-      console.log("搜尋結果:", data); 
-
       if (data.success === true && data.id) {
-        // 搜尋成功，拿到 ID 了！現在「立刻」去跑簽到函式
-        await executeCheckin(data.id);
+        // --- 核心修正：找到 ID 後，直接去執行簽到流程 ---
+        // 這樣第二次簽到時，就會跑 executeCheckin 裡的「重複簽到」判斷
+        await executeCheckin(data.id); 
       } else {
-        // 這裡就是會噴 undefined 的地方
-        // 如果後端給的是 error，但你寫 data.message，就會變成 undefined
-        const errorMsg = data.error || data.message || "找不到此人";
+        // 如果連搜尋都失敗（例如沒這個人）
+        const errorMsg = data.error || data.message || "找不到此登記資料";
         setMessage(`❌ 搜尋失敗：${errorMsg}`);
       }
     } catch (err) {
-      setMessage('⚠️ 網路連線失敗');
+      console.error("Search API Error:", err);
+      setMessage('⚠️ 搜尋請求失敗');
     } finally {
       setIsSearching(false);
       setPhoneLastFour('');
