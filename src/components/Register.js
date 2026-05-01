@@ -5,7 +5,8 @@ const t = {
   'zh-TW': { 
     title: "活動人員登記", 
     checkinTitle: "現場登記與簽到", 
-    name: "姓名", phone: "電話", email: "電子郵件 (選填)", 
+    lastName: "姓", firstName: "名", 
+    phone: "電話", email: "電子郵件 (選填)", 
     type: "身分", submit: "提交登記並生成碼", 
     success: "登記成功！請截圖保存下方的二維碼。", 
     guest: "來賓", volunteer: "義工", student: "學員", 
@@ -14,7 +15,8 @@ const t = {
   'zh-CN': { 
     title: "活动人员登记", 
     checkinTitle: "现场登记与签到", 
-    name: "姓名", phone: "电话", email: "电子邮件 (选填)", 
+    lastName: "姓", firstName: "名", 
+    phone: "电话", email: "电子邮件 (选填)", 
     type: "身分", submit: "提交登记并生成码", 
     success: "登记成功！请截图保存下方的二维码。", 
     guest: "来宾", volunteer: "义工", student: "学员", 
@@ -23,7 +25,8 @@ const t = {
   'en-US': { 
     title: "Registration", 
     checkinTitle: "On-site Registration", 
-    name: "Name", phone: "Phone", email: "Email (Optional)", 
+    lastName: "Last Name", firstName: "First Name", 
+    phone: "Phone", email: "Email (Optional)", 
     type: "Role", submit: "Submit & Generate QR", 
     success: "Registration successful! Please save the QR code below.", 
     guest: "Guest", volunteer: "Volunteer", student: "Student", 
@@ -33,7 +36,7 @@ const t = {
 
 const Register = ({ autoCheckin }) => {
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
-  const [formData, setFormData] = useState({ name: '', phone: '', user_type: 'guest', email: '' });
+  const [formData, setFormData] = useState({ lastName: '', firstName: '', phone: '', user_type: 'guest', email: '' });
   const [qrValue, setQrValue] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +51,7 @@ const Register = ({ autoCheckin }) => {
   const handleReset = () => {
     setQrValue('');
     setMessage('');
-    setFormData({ name: '', phone: '', user_type: 'guest', email: '' });
+    setFormData({ lastName: '', firstName: '', phone: '', user_type: 'guest', email: '' });
     setIsSubmitting(false);
   };
 
@@ -76,13 +79,14 @@ const Register = ({ autoCheckin }) => {
 
       const data = await response.json();
 
-      // 1. 先處理重複登記的情況 (無論 response.ok 與否，只要 error 對了就攔截)
+      // 1. 先處理重複登記的情況
       if (data.error === 'already_registered' || response.status === 409) {
         setIsSubmitting(false); 
         setMessage(''); 
 
+        const fullName = `${formData.lastName}${formData.firstName}`;
         const confirmGo = window.confirm(
-          `提醒：系統偵測到「${formData.name}」與「${formData.phone}」已經登記過了。\n\n是否直接前往「掃碼簽到」頁面？`
+          `提醒：系統偵測到「${fullName}」與「${formData.phone}」已經登記過了。\n\n是否直接前往「掃碼簽到」頁面？`
         );
         
         if (confirmGo) {
@@ -97,6 +101,7 @@ const Register = ({ autoCheckin }) => {
       // 2. 處理成功的情況
       if (response.ok) {
         if (data.id) {
+          // 注意：QR Code 的值通常使用 data.id 或是 qr_code 字串，這裡維持你原本的邏輯
           setQrValue(String(data.id));
           setMessage(translations.success);
         }
@@ -116,7 +121,15 @@ const Register = ({ autoCheckin }) => {
     <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto', textAlign: 'center', fontFamily: 'sans-serif' }}>
       <div style={{ marginBottom: '15px' }}>
         {['zh-TW', 'zh-CN', 'en-US'].map((l) => (
-          <button key={l} onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '5px 10px', cursor: 'pointer' }}>
+          <button key={l} onClick={() => handleLangChange(l)} style={{ 
+            margin: '0 5px', 
+            padding: '5px 10px', 
+            cursor: 'pointer',
+            backgroundColor: lang === l ? '#007bff' : '#f8f9fa',
+            color: lang === l ? '#white' : '#333',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}>
             {l === 'zh-TW' ? '繁' : l === 'zh-CN' ? '简' : 'EN'}
           </button>
         ))}
@@ -128,14 +141,33 @@ const Register = ({ autoCheckin }) => {
       
       {!qrValue ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <input name="name" placeholder={translations.name} value={formData.name} onChange={handleChange} required style={{ padding: '12px', borderRadius: '4px', border: '1px solid #ccc' }} />
+          {/* 姓名拆分輸入區 */}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input 
+              name="lastName" 
+              placeholder={translations.lastName} 
+              value={formData.lastName} 
+              onChange={handleChange} 
+              required 
+              style={{ flex: 1, padding: '12px', borderRadius: '4px', border: '1px solid #ccc' }} 
+            />
+            <input 
+              name="firstName" 
+              placeholder={translations.firstName} 
+              value={formData.firstName} 
+              onChange={handleChange} 
+              required 
+              style={{ flex: 2, padding: '12px', borderRadius: '4px', border: '1px solid #ccc' }} 
+            />
+          </div>
+
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} required style={{ padding: '12px', borderRadius: '4px', border: '1px solid #ccc' }} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={{ padding: '12px', borderRadius: '4px', border: '1px solid #ccc' }} />
           
           <select name="user_type" value={formData.user_type} onChange={handleChange} style={{ padding: '12px', borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}>
             <option value="guest">{translations.guest}</option>
-            <option value="volunteer" disabled>{translations.volunteer}</option>
-            <option value="student" disabled>{translations.student}</option>
+            <option value="volunteer">{translations.volunteer}</option>
+            <option value="student">{translations.student}</option>
           </select>
           
           <button 
@@ -154,8 +186,8 @@ const Register = ({ autoCheckin }) => {
       ) : (
         <div style={{ marginTop: '20px', padding: '20px', border: '2px dashed #28a745', borderRadius: '10px', background: '#f9f9f9' }}>
           <QRCodeCanvas value={qrValue} size={200} />
-          <h3 style={{ marginTop: '15px', color: '#28a745' }}>{formData.name}</h3>
-          <p style={{ margin: '5px 0' }}>{translations.type}：{translations.guest}</p>
+          <h3 style={{ marginTop: '15px', color: '#28a745' }}>{formData.lastName}{formData.firstName}</h3>
+          <p style={{ margin: '5px 0' }}>{translations.type}：{translations[formData.user_type]}</p>
           <p style={{ color: '#d9534f', fontSize: '0.85rem', fontWeight: 'bold' }}>※ 請截圖此畫面保存</p>
           
           <button 
@@ -174,17 +206,16 @@ const Register = ({ autoCheckin }) => {
 
       {message && (
         <p style={{ 
-  marginTop: '15px', 
-  padding: '12px', 
-  borderRadius: '8px', 
-  // 如果是重複登記，用橘黃色背景提醒
-  backgroundColor: message.includes('登記過') ? '#fff3cd' : (message.includes('失敗') ? '#f8d7da' : '#e2e3e5'),
-  color: message.includes('登記過') ? '#856404' : (message.includes('失敗') ? '#721c24' : '#383d41'),
-  border: message.includes('登記過') ? '1px solid #ffeeba' : 'none',
-  fontWeight: 'bold'
-}}>
-  {message}
-</p>
+          marginTop: '15px', 
+          padding: '12px', 
+          borderRadius: '8px', 
+          backgroundColor: message.includes('登記過') ? '#fff3cd' : (message.includes('失敗') || message.includes('錯誤') ? '#f8d7da' : '#e2e3e5'),
+          color: message.includes('登記過') ? '#856404' : (message.includes('失敗') || message.includes('錯誤') ? '#721c24' : '#383d41'),
+          border: message.includes('登記過') ? '1px solid #ffeeba' : 'none',
+          fontWeight: 'bold'
+        }}>
+          {message}
+        </p>
       )}
     </div>
   );
