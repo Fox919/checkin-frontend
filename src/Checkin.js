@@ -44,7 +44,7 @@ function Checkin() {
       setMessage('⚠️ 無法連線至伺服器，請檢查網路');
     }
   };
-
+//3534534534534
   // 2. 處理電話搜尋
   const handlePhoneSearch = async (e) => {
     if (e) e.preventDefault();
