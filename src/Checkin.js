@@ -6,16 +6,16 @@ function Checkin() {
   const [phoneLastFour, setPhoneLastFour] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // 1. 抽離簽到執行邏輯 (增加對 undefined 的防禦)
+  // 1. 抽離簽到執行邏輯
   const executeCheckin = async (userId) => {
     try {
       console.log("正在發送簽到請求，ID 為:", userId);
-      
+      setMessage('⌛ 正在處理簽到...');
+
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${userId}`, {
         method: 'POST'
       });
       
-      // 先取得原始文字，防止後端回傳 HTML 導致解析 JSON 失敗
       const text = await response.text();
       console.log("後端原始回傳:", text);
 
@@ -23,41 +23,36 @@ function Checkin() {
       try {
         data = JSON.parse(text);
       } catch (e) {
-        setMessage(`❌ 伺服器錯誤：回傳格式不是 JSON (請檢查後端日誌)`);
+        setMessage(`❌ 伺服器錯誤：回傳格式不是 JSON`);
         return;
       }
 
-      if (data.success === true || response.ok) {
-        // 如果 response.ok 是 true 且沒給 name，就顯示 "OK"
-        const displayName = data.name || (data.success ? "成功" : "");
-        setMessage(`✅ 簽到成功：${displayName}`);
+      if (data.success === true) {
+        setMessage(`✅ 簽到成功：${data.name || "已完成"}`);
       } else {
-        // 這裡會把所有可能的 Key 都跑一遍
-        const errorDetail = data.message || data.error || data.msg || text || "未知原因";
+        // 這裡會抓後端的 message
+        const errorDetail = data.message || data.error || "未知原因";
         setMessage(`❌ 錯誤：${errorDetail}`);
       }
     } catch (err) {
       console.error("連線發生異常:", err);
-      setMessage('⚠️ 無法連線至伺服器，請確認網路或後端狀態');
+      setMessage('⚠️ 無法連線至伺服器');
     }
   };
 
   // 2. 處理電話搜尋
- // 2. 處理電話搜尋
- // 2. 處理電話搜尋
   const handlePhoneSearch = async (e) => {
     if (e) e.preventDefault();
     if (phoneLastFour.length !== 4) return;
 
     setIsSearching(true);
-    setMessage('🔍 正在搜尋中...'); // 先給一個明確狀態
+    setMessage('🔍 正在搜尋中...');
 
     try {
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
       const data = await response.json();
 
       if (data.success === true && data.id) {
-        // 關鍵：在發起簽到前，先暫停一下或確保 executeCheckin 承接後續
         console.log("搜尋成功，準備簽到:", data.name);
         await executeCheckin(data.id); 
       } else {
@@ -68,8 +63,7 @@ function Checkin() {
       setMessage('⚠️ 搜尋通訊異常');
     } finally {
       setIsSearching(false);
-      // 建議：先不要清空 phoneLastFour，讓使用者知道剛才輸入了什麼
-      // setPhoneLastFour(''); 
+      setPhoneLastFour(''); 
     }
   };
 
@@ -83,49 +77,50 @@ function Checkin() {
 
   return (
     <div style={{ textAlign: 'center', padding: '20px' }}>
-    {/* 加入這一行，作為我們唯一的通訊密碼 */}
-    <h1 style={{ background: 'yellow', color: 'black' }}>正在測試：2024-05-21 更新版本</h1>
+      {/* 黃色測試標籤 */}
+      <h1 style={{ background: 'yellow', color: 'black', padding: '10px' }}>正在測試：V4 修正標籤版</h1>
 
-    <div style={{ textAlign: 'center', padding: '20px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h2 style={{ color: '#333' }}>現場簽到系統</h2>
-      
-      {/* 掃碼區 */}
-      <div style={{ width: '100%', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '12px', overflow: 'hidden' }}>
-        <Scanner onScan={handleScan} />
-      </div>
+      <div style={{ maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+        <h2 style={{ color: '#333' }}>現場簽到系統</h2>
+        
+        {/* 掃碼區 */}
+        <div style={{ width: '100%', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '12px', overflow: 'hidden' }}>
+          <Scanner onScan={handleScan} />
+        </div>
 
-      {/* 手動輸入區 */}
-      <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
-        <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#666' }}>快速簽到：請輸入電話後四位</p>
-        <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-          <input 
-            type="tel" 
-            value={phoneLastFour}
-            onChange={(e) => setPhoneLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            placeholder="5678"
-            style={{ padding: '10px', width: '80px', textAlign: 'center', fontSize: '1.2rem', borderRadius: '4px', border: '1px solid #ccc' }}
-          />
-          <button 
-            type="submit" 
-            disabled={isSearching || phoneLastFour.length !== 4}
-            style={{ padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-          >
-            {isSearching ? '...' : '確認'}
-          </button>
-        </form>
-      </div>
+        {/* 手動輸入區 */}
+        <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
+          <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#666' }}>快速簽到：請輸入電話後四位</p>
+          <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <input 
+              type="tel" 
+              value={phoneLastFour}
+              onChange={(e) => setPhoneLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="5678"
+              style={{ padding: '10px', width: '80px', textAlign: 'center', fontSize: '1.2rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            />
+            <button 
+              type="submit" 
+              disabled={isSearching || phoneLastFour.length !== 4}
+              style={{ padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              {isSearching ? '...' : '確認'}
+            </button>
+          </form>
+        </div>
 
-      {/* 訊息顯示區 */}
-      <div style={{ 
-        marginTop: '20px', 
-        padding: '15px', 
-        borderRadius: '8px',
-        fontSize: '1.1rem',
-        fontWeight: 'bold',
-        backgroundColor: message.includes('✅') ? '#d4edda' : (message.includes('❌') || message.includes('⚠️')) ? '#f8d7da' : '#e9ecef',
-        color: message.includes('✅') ? '#155724' : (message.includes('❌') || message.includes('⚠️')) ? '#721c24' : '#495057'
-      }}>
-        {message}
+        {/* 訊息顯示區 */}
+        <div style={{ 
+          marginTop: '20px', 
+          padding: '15px', 
+          borderRadius: '8px',
+          fontSize: '1.1rem',
+          fontWeight: 'bold',
+          backgroundColor: message.includes('✅') ? '#d4edda' : (message.includes('❌') || message.includes('⚠️')) ? '#f8d7da' : '#e9ecef',
+          color: message.includes('✅') ? '#155724' : (message.includes('❌') || message.includes('⚠️')) ? '#721c24' : '#495057'
+        }}>
+          {message}
+        </div>
       </div>
     </div>
   );
