@@ -30,13 +30,18 @@ function Checkin() {
       if (data.success === true) {
         setMessage(`✅ 簽到成功：${data.name || "已完成"}`);
       } else {
-        // 這裡會抓後端的 message
-        const errorDetail = data.message || data.error || "未知原因";
-        setMessage(`❌ 錯誤：${errorDetail}`);
+        // 修正點：補齊邏輯並確保錯誤訊息不為 undefined
+        const errorDetail = data.message || data.error || data.msg || "伺服器未回傳具體原因";
+        
+        if (!errorDetail || errorDetail === "undefined") {
+          setMessage(`❌ 錯誤：伺服器回傳空內容 (JSON: ${JSON.stringify(data)})`);
+        } else {
+          setMessage(`❌ 錯誤：${errorDetail}`);
+        }
       }
     } catch (err) {
       console.error("連線發生異常:", err);
-      setMessage('⚠️ 無法連線至伺服器');
+      setMessage('⚠️ 無法連線至伺服器，請檢查網路');
     }
   };
 
@@ -78,7 +83,7 @@ function Checkin() {
   return (
     <div style={{ textAlign: 'center', padding: '20px' }}>
       {/* 黃色測試標籤 */}
-      <h1 style={{ background: 'yellow', color: 'black', padding: '10px' }}>正在測試：V4 修正標籤版</h1>
+      <h1 style={{ background: 'yellow', color: 'black', padding: '10px' }}>正在測試：V5 括號修復版</h1>
 
       <div style={{ maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
         <h2 style={{ color: '#333' }}>現場簽到系統</h2>
