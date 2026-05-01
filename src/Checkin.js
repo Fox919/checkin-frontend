@@ -3,109 +3,92 @@ import { Scanner } from '@yudiel/react-qr-scanner';
 
 function Checkin() {
   const [message, setMessage] = useState('等待操作...');
-  const [phoneLastFour, setPhoneLastFour] = useState(''); // 新增：存儲輸入的 4 碼
-  const [isSearching, setIsSearching] = useState(false);  // 新增：搜尋讀取狀態
+  const [phoneLastFour, setPhoneLastFour] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
-  // --- 原有的掃碼簽到邏輯 ---
-  const handleScan = async (detectedCodes) => {
-    if (detectedCodes && detectedCodes.length > 0) {
-      const userId = detectedCodes[0].rawValue || 
-                     detectedCodes[0].value;
-      if (!userId) return;
-      
-      // 直接執行簽到
-      executeCheckin(userId);
-    }
-  };
-
-  // --- 新增：電話後四碼搜尋邏輯 ---
-  const handlePhoneSearch = async (e) => {
-    if (e) e.preventDefault(); // 阻止表單跳轉
-    
-    if (phoneLastFour.length !== 4) {
-      alert("請輸入電話後四位數字");
-      return;
-    }
-
-    setIsSearching(true);
-    setMessage('搜尋中...');
-
-    try {
-      // 1. 先搜尋該電話對應的 ID
-      const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
-      const data = await response.json();
-
-      if (response.ok && data.id) {
-        // 2. 找到 ID 後，直接呼叫簽到函數
-        executeCheckin(data.id);
-      } else {
-        // 這裡就是你之前會出現 undefined 的地方，現在後端有 error 欄位了
-        setMessage(`❌ 錯誤：${data.error || '找不到資料'}`);
-      }
-    } catch (err) {
-      setMessage('⚠️ 搜尋連線失敗');
-    } finally {
-      setIsSearching(false);
-      setPhoneLastFour(''); // 清空輸入框
-    }
-  };
-
-  // --- 抽離出的簽到執行邏輯 (掃碼跟電話搜尋共用) ---
+  // 1. 抽離簽到執行邏輯 (增加對 undefined 的防禦)
   const executeCheckin = async (userId) => {
     try {
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${userId}`, {
         method: 'POST'
       });
+      
       const data = await response.json();
       
       if (data.success) {
-        setMessage(`✅ 簽到成功：${data.name} (${data.user_type})`);
+        setMessage(`✅ 簽到成功：${data.name}`);
       } else {
-        setMessage(`❌ 簽到失敗：${data.message || '未知錯誤'}`);
+        // --- 關鍵修正：相容 error 或 message ---
+        const errorText = data.error || data.message || "未知簽到錯誤";
+        setMessage(`❌ 錯誤：${errorText}`);
       }
     } catch (err) {
-      setMessage('⚠️ 簽到連線失敗');
+      console.error("Checkin API Error:", err);
+      setMessage('⚠️ 簽到請求失敗，請檢查網路');
+    }
+  };
+
+  // 2. 處理電話搜尋
+  const handlePhoneSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (phoneLastFour.length !== 4) return;
+
+    setIsSearching(true);
+    setMessage('搜尋中...');
+
+    try {
+      const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
+      const data = await response.json();
+
+      if (response.ok && data.id) {
+        // 搜尋成功，接著執行簽到
+        await executeCheckin(data.id);
+      } else {
+        // --- 關鍵修正：相容 error 或 message ---
+        const errorText = data.error || data.message || "找不到該筆紀錄";
+        setMessage(`❌ 錯誤：${errorText}`);
+      }
+    } catch (err) {
+      console.error("Search API Error:", err);
+      setMessage('⚠️ 搜尋請求失敗');
+    } finally {
+      setIsSearching(false);
+      setPhoneLastFour('');
+    }
+  };
+
+  // 3. 處理掃碼
+  const handleScan = (detectedCodes) => {
+    if (detectedCodes && detectedCodes.length > 0) {
+      const userId = detectedCodes[0].rawValue || detectedCodes[0].value;
+      if (userId) executeCheckin(userId);
     }
   };
 
   return (
     <div style={{ textAlign: 'center', padding: '20px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h2>管理員簽到系統</h2>
+      <h2 style={{ color: '#333' }}>現場簽到系統</h2>
       
-      {/* 掃描區 */}
-      <div style={{ width: '100%', marginBottom: '30px', border: '1px solid #ccc', borderRadius: '8px', overflow: 'hidden' }}>
+      {/* 掃碼區 */}
+      <div style={{ width: '100%', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '12px', overflow: 'hidden' }}>
         <Scanner onScan={handleScan} />
-        <p style={{ backgroundColor: '#f8f9fa', margin: 0, padding: '10px', fontSize: '0.9rem', color: '#666' }}>
-          將二維碼對準鏡頭
-        </p>
-      </div>
-
-      <div style={{ margin: '20px 0', borderBottom: '1px solid #eee', pb: '20px' }}>
-        <p>或</p>
       </div>
 
       {/* 手動輸入區 */}
-      <div style={{ padding: '20px', backgroundColor: '#f0f4f8', borderRadius: '8px' }}>
-        <h4 style={{ marginTop: 0 }}>手動輸入電話後四位</h4>
-        <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+      <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
+        <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#666' }}>快速簽到：請輸入電話後四位</p>
+        <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
           <input 
             type="tel" 
-            placeholder="例如: 5678" 
             value={phoneLastFour}
             onChange={(e) => setPhoneLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            style={{ padding: '10px', width: '100px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '1.1rem', textAlign: 'center' }}
+            placeholder="5678"
+            style={{ padding: '10px', width: '80px', textAlign: 'center', fontSize: '1.2rem', borderRadius: '4px', border: '1px solid #ccc' }}
           />
           <button 
             type="submit" 
             disabled={isSearching || phoneLastFour.length !== 4}
-            style={{ 
-              padding: '10px 20px', 
-              backgroundColor: '#007bff', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px', 
-              cursor: 'pointer' 
-            }}
+            style={{ padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
           >
             {isSearching ? '...' : '確認'}
           </button>
@@ -114,13 +97,13 @@ function Checkin() {
 
       {/* 訊息顯示區 */}
       <div style={{ 
-        marginTop: '30px', 
+        marginTop: '20px', 
         padding: '15px', 
-        borderRadius: '8px', 
-        backgroundColor: message.includes('✅') ? '#d4edda' : message.includes('❌') ? '#f8d7da' : '#e2e3e5',
-        color: message.includes('✅') ? '#155724' : message.includes('❌') ? '#721c24' : '#383d41',
+        borderRadius: '8px',
+        fontSize: '1.1rem',
         fontWeight: 'bold',
-        fontSize: '1.1rem'
+        backgroundColor: message.includes('✅') ? '#d4edda' : (message.includes('❌') || message.includes('⚠️')) ? '#f8d7da' : '#e9ecef',
+        color: message.includes('✅') ? '#155724' : (message.includes('❌') || message.includes('⚠️')) ? '#721c24' : '#495057'
       }}>
         {message}
       </div>
