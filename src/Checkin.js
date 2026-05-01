@@ -82,6 +82,10 @@ function Checkin() {
   };
 
   return (
+    <div style={{ textAlign: 'center', padding: '20px' }}>
+    {/* 加入這一行，作為我們唯一的通訊密碼 */}
+    <h1 style={{ background: 'yellow', color: 'black' }}>正在測試：2024-05-21 更新版本</h1>
+
     <div style={{ textAlign: 'center', padding: '20px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h2 style={{ color: '#333' }}>現場簽到系統</h2>
       
