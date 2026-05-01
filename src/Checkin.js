@@ -2,134 +2,125 @@ import React, { useState } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 
 function Checkin() {
-  const [message, setMessage] = useState('等待操作...');
-  const [phoneLastFour, setPhoneLastFour] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [message, setMessage] = useState('請掃描您的 QR Code 進行簽到');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // 1. 抽離簽到執行邏輯
+  // 1. 核心簽到執行邏輯 (與 Kiosk 共用同樣的後端 API)
   const executeCheckin = async (userId) => {
+    if (isProcessing) return; // 防止重複觸發
+
     try {
-      console.log("正在發送簽到請求，ID 為:", userId);
-      setMessage('⌛ 正在處理簽到...');
+      setIsProcessing(true);
+      setMessage('⌛ 正在驗證簽到資訊...');
 
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${userId}`, {
         method: 'POST'
       });
       
       const text = await response.text();
-      console.log("後端原始回傳:", text);
-
       let data;
+
       try {
         data = JSON.parse(text);
       } catch (e) {
-        setMessage(`❌ 伺服器錯誤：回傳格式不是 JSON`);
+        setMessage(`❌ 伺服器錯誤：回傳格式異常`);
+        setIsProcessing(false);
         return;
       }
 
       if (data.success === true) {
         setMessage(`✅ 簽到成功：${data.name || "已完成"}`);
+        // 3秒後恢復初始狀態，準備下一位簽到
+        setTimeout(() => {
+          setMessage('請掃描您的 QR Code 進行簽到');
+          setIsProcessing(false);
+        }, 3000);
       } else {
-        // 修正點：補齊邏輯並確保錯誤訊息不為 undefined
-        const errorDetail = data.message || data.error || data.msg || "伺服器未回傳具體原因";
-        
-        if (!errorDetail || errorDetail === "undefined") {
-          setMessage(`❌ 錯誤：伺服器回傳空內容 (JSON: ${JSON.stringify(data)})`);
-        } else {
-          setMessage(`❌ 錯誤：${errorDetail}`);
-        }
+        const errorDetail = data.message || data.error || "簽到失敗";
+        setMessage(`❌ 錯誤：${errorDetail}`);
+        // 失敗時給予較長的顯示時間，手動恢復處理狀態
+        setTimeout(() => setIsProcessing(false), 2000);
       }
     } catch (err) {
       console.error("連線發生異常:", err);
       setMessage('⚠️ 無法連線至伺服器，請檢查網路');
-    }
-  };
-//3534534534534
-  // 2. 處理電話搜尋
-  const handlePhoneSearch = async (e) => {
-    if (e) e.preventDefault();
-    if (phoneLastFour.length !== 4) return;
-
-    setIsSearching(true);
-    setMessage('🔍 正在搜尋中...');
-
-    try {
-      const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
-      const data = await response.json();
-
-      if (data.success === true && data.id) {
-        console.log("搜尋成功，準備簽到:", data.name);
-        await executeCheckin(data.id); 
-      } else {
-        const errorMsg = data.error || data.message || "找不到登記資料";
-        setMessage(`❌ 搜尋失敗：${errorMsg}`);
-      }
-    } catch (err) {
-      setMessage('⚠️ 搜尋通訊異常');
-    } finally {
-      setIsSearching(false);
-      setPhoneLastFour(''); 
+      setIsProcessing(false);
     }
   };
 
-  // 3. 處理掃碼
+  // 2. 處理掃碼事件
   const handleScan = (detectedCodes) => {
-    if (detectedCodes && detectedCodes.length > 0) {
+    if (detectedCodes && detectedCodes.length > 0 && !isProcessing) {
+      // 取得掃描結果的值
       const userId = detectedCodes[0].rawValue || detectedCodes[0].value;
-      if (userId) executeCheckin(userId);
+      if (userId) {
+        executeCheckin(userId);
+      }
     }
   };
 
   return (
-    <div style={{ textAlign: 'center', padding: '20px' }}>
-      {/* 黃色測試標籤 */}
-      <h1 style={{ background: 'yellow', color: 'black', padding: '10px' }}>正在測試：V5 括號修復版</h1>
+    <div style={{ textAlign: 'center', padding: '20px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h2 style={{ color: '#333', marginBottom: '20px' }}>📷 掃碼簽到頁面</h2>
 
-      <div style={{ maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-        <h2 style={{ color: '#333' }}>現場簽到系統</h2>
-        
-        {/* 掃碼區 */}
-        <div style={{ width: '100%', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '12px', overflow: 'hidden' }}>
-          <Scanner onScan={handleScan} />
-        </div>
+      {/* 掃碼區域 */}
+      <div style={{ 
+        width: '100%', 
+        aspectRatio: '1/1',
+        marginBottom: '20px', 
+        border: '2px solid #007bff', 
+        borderRadius: '16px', 
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#000'
+      }}>
+        {/* 如果正在處理中，可以加一個透明遮罩防止重複掃描 */}
+        {isProcessing && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 10,
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontWeight: 'bold'
+          }}>
+            處理中...
+          </div>
+        )}
+        <Scanner onScan={handleScan} />
+      </div>
 
-        {/* 手動輸入區 */}
-        <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
-          <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#666' }}>快速簽到：請輸入電話後四位</p>
-          <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            <input 
-              type="tel" 
-              value={phoneLastFour}
-              onChange={(e) => setPhoneLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="5678"
-              style={{ padding: '10px', width: '80px', textAlign: 'center', fontSize: '1.2rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            />
-            <button 
-              type="submit" 
-              disabled={isSearching || phoneLastFour.length !== 4}
-              style={{ padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              {isSearching ? '...' : '確認'}
-            </button>
-          </form>
-        </div>
+      <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px' }}>
+        請將登記後的 QR Code 對準攝影機
+      </p>
 
-        {/* 訊息顯示區 */}
-        <div style={{ 
-          marginTop: '20px', 
-          padding: '15px', 
-          borderRadius: '8px',
-          fontSize: '1.1rem',
-          fontWeight: 'bold',
-          backgroundColor: message.includes('✅') ? '#d4edda' : (message.includes('❌') || message.includes('⚠️')) ? '#f8d7da' : '#e9ecef',
-          color: message.includes('✅') ? '#155724' : (message.includes('❌') || message.includes('⚠️')) ? '#721c24' : '#495057'
-        }}>
-          {message}
-        </div>
+      {/* 訊息顯示區 */}
+      <div style={{ 
+        padding: '20px', 
+        borderRadius: '12px',
+        fontSize: '1.2rem',
+        fontWeight: 'bold',
+        minHeight: '80px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: message.includes('✅') ? '#d4edda' : (message.includes('❌') || message.includes('⚠️')) ? '#f8d7da' : '#f8f9fa',
+        color: message.includes('✅') ? '#155724' : (message.includes('❌') || message.includes('⚠️')) ? '#721c24' : '#495057',
+        border: '1px solid #eee',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+      }}>
+        {message}
+      </div>
+
+      {/* 頁面引導備註 */}
+      <div style={{ marginTop: '30px', fontSize: '0.85rem', color: '#999' }}>
+        提示：若無法掃描，請點擊上方導航的「快速簽到」使用電話號碼
       </div>
     </div>
   );
 }
 
 export default Checkin;
-//gdgdgdfgd
