@@ -14,18 +14,19 @@ function Checkin() {
       });
       
       const data = await response.json();
-      
-      if (data.success) {
-        setMessage(`✅ 簽到成功：${data.name}`);
+      console.log("簽到回傳原始資料:", data); // 你可以在瀏覽器 F12 看到這個
+
+      if (data.success === true) {
+        setMessage(`✅ 簽到成功：${data.name || ''}`);
       } else {
-        // --- 這裡是最關鍵的修改 ---
-        // 你的後端回傳的是 { success: false, message: "..." }
-        // 所以這裡必須讀取 data.message
-        const errorText = data.message || data.error || "簽到失敗";
+        // --- 這裡是最強大的防禦邏輯 ---
+        // 優先找 message，再找 error，如果都沒有就找後端有沒有給文字
+        const errorText = data.message || data.error || (typeof data === 'string' ? data : "簽到失敗(原因不明)");
         setMessage(`❌ 錯誤：${errorText}`);
       }
     } catch (err) {
-      setMessage('⚠️ 簽到請求失敗');
+      console.error("API 錯誤:", err);
+      setMessage('⚠️ 連線失敗，請檢查網路');
     }
   };
 
