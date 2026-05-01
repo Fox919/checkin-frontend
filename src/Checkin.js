@@ -50,40 +50,26 @@ function Checkin() {
     if (phoneLastFour.length !== 4) return;
 
     setIsSearching(true);
-    setMessage('搜尋中...');
+    setMessage('🔍 正在搜尋中...'); // 先給一個明確狀態
 
     try {
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
-      
-      // 1. 先看後端到底傳回什麼「文字」
-      const rawText = await response.text();
-      console.log("後端原始回傳內容:", rawText);
+      const data = await response.json();
 
-      // 2. 嘗試解析成 JSON
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch (parseErr) {
-        setMessage(`❌ 伺服器錯誤：回傳內容不是 JSON。內容為：${rawText.substring(0, 20)}...`);
-        return;
-      }
-
-      // 3. 根據解析後的 data 進行條件判斷
-      if (data && data.success === true && data.id) {
-        // 如果搜尋成功，拿到 ID，去跑簽到邏輯
-        await executeCheckin(data.id);
+      if (data.success === true && data.id) {
+        // 關鍵：在發起簽到前，先暫停一下或確保 executeCheckin 承接後續
+        console.log("搜尋成功，準備簽到:", data.name);
+        await executeCheckin(data.id); 
       } else {
-        // ❌ 這裡就是產生 undefined 的元兇 ❌
-        // 我們強制把所有可能的 Key 都列出來，最後加上 String() 保險
-        const finalError = data.error || data.message || data.msg || "找不到資料或格式錯誤";
-        setMessage(`❌ 錯誤：${String(finalError)}`);
+        const errorMsg = data.error || data.message || "找不到登記資料";
+        setMessage(`❌ 搜尋失敗：${errorMsg}`);
       }
     } catch (err) {
-      console.error("發生錯誤:", err);
-      setMessage('⚠️ 搜尋連線失敗');
+      setMessage('⚠️ 搜尋通訊異常');
     } finally {
       setIsSearching(false);
-      setPhoneLastFour('');
+      // 建議：先不要清空 phoneLastFour，讓使用者知道剛才輸入了什麼
+      // setPhoneLastFour(''); 
     }
   };
 
