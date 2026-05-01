@@ -55,18 +55,20 @@ function Checkin() {
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
       const data = await response.json();
 
-      // 修正邏輯：後端搜尋成功會給 id
-      if (response.ok && data.id) {
-        // 搜尋成功後，直接呼叫上面的「簽到執行邏輯」
+      // --- 關鍵診斷點 ---
+      console.log("搜尋結果:", data); 
+
+      if (data.success === true && data.id) {
+        // 搜尋成功，拿到 ID 了！現在「立刻」去跑簽到函式
         await executeCheckin(data.id);
       } else {
-        // 搜尋失敗（如：找不到人），後端會給 error 欄位
-        const errorMsg = data.error || data.message || "找不到該筆紀錄";
-        setMessage(`❌ 錯誤：${errorMsg}`);
+        // 這裡就是會噴 undefined 的地方
+        // 如果後端給的是 error，但你寫 data.message，就會變成 undefined
+        const errorMsg = data.error || data.message || "找不到此人";
+        setMessage(`❌ 搜尋失敗：${errorMsg}`);
       }
     } catch (err) {
-      console.error("Search API Error:", err);
-      setMessage('⚠️ 搜尋請求失敗');
+      setMessage('⚠️ 網路連線失敗');
     } finally {
       setIsSearching(false);
       setPhoneLastFour('');
