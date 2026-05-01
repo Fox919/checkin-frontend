@@ -18,13 +18,14 @@ function Checkin() {
       if (data.success) {
         setMessage(`✅ 簽到成功：${data.name}`);
       } else {
-        // --- 關鍵修正：相容 error 或 message ---
-        const errorText = data.error || data.message || "未知簽到錯誤";
+        // --- 這裡是最關鍵的修改 ---
+        // 你的後端回傳的是 { success: false, message: "..." }
+        // 所以這裡必須讀取 data.message
+        const errorText = data.message || data.error || "簽到失敗";
         setMessage(`❌ 錯誤：${errorText}`);
       }
     } catch (err) {
-      console.error("Checkin API Error:", err);
-      setMessage('⚠️ 簽到請求失敗，請檢查網路');
+      setMessage('⚠️ 簽到請求失敗');
     }
   };
 
