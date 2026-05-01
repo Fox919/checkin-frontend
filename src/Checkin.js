@@ -43,6 +43,7 @@ function Checkin() {
   };
 
   // 2. 處理電話搜尋
+ // 2. 處理電話搜尋
   const handlePhoneSearch = async (e) => {
     if (e) e.preventDefault();
     if (phoneLastFour.length !== 4) return;
@@ -54,13 +55,14 @@ function Checkin() {
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/search-by-phone/${phoneLastFour}`);
       const data = await response.json();
 
+      // 修正邏輯：後端搜尋成功會給 id
       if (response.ok && data.id) {
-        // 搜尋成功，接著執行簽到
+        // 搜尋成功後，直接呼叫上面的「簽到執行邏輯」
         await executeCheckin(data.id);
       } else {
-        // --- 關鍵修正：相容 error 或 message ---
-        const errorText = data.error || data.message || "找不到該筆紀錄";
-        setMessage(`❌ 錯誤：${errorText}`);
+        // 搜尋失敗（如：找不到人），後端會給 error 欄位
+        const errorMsg = data.error || data.message || "找不到該筆紀錄";
+        setMessage(`❌ 錯誤：${errorMsg}`);
       }
     } catch (err) {
       console.error("Search API Error:", err);
