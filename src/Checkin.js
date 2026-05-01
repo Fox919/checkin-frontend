@@ -9,24 +9,36 @@ function Checkin() {
   // 1. 抽離簽到執行邏輯 (增加對 undefined 的防禦)
   const executeCheckin = async (userId) => {
     try {
+      console.log("正在發送簽到請求，ID 為:", userId);
+      
       const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${userId}`, {
         method: 'POST'
       });
       
-      const data = await response.json();
-      console.log("簽到回傳原始資料:", data); // 你可以在瀏覽器 F12 看到這個
+      // 先取得原始文字，防止後端回傳 HTML 導致解析 JSON 失敗
+      const text = await response.text();
+      console.log("後端原始回傳:", text);
 
-      if (data.success === true) {
-        setMessage(`✅ 簽到成功：${data.name || ''}`);
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        setMessage(`❌ 伺服器錯誤：回傳格式不是 JSON (請檢查後端日誌)`);
+        return;
+      }
+
+      if (data.success === true || response.ok) {
+        // 如果 response.ok 是 true 且沒給 name，就顯示 "OK"
+        const displayName = data.name || (data.success ? "成功" : "");
+        setMessage(`✅ 簽到成功：${displayName}`);
       } else {
-        // --- 這裡是最強大的防禦邏輯 ---
-        // 優先找 message，再找 error，如果都沒有就找後端有沒有給文字
-        const errorText = data.message || data.error || (typeof data === 'string' ? data : "簽到失敗(原因不明)");
-        setMessage(`❌ 錯誤：${errorText}`);
+        // 這裡會把所有可能的 Key 都跑一遍
+        const errorDetail = data.message || data.error || data.msg || text || "未知原因";
+        setMessage(`❌ 錯誤：${errorDetail}`);
       }
     } catch (err) {
-      console.error("API 錯誤:", err);
-      setMessage('⚠️ 連線失敗，請檢查網路');
+      console.error("連線發生異常:", err);
+      setMessage('⚠️ 無法連線至伺服器，請確認網路或後端狀態');
     }
   };
 
