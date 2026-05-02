@@ -69,7 +69,7 @@ const Register = ({ autoCheckin }) => {
   const [formData, setFormData] = useState({
     lastName: '', firstName: '', gender: '', 
     phone: '', email: '', 
-    contact_method: [], // 修改為陣列
+    contact_method: [], 
     city: '', discovery_source: '', referrer_name: '', other_source_text: '',
     youtube_subscribed: false, user_type: 'guest'
   });
@@ -92,7 +92,6 @@ const Register = ({ autoCheckin }) => {
     }));
   };
 
-  // 專門處理聯絡偏好的多選邏輯
   const handleContactChange = (e) => {
     const { value, checked } = e.target;
     let updatedMethods = [...formData.contact_method];
@@ -107,7 +106,6 @@ const Register = ({ autoCheckin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // 如果沒有選任何聯絡方式，給個提示（可選）
     if (formData.contact_method.length === 0) {
       alert("請至少選擇一種聯絡方式 / Please select at least one contact method.");
       return;
@@ -180,8 +178,8 @@ const Register = ({ autoCheckin }) => {
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} required style={inputStyle} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
-          {/* 聯絡偏好多選區區塊 */}
-          <div style={{ padding: '5px', border: '1px solid #eee', borderRadius: '6px', padding: '10px' }}>
+          {/* 修正後的聯絡偏好區塊：移除重複的 padding */}
+          <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px' }}>
             <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
@@ -236,7 +234,7 @@ const Register = ({ autoCheckin }) => {
         </div>
       )}
 
-      {message && <p style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', backgroundColor: message.includes('✅') || message.includes('success') || message.includes('成功') ? '#d4edda' : '#f8d7da', color: message.includes('✅') || message.includes('success') || message.includes('成功') ? '#155724' : '#721c24', fontWeight: 'bold' }}>{message}</p>}
+      {message && <p style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', backgroundColor: message.includes('success') || message.includes('成功') ? '#d4edda' : '#f8d7da', color: message.includes('success') || message.includes('成功') ? '#155724' : '#721c24', fontWeight: 'bold' }}>{message}</p>}
     </div>
   );
 };
