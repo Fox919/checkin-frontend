@@ -8,8 +8,8 @@ const t = {
     lastName: "姓", firstName: "名",
     gender: "性別", male: "男", female: "女",
     phone: "電話", email: "電子郵件",
-    contactPref: "您願意以何種形式收到訊息？",
-    call: "電話通知", text: "簡訊", emailPref: "電子郵件",
+    contactPref: "您願意以何種形式收到訊息？(可多選)",
+    call: "電話", text: "簡訊", emailPref: "電郵",
     city: "居住城市",
     source: "您如何得知菩提禪修？",
     google: "谷歌 / YouTube", facebook: "臉書 / Instagram",
@@ -28,8 +28,8 @@ const t = {
     lastName: "姓", firstName: "名",
     gender: "性别", male: "男", female: "女",
     phone: "电话", email: "电子邮件",
-    contactPref: "您愿意以何种形式收到信息？",
-    call: "电话通知", text: "短信", emailPref: "电子邮件",
+    contactPref: "您愿意以何种形式收到信息？(可多选)",
+    call: "电话", text: "短信", emailPref: "电邮",
     city: "居住城市",
     source: "您如何得知菩提禅修？",
     google: "谷歌 / YouTube", facebook: "脸书 / Instagram",
@@ -48,7 +48,7 @@ const t = {
     lastName: "Last Name", firstName: "First Name",
     gender: "Gender", male: "Male", female: "Female",
     phone: "Phone", email: "Email",
-    contactPref: "How would you like to receive updates?",
+    contactPref: "How would you like to receive updates? (Multiple)",
     call: "Call", text: "Text", emailPref: "E-mail",
     city: "City",
     source: "How did you hear about Bodhi Meditation?",
@@ -68,7 +68,8 @@ const Register = ({ autoCheckin }) => {
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const [formData, setFormData] = useState({
     lastName: '', firstName: '', gender: '', 
-    phone: '', email: '', contact_method: '',
+    phone: '', email: '', 
+    contact_method: [], // 修改為陣列
     city: '', discovery_source: '', referrer_name: '', other_source_text: '',
     youtube_subscribed: false, user_type: 'guest'
   });
@@ -91,8 +92,27 @@ const Register = ({ autoCheckin }) => {
     }));
   };
 
+  // 專門處理聯絡偏好的多選邏輯
+  const handleContactChange = (e) => {
+    const { value, checked } = e.target;
+    let updatedMethods = [...formData.contact_method];
+    if (checked) {
+      updatedMethods.push(value);
+    } else {
+      updatedMethods = updatedMethods.filter(m => m !== value);
+    }
+    setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 如果沒有選任何聯絡方式，給個提示（可選）
+    if (formData.contact_method.length === 0) {
+      alert("請至少選擇一種聯絡方式 / Please select at least one contact method.");
+      return;
+    }
+
     setQrValue('');
     setMessage('Processing...');
     setIsSubmitting(true);
@@ -106,7 +126,7 @@ const Register = ({ autoCheckin }) => {
 
       const data = await response.json();
 
-      if (data.error === 'already_registered' || response.status === 409) {
+      if (response.status === 409) {
         setIsSubmitting(false);
         const fullName = `${formData.lastName}${formData.firstName}`;
         if (window.confirm(`提醒：${fullName} 已登記過。是否前往簽到頁？`)) {
@@ -146,36 +166,38 @@ const Register = ({ autoCheckin }) => {
       {!qrValue ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
           
-          {/* 姓名 */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <input name="lastName" placeholder={translations.lastName} value={formData.lastName} onChange={handleChange} required style={inputStyle} />
             <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} required style={inputStyle} />
           </div>
 
-          {/* 性別 */}
           <div style={{ padding: '5px' }}>
             <span style={{ marginRight: '15px' }}>{translations.gender}:</span>
-            <label><input type="radio" name="gender" value="Male" onChange={handleChange} required /> {translations.male}</label>
-            <label style={{ marginLeft: '15px' }}><input type="radio" name="gender" value="Female" onChange={handleChange} /> {translations.female}</label>
+            <label style={{ cursor: 'pointer' }}><input type="radio" name="gender" value="Male" onChange={handleChange} required /> {translations.male}</label>
+            <label style={{ marginLeft: '15px', cursor: 'pointer' }}><input type="radio" name="gender" value="Female" onChange={handleChange} /> {translations.female}</label>
           </div>
 
-          {/* 電話與電郵 */}
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} required style={inputStyle} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
-          {/* 聯絡偏好 */}
-          <label style={{ fontSize: '0.9rem', color: '#666' }}>{translations.contactPref}</label>
-          <select name="contact_method" value={formData.contact_method} onChange={handleChange} required style={inputStyle}>
-            <option value="">-- Select --</option>
-            <option value="Call">{translations.call}</option>
-            <option value="Text">{translations.text}</option>
-            <option value="Email">{translations.emailPref}</option>
-          </select>
+          {/* 聯絡偏好多選區區塊 */}
+          <div style={{ padding: '5px', border: '1px solid #eee', borderRadius: '6px', padding: '10px' }}>
+            <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
+                <input type="checkbox" value="Call" checked={formData.contact_method.includes('Call')} onChange={handleContactChange} /> {translations.call}
+              </label>
+              <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
+                <input type="checkbox" value="Text" checked={formData.contact_method.includes('Text')} onChange={handleContactChange} /> {translations.text}
+              </label>
+              <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
+                <input type="checkbox" value="Email" checked={formData.contact_method.includes('Email')} onChange={handleContactChange} /> {translations.emailPref}
+              </label>
+            </div>
+          </div>
 
-          {/* 城市 */}
           <input name="city" placeholder={translations.city} value={formData.city} onChange={handleChange} required style={inputStyle} />
 
-          {/* 得知管道 */}
           <label style={{ fontSize: '0.9rem', color: '#666' }}>{translations.source}</label>
           <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
             <option value="">-- Select --</option>
@@ -187,7 +209,6 @@ const Register = ({ autoCheckin }) => {
             <option value="Other">{translations.other}</option>
           </select>
 
-          {/* 介紹人/其他來源補充 */}
           {formData.discovery_source === 'Friend' && (
             <input name="referrer_name" placeholder={translations.referrer} value={formData.referrer_name} onChange={handleChange} required style={inputStyle} />
           )}
@@ -195,7 +216,6 @@ const Register = ({ autoCheckin }) => {
             <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={inputStyle} />
           )}
 
-          {/* YouTube 訂閱 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px' }}>
             <input type="checkbox" name="youtube_subscribed" checked={formData.youtube_subscribed} onChange={handleChange} id="yt" />
             <label htmlFor="yt" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>{translations.subscribe}</label>
@@ -216,7 +236,7 @@ const Register = ({ autoCheckin }) => {
         </div>
       )}
 
-      {message && <p style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', backgroundColor: message.includes('✅') || message.includes('success') ? '#d4edda' : '#f8d7da', color: message.includes('✅') || message.includes('success') ? '#155724' : '#721c24', fontWeight: 'bold' }}>{message}</p>}
+      {message && <p style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', backgroundColor: message.includes('✅') || message.includes('success') || message.includes('成功') ? '#d4edda' : '#f8d7da', color: message.includes('✅') || message.includes('success') || message.includes('成功') ? '#155724' : '#721c24', fontWeight: 'bold' }}>{message}</p>}
     </div>
   );
 };
