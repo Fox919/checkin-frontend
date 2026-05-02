@@ -103,13 +103,40 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
   };
 
+  const validateForm = () => {
+    // 聯絡方式檢查
+    if (formData.contact_method.length === 0) {
+      alert("請至少選擇一種聯絡方式 / Please select at least one contact method.");
+      return false;
+    }
+
+    const isEmailSelected = formData.contact_method.includes('Email');
+    const emailValue = formData.email ? formData.email.trim() : "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // Email 條件檢查
+    if (isEmailSelected) {
+      if (!emailValue) {
+        alert("您已選擇以 Email 接收訊息，請填寫電子郵件地址。/ Please provide your Email address.");
+        return false;
+      }
+      if (!emailRegex.test(emailValue)) {
+        alert("電子郵件格式不正確。/ Invalid email format.");
+        return false;
+      }
+    } else if (emailValue && !emailRegex.test(emailValue)) {
+      // 沒勾選 Email 但填了錯誤格式
+      alert("電子郵件格式不正確，若不方便提供請清空該欄位。/ Invalid email format. Please correct it or leave it blank.");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (formData.contact_method.length === 0) {
-      alert("請至少選擇一種聯絡方式 / Please select at least one contact method.");
-      return;
-    }
+    if (!validateForm()) return;
 
     setQrValue('');
     setMessage('Processing...');
@@ -136,6 +163,7 @@ const Register = ({ autoCheckin }) => {
       if (response.ok) {
         setQrValue(String(data.id));
         setMessage(translations.success);
+        window.scrollTo(0, 0); // 提交成功後滾回頂部看結果
       } else {
         setMessage(`${translations.error}: ${data.error || 'Unknown'}`);
       }
@@ -176,10 +204,21 @@ const Register = ({ autoCheckin }) => {
           </div>
 
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} required style={inputStyle} />
-          <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
+          
+          {/* Email 輸入框提示：如果是被勾選的，顯示必填感 */}
+          <input 
+            name="email" 
+            type="email" 
+            placeholder={formData.contact_method.includes('Email') ? `${translations.email} *` : translations.email} 
+            value={formData.email} 
+            onChange={handleChange} 
+            style={{
+              ...inputStyle,
+              border: (formData.contact_method.includes('Email') && !formData.email) ? '1px solid #ff4d4f' : '1px solid #ccc'
+            }} 
+          />
 
-          {/* 修正後的聯絡偏好區塊：移除重複的 padding */}
-          <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px' }}>
+          <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
             <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
@@ -228,13 +267,24 @@ const Register = ({ autoCheckin }) => {
           <QRCodeCanvas value={qrValue} size={220} />
           <h3 style={{ marginTop: '20px', color: '#2c3e50' }}>{formData.lastName}{formData.firstName}</h3>
           <p style={{ color: '#666' }}>{translations.success}</p>
-          <button onClick={() => setQrValue('')} style={{ marginTop: '20px', padding: '12px', width: '100%', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+          <button onClick={() => { setQrValue(''); setMessage(''); }} style={{ marginTop: '20px', padding: '12px', width: '100%', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             {translations.retry}
           </button>
         </div>
       )}
 
-      {message && <p style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', backgroundColor: message.includes('success') || message.includes('成功') ? '#d4edda' : '#f8d7da', color: message.includes('success') || message.includes('成功') ? '#155724' : '#721c24', fontWeight: 'bold' }}>{message}</p>}
+      {message && (
+        <p style={{ 
+          marginTop: '20px', 
+          padding: '15px', 
+          borderRadius: '8px', 
+          backgroundColor: (message.includes('success') || message.includes('成功')) ? '#d4edda' : '#f8d7da', 
+          color: (message.includes('success') || message.includes('成功')) ? '#155724' : '#721c24', 
+          fontWeight: 'bold' 
+        }}>
+          {message}
+        </p>
+      )}
     </div>
   );
 };
