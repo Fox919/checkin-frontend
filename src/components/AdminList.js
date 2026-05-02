@@ -36,7 +36,7 @@ const AdminList = () => {
   };
 
   const handlePasswordSubmit = () => {
-    if (tempPassword === "123456") {
+    if (tempPassword === "my789") {
       if (actionType === 'login') setAuthorized(true);
       if (actionType === 'export') exportToCSV();
       setIsModalOpen(false);
