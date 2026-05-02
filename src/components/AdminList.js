@@ -194,7 +194,7 @@ const AdminList = () => {
                 <th style={tableHeaderStyle}>身分</th>
                 <th style={tableHeaderStyle}>電話/城市</th>
                 <th style={tableHeaderStyle}>管道/介紹人</th>
-                <th style={tableHeaderStyle}>接待人員 (方案A)</th>
+                <th style={tableHeaderStyle}>接待人員 </th>
                 <th style={tableHeaderStyle}>備註</th>
                 <th style={tableHeaderStyle}>操作</th>
               </tr>
