@@ -6,17 +6,15 @@ const t = {
     title: "活動人員登記",
     checkinTitle: "現場登記與簽到",
     lastName: "姓", firstName: "名",
-    gender: "性別", male: "男", female: "女",
+    gender: "性別", male: "男", female: "女", otherGender: "不便透露",
     phone: "電話", email: "電子郵件",
     contactPref: "您願意以何種形式收到訊息？(可多選)",
     call: "電話", text: "簡訊", emailPref: "電郵",
-    city: "居住城市",
     source: "您如何得知菩提禪修？",
     google: "谷歌 / YouTube", facebook: "臉書 / Instagram",
     friend: "朋友 / 親戚", magazine: "雜誌", website: "官方網站", other: "其他",
     referrer: "介紹人姓名",
     otherSource: "請註明來源",
-    subscribe: "訂閱金菩提宗師 YouTube 頻道",
     type: "身分", guest: "來賓", volunteer: "義工", student: "學員",
     submit: "提交登記並生成碼",
     success: "登記成功！請截圖保存下方的二維碼。",
@@ -26,17 +24,15 @@ const t = {
     title: "活动人员登记",
     checkinTitle: "现场登记与签到",
     lastName: "姓", firstName: "名",
-    gender: "性别", male: "男", female: "女",
+    gender: "性别", male: "男", female: "女", otherGender: "不便透露",
     phone: "电话", email: "电子邮件",
     contactPref: "您愿意以何种形式收到信息？(可多选)",
     call: "电话", text: "短信", emailPref: "电邮",
-    city: "居住城市",
     source: "您如何得知菩提禅修？",
     google: "谷歌 / YouTube", facebook: "脸书 / Instagram",
     friend: "朋友 / 亲戚", magazine: "杂志", website: "官方网站", other: "其他",
     referrer: "介绍人姓名",
     otherSource: "请注明来源",
-    subscribe: "订阅金菩提宗师 YouTube 频道",
     type: "身分", guest: "来宾", volunteer: "义工", student: "学员",
     submit: "提交登记并生成码",
     success: "登记成功！请截图保存下方的二维码。",
@@ -46,17 +42,15 @@ const t = {
     title: "Registration",
     checkinTitle: "On-site Registration",
     lastName: "Last Name", firstName: "First Name",
-    gender: "Gender", male: "Male", female: "Female",
+    gender: "Gender", male: "Male", female: "Female", otherGender: "Prefer not to say",
     phone: "Phone", email: "Email",
     contactPref: "How would you like to receive updates? (Multiple)",
     call: "Call", text: "Text", emailPref: "E-mail",
-    city: "City",
     source: "How did you hear about Bodhi Meditation?",
     google: "Google / YouTube", facebook: "Facebook / Instagram",
     friend: "Friend / Relative", magazine: "Magazine", website: "Official Website", other: "Other",
     referrer: "Referrer Name",
     otherSource: "Please specify",
-    subscribe: "Subscribe to Grandmaster JinBodhi's YouTube",
     type: "Role", guest: "Guest", volunteer: "Volunteer", student: "Student",
     submit: "Submit & Generate QR",
     success: "Successful! Please screenshot your QR code.",
@@ -70,8 +64,8 @@ const Register = ({ autoCheckin }) => {
     lastName: '', firstName: '', gender: '', 
     phone: '', email: '', 
     contact_method: [], 
-    city: '', discovery_source: '', referrer_name: '', other_source_text: '',
-    youtube_subscribed: false, user_type: 'guest'
+    discovery_source: '', referrer_name: '', other_source_text: '',
+    user_type: 'guest'
   });
   const [qrValue, setQrValue] = useState('');
   const [message, setMessage] = useState('');
@@ -103,11 +97,8 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
   };
 
-  // --- 新增：預先檢查人員是否已登記 ---
   const checkUserExists = async () => {
     const { lastName, firstName, phone } = formData;
-    
-    // 只有當三個關鍵欄位都有值且電話長度足夠時才執行
     if (lastName.trim() && firstName.trim() && phone.trim().length >= 8) {
       try {
         const response = await fetch('https://checkin-system-production-2a74.up.railway.app/check-duplicate', {
@@ -116,7 +107,6 @@ const Register = ({ autoCheckin }) => {
           body: JSON.stringify({ lastName, firstName, phone }),
         });
         const data = await response.json();
-        
         if (data.isDuplicate) {
           if (window.confirm(`提醒：${lastName}${firstName} (電話: ${phone}) 已經登記過了。\n是否要直接前往簽到頁面？`)) {
             window.location.href = '/checkin';
@@ -133,7 +123,6 @@ const Register = ({ autoCheckin }) => {
       alert("請至少選擇一種聯絡方式 / Please select at least one contact method.");
       return false;
     }
-
     const isEmailSelected = formData.contact_method.includes('Email');
     const emailValue = formData.email ? formData.email.trim() : "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,7 +137,7 @@ const Register = ({ autoCheckin }) => {
         return false;
       }
     } else if (emailValue && !emailRegex.test(emailValue)) {
-      alert("電子郵件格式不正確，若不方便提供請清空該欄位。/ Invalid email format. Please correct it or leave it blank.");
+      alert("電子郵件格式不正確，若不方便提供請清空該欄位。/ Invalid email format.");
       return false;
     }
     return true;
@@ -218,9 +207,10 @@ const Register = ({ autoCheckin }) => {
           </div>
 
           <div style={{ padding: '5px' }}>
-            <span style={{ marginRight: '15px' }}>{translations.gender}:</span>
+            <span style={{ marginRight: '10px' }}>{translations.gender}:</span>
             <label style={{ cursor: 'pointer' }}><input type="radio" name="gender" value="Male" onChange={handleChange} required /> {translations.male}</label>
-            <label style={{ marginLeft: '15px', cursor: 'pointer' }}><input type="radio" name="gender" value="Female" onChange={handleChange} /> {translations.female}</label>
+            <label style={{ marginLeft: '10px', cursor: 'pointer' }}><input type="radio" name="gender" value="Female" onChange={handleChange} /> {translations.female}</label>
+            <label style={{ marginLeft: '10px', cursor: 'pointer' }}><input type="radio" name="gender" value="Other" onChange={handleChange} /> {translations.otherGender}</label>
           </div>
 
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
@@ -240,19 +230,17 @@ const Register = ({ autoCheckin }) => {
           <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
             <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
+              <label style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
                 <input type="checkbox" value="Call" checked={formData.contact_method.includes('Call')} onChange={handleContactChange} /> {translations.call}
               </label>
-              <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
+              <label style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
                 <input type="checkbox" value="Text" checked={formData.contact_method.includes('Text')} onChange={handleContactChange} /> {translations.text}
               </label>
-              <label style={{ cursor: 'pointer', fontSize: '0.95rem' }}>
+              <label style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
                 <input type="checkbox" value="Email" checked={formData.contact_method.includes('Email')} onChange={handleContactChange} /> {translations.emailPref}
               </label>
             </div>
           </div>
-
-          <input name="city" placeholder={translations.city} value={formData.city} onChange={handleChange} required style={inputStyle} />
 
           <label style={{ fontSize: '0.9rem', color: '#666' }}>{translations.source}</label>
           <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
@@ -271,11 +259,6 @@ const Register = ({ autoCheckin }) => {
           {formData.discovery_source === 'Other' && (
             <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={inputStyle} />
           )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px' }}>
-            <input type="checkbox" name="youtube_subscribed" checked={formData.youtube_subscribed} onChange={handleChange} id="yt" />
-            <label htmlFor="yt" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>{translations.subscribe}</label>
-          </div>
 
           <button type="submit" disabled={isSubmitting} style={{ padding: '15px', background: isSubmitting ? '#ccc' : '#28a745', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '10px' }}>
             {isSubmitting ? '...' : translations.submit}
