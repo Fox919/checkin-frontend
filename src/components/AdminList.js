@@ -191,7 +191,7 @@ const AdminList = () => {
         </div>
         
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="text" placeholder="🔍 搜尋姓名、電話、城市或接待人..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ padding: '12px', width: '300px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+          <input type="text" placeholder="🔍 搜尋姓名、電話、接待人..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ padding: '12px', width: '300px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666' }}>日期篩選:</span>
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
@@ -207,7 +207,7 @@ const AdminList = () => {
               <tr>
                 <th style={tableHeaderStyle}>姓名/性別</th>
                 <th style={tableHeaderStyle}>身分</th>
-                <th style={tableHeaderStyle}>電話/城市</th>
+                <th style={tableHeaderStyle}>電話</th>
                 <th style={tableHeaderStyle}>管道/介紹人</th>
                 <th style={tableHeaderStyle}>聯絡偏好</th>
                 <th style={tableHeaderStyle}>接待人員</th>
@@ -227,7 +227,7 @@ const AdminList = () => {
                   </td>
                   <td style={tableCellStyle}>
                     <div style={{ color: '#2980b9', fontWeight: '500' }}>{user.phone}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>📍 {user.city || '未知'}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d' }}></div>
                   </td>
                   <td style={tableCellStyle}>
                     <div style={{ fontSize: '0.8rem', color: '#444' }}>{user.discovery_source}</div>
