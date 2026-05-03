@@ -103,8 +103,32 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
   };
 
+  // --- 新增：預先檢查人員是否已登記 ---
+  const checkUserExists = async () => {
+    const { lastName, firstName, phone } = formData;
+    
+    // 只有當三個關鍵欄位都有值且電話長度足夠時才執行
+    if (lastName.trim() && firstName.trim() && phone.trim().length >= 8) {
+      try {
+        const response = await fetch('https://checkin-system-production-2a74.up.railway.app/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lastName, firstName, phone }),
+        });
+        const data = await response.json();
+        
+        if (data.isDuplicate) {
+          if (window.confirm(`提醒：${lastName}${firstName} (電話: ${phone}) 已經登記過了。\n是否要直接前往簽到頁面？`)) {
+            window.location.href = '/checkin';
+          }
+        }
+      } catch (error) {
+        console.error("預檢請求失敗:", error);
+      }
+    }
+  };
+
   const validateForm = () => {
-    // 聯絡方式檢查
     if (formData.contact_method.length === 0) {
       alert("請至少選擇一種聯絡方式 / Please select at least one contact method.");
       return false;
@@ -114,7 +138,6 @@ const Register = ({ autoCheckin }) => {
     const emailValue = formData.email ? formData.email.trim() : "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Email 條件檢查
     if (isEmailSelected) {
       if (!emailValue) {
         alert("您已選擇以 Email 接收訊息，請填寫電子郵件地址。/ Please provide your Email address.");
@@ -125,17 +148,14 @@ const Register = ({ autoCheckin }) => {
         return false;
       }
     } else if (emailValue && !emailRegex.test(emailValue)) {
-      // 沒勾選 Email 但填了錯誤格式
       alert("電子郵件格式不正確，若不方便提供請清空該欄位。/ Invalid email format. Please correct it or leave it blank.");
       return false;
     }
-
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
 
     setQrValue('');
@@ -163,7 +183,7 @@ const Register = ({ autoCheckin }) => {
       if (response.ok) {
         setQrValue(String(data.id));
         setMessage(translations.success);
-        window.scrollTo(0, 0); // 提交成功後滾回頂部看結果
+        window.scrollTo(0, 0);
       } else {
         setMessage(`${translations.error}: ${data.error || 'Unknown'}`);
       }
@@ -193,8 +213,8 @@ const Register = ({ autoCheckin }) => {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
           
           <div style={{ display: 'flex', gap: '10px' }}>
-            <input name="lastName" placeholder={translations.lastName} value={formData.lastName} onChange={handleChange} required style={inputStyle} />
-            <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} required style={inputStyle} />
+            <input name="lastName" placeholder={translations.lastName} value={formData.lastName} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
+            <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
           </div>
 
           <div style={{ padding: '5px' }}>
@@ -203,9 +223,8 @@ const Register = ({ autoCheckin }) => {
             <label style={{ marginLeft: '15px', cursor: 'pointer' }}><input type="radio" name="gender" value="Female" onChange={handleChange} /> {translations.female}</label>
           </div>
 
-          <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} required style={inputStyle} />
+          <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
           
-          {/* Email 輸入框提示：如果是被勾選的，顯示必填感 */}
           <input 
             name="email" 
             type="email" 
