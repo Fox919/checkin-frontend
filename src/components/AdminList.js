@@ -231,7 +231,7 @@ const AdminList = () => {
                   </td>
                   <td style={tableCellStyle}>
                     <div style={{ fontSize: '0.8rem', color: '#444' }}>{user.discovery_source}</div>
-                    {user.referrer_name && <div style={{ fontSize: '0.75rem', color: '#8e44ad' }}>👤 引薦: {user.referrer_name}</div>}
+                    {user.referrer_name && <div style={{ fontSize: '0.75rem', color: '#8e44ad' }}>👤 推薦人: {user.referrer_name}</div>}
                   </td>
                   <td style={tableCellStyle}>
                     {user.contact_method ? user.contact_method.split(',').map(m => (
