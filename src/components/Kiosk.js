@@ -70,7 +70,7 @@ const Kiosk = () => {
           window.history.replaceState({}, '', window.location.pathname);
         }, 1500); 
       } else {
-        setMessage(`❌ 失敗: ${data.message || '請洽工作人員'}`);
+        setMessage(`❌ 對不起: ${data.message || '請洽工作人員'}`);
         setIsProcessing(false);
       }
     } catch (err) {
