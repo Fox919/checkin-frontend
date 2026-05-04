@@ -86,41 +86,48 @@ const Kiosk = () => {
       <div style={{ marginTop: '30px' }}>
 
        {filtered.map(item => {
-    const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
-    const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
+  const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
+  const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
 
-    let styleKey = 'default';
+  let styleKey = 'default';
 
-    // 邏輯判斷賦值也用小寫
-    if (finalType.includes('volunteer') || finalType.includes('guest')) {
-      styleKey = 'volunteer';
-    } else if (finalType.includes('student')) {
-      styleKey = 'student';
-    } else if (finalType.includes('hall')) {
-      styleKey = 'hall-newcomer';
-    } else if (finalType.includes('expo')) {
-      styleKey = 'expo-newcomer';
-    } else if (finalType.includes('visitor')) {
-      styleKey = 'visitor';
-    }
+  if (finalType.includes('volunteer') || finalType.includes('guest')) {
+    styleKey = 'volunteer';
+  } else if (finalType.includes('student')) {
+    styleKey = 'student';
+  } else if (finalType.includes('hall')) {
+    styleKey = 'hall-newcomer';
+  } else if (finalType.includes('expo')) {
+    styleKey = 'expo-newcomer';
+  } else if (finalType.includes('visitor')) {
+    styleKey = 'visitor';
+  }
 
-    const style = typeStyles[styleKey] || typeStyles['default'];
+  const style = typeStyles[styleKey] || typeStyles['default'];
 
-    return (
+  return (
     <button 
       key={item.id} 
       onClick={() => handleCheckin(item.id, item.name)}
-      style={{ backgroundColor: style.bg,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', 
-        padding: '20px', margin: '15px 0', backgroundColor: style.bg, color: 'white', 
-        border: 'none', borderRadius: '20px', cursor: 'pointer', boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        width: '100%', 
+        padding: '20px', 
+        margin: '15px 0', 
+        backgroundColor: style.bg, // 保持這一個就好
+        color: 'white', 
+        border: 'none', 
+        borderRadius: '20px', 
+        cursor: 'pointer', 
+        boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
       }}
     >
       <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
         {style.icon} 我是 {item.name}
       </div>
       
-      {/* --- 這裡非常關鍵：幫你抓出到底是哪個字對不上 --- */}
       <div style={{ marginTop: '8px', padding: '4px 15px', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '25px' }}>
         顯示類別: {style.label} | DB實際值: "{rawTypeFromDB || '空值'}"
       </div>
