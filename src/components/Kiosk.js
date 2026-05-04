@@ -88,37 +88,46 @@ const Kiosk = () => {
 
       <div style={{ marginTop: '30px' }}>
         {filtered.map(item => {
-          // --- 關鍵修正邏輯 ---
-          // 優先級：網址傳來的 type > 數據庫存的 user_type > 'guest' > 'Visitor'
-          const finalType = (urlType || item.user_type || 'guest').toString().toLowerCase();
+  // 1. 取得原始字串，並強制進行「標準化處理」：轉小寫、去前後空格
+  const rawType = (item.user_type || "").toString().trim().toLowerCase();
 
-          let styleKey = 'default';
-          if (finalType.includes('volunteer') || finalType === 'guest') styleKey = 'Volunteer';
-          else if (finalType.includes('student')) styleKey = 'Student';
-          else if (finalType.includes('hall')) styleKey = 'Hall-Newcomer';
-          else if (finalType.includes('expo')) styleKey = 'Expo-Newcomer';
-          else if (finalType.includes('visitor')) styleKey = 'Visitor';
+  // 2. 定義匹配邏輯
+  let styleKey = 'default';
 
-          const style = typeStyles[styleKey] || typeStyles['default'];
+  if (rawType === 'volunteer' || rawType === 'guest') {
+    styleKey = 'Volunteer';
+  } else if (rawType === 'student') {
+    styleKey = 'Student';
+  } else if (rawType.includes('hall')) { // 使用 includes 增加容錯
+    styleKey = 'Hall-Newcomer';
+  } else if (rawType.includes('expo')) {
+    styleKey = 'Expo-Newcomer';
+  } else if (rawType === 'visitor') {
+    styleKey = 'Visitor';
+  }
 
-          return (
-            <button 
-              key={item.id} 
-              onClick={() => handleCheckin(item.id, item.name)}
-              style={{ 
-                width: '100%', padding: '20px', margin: '15px 0', backgroundColor: style.bg, 
-                color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-              }}
-            >
-              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                {style.icon} 我是 {item.name}
-              </div>
-              <div style={{ marginTop: '8px', fontSize: '1rem', opacity: 0.9 }}>
-                類別: {style.label} | 電話末碼: {item.phone?.slice(-4)}
-              </div>
-            </button>
-          );
-        })}
+  const style = typeStyles[styleKey] || typeStyles['default'];
+
+  return (
+    <button 
+      key={item.id} 
+      onClick={() => handleCheckin(item.id, item.name)}
+      style={{ 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', 
+        padding: '20px', margin: '15px 0', backgroundColor: style.bg, color: 'white', 
+        border: 'none', borderRadius: '20px', cursor: 'pointer', boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+      }}
+    >
+      <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+        {style.icon} 我是 {item.name}
+      </div>
+      <div style={{ marginTop: '8px', padding: '4px 15px', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '25px' }}>
+        類別: {style.label} | 電話末碼: {item.phone?.slice(-4)}
+      </div>
+    </button>
+  );
+})}
+
       </div>
     </div>
   );
