@@ -84,7 +84,7 @@ const Kiosk = () => {
             value={phoneQuery}
             onChange={(e) => setPhoneQuery(e.target.value.replace(/\D/g, '').slice(0, 4))}
             style={{ 
-              width: '90%', 
+              width: '80%', 
               padding: '15px 10px', 
               fontSize: '1.4rem', // 從 3.5 降到 2.2，確保 placeholder 不會被裁切
               textAlign: 'center', 
@@ -124,7 +124,7 @@ const Kiosk = () => {
               key={item.id} 
               onClick={() => handleCheckin(item.id, item.name)}
               style={{ 
-                display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', 
+                display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80%', 
                 padding: '18px', margin: '12px 0', backgroundColor: style.bg, color: 'white', 
                 border: 'none', borderRadius: '18px', cursor: 'pointer', 
                 boxShadow: '0 5px 15px rgba(0,0,0,0.12)',
