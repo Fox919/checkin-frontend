@@ -8,7 +8,6 @@ const Kiosk = () => {
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // 1. 定義身份樣式對照表
   const typeStyles = {
     'Volunteer': { bg: '#FF9800', label: '義工', icon: '🧡' },
     'Student': { bg: '#4CAF50', label: '學員', icon: '🌿' },
@@ -18,20 +17,16 @@ const Kiosk = () => {
     'default': { bg: '#607D8B', label: '朋友', icon: '😊' }
   };
 
-  // 2. 載入名單
   useEffect(() => {
     fetch(`${API_BASE}/users`)
       .then(res => res.json())
-      .then(data => {
-        setList(Array.isArray(data) ? data : []);
-      })
+      .then(data => setList(Array.isArray(data) ? data : []))
       .catch(err => {
         console.error("無法載入名單", err);
         setMessage('⚠️ 系統載入失敗，請檢查網路');
       });
   }, []);
 
-  // 3. 篩選邏輯
   const filtered = phoneQuery.length >= 3 
     ? list.filter(item => {
         if (!item.phone) return false;
@@ -40,7 +35,6 @@ const Kiosk = () => {
       })
     : [];
 
-  // 4. 簽到執行
   const handleCheckin = async (id, name) => {
     if (isProcessing) return;
     setIsProcessing(true);
@@ -101,14 +95,17 @@ const Kiosk = () => {
           <div>
             <p style={{ color: '#888', marginBottom: '15px', fontSize: '1.1rem' }}>找到以下成員，請點擊姓名簽到：</p>
             {filtered.map(item => {
-              // --- 身份樣式邏輯核心 ---
-              const rawType = item.user_type || 'Visitor';
-              // 尋找不分大小寫的 Key
-              const styleKey = Object.keys(typeStyles).find(
-                key => key.toLowerCase() === rawType.toLowerCase()
-              ) || 'default';
-              const style = typeStyles[styleKey];
-              // -----------------------
+              // --- 強化版身分樣式邏輯 ---
+              const rawType = (item.user_type || item.type || item.role || 'Visitor').toString().toLowerCase().trim();
+              
+              let styleKey = 'default';
+              if (rawType.includes('volunteer')) styleKey = 'Volunteer';
+              else if (rawType.includes('student')) styleKey = 'Student';
+              else if (rawType.includes('hall')) styleKey = 'Hall-Newcomer';
+              else if (rawType.includes('expo')) styleKey = 'Expo-Newcomer';
+              else if (rawType.includes('visitor')) styleKey = 'Visitor';
+
+              const style = typeStyles[styleKey] || typeStyles['default'];
 
               return (
                 <button 
@@ -125,14 +122,13 @@ const Kiosk = () => {
                   <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
                     {style.icon} 我是 {item.name}
                   </div>
-                  
                   <div style={{ 
                     marginTop: '8px', padding: '4px 15px', backgroundColor: 'rgba(255,255,255,0.25)', 
                     borderRadius: '25px', fontSize: '1rem', fontWeight: '500', display: 'flex', gap: '10px' 
                   }}>
                     <span>類別: {style.label}</span>
                     <span>|</span>
-                    <span>電話末碼: {item.phone?.slice(-4)}</span>
+                    <span>電話末碼: {item.phone ? item.phone.slice(-4) : '無'}</span>
                   </div>
                 </button>
               );
@@ -142,16 +138,13 @@ const Kiosk = () => {
           phoneQuery.length === 4 && filtered.length === 0 && !isProcessing && (
             <div style={{ padding: '30px', backgroundColor: '#fff5f5', borderRadius: '20px', border: '1px solid #feb2b2' }}>
               <p style={{ color: '#e74c3c', fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '10px' }}>🔍 找不到您的資料</p>
-              <p style={{ color: '#666', fontSize: '1.1rem' }}>
-                請確認號碼是否正確。<br/>
-                如果您是新朋友，請先點擊下方的<strong>「登記」</strong>按鈕。
-              </p>
+              <p style={{ color: '#666', fontSize: '1.1rem' }}>請確認號碼是否正確，或點擊下方登記。</p>
             </div>
           )
         )}
       </div>
 
-      {/* 底部按鈕 */}
+      {/* 底部引導 */}
       <div style={{ marginTop: '60px', borderTop: '2px dashed #ddd', paddingTop: '30px' }}>
         <button 
           onClick={() => window.location.href = '/register'}
