@@ -80,7 +80,7 @@ const Kiosk = () => {
           <input 
             type="tel" 
             inputMode="numeric" 
-            placeholder="請輸入電話後 4 碼" 
+            placeholder="請輸入" 
             value={phoneQuery}
             onChange={(e) => setPhoneQuery(e.target.value.replace(/\D/g, '').slice(0, 4))}
             style={{ 
@@ -99,8 +99,8 @@ const Kiosk = () => {
             }}
             autoFocus
           />
-          <p style={{ marginTop: '10px', color: '#999', fontSize: '0.9rem' }}>
-            請輸入您登記時使用的電話號碼末 4 位
+          <p style={{ marginTop: '10px', color: '#999', fontSize: '1.2rem' }}>
+            請輸入您電話號碼后 4 位
           </p>
         </div>
       )}
