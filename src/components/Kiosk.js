@@ -129,7 +129,7 @@ const Kiosk = () => {
       </div>
       
       <div style={{ marginTop: '8px', padding: '4px 15px', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '25px' }}>
-        顯示類別: {style.label} | DB實際值: "{rawTypeFromDB || '空值'}"
+        顯示類別: {style.label} | : "{rawTypeFromDB || '空值'}"
       </div>
     </button>
   );
