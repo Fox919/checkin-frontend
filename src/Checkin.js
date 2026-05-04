@@ -37,7 +37,7 @@ function Checkin() {
         }, 3000);
       } else {
         const errorDetail = data.message || data.error || "簽到失敗";
-        setMessage(`❌ 錯誤：${errorDetail}`);
+        setMessage(`❌ 對不起：${errorDetail}`);
         // 失敗時給予較長的顯示時間，手動恢復處理狀態
         setTimeout(() => setIsProcessing(false), 2000);
       }
