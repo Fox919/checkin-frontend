@@ -84,9 +84,9 @@ const Kiosk = () => {
             value={phoneQuery}
             onChange={(e) => setPhoneQuery(e.target.value.replace(/\D/g, '').slice(0, 4))}
             style={{ 
-              width: '100%', 
+              width: '90%', 
               padding: '15px 10px', 
-              fontSize: '2.2rem', // 從 3.5 降到 2.2，確保 placeholder 不會被裁切
+              fontSize: '1.8rem', // 從 3.5 降到 2.2，確保 placeholder 不會被裁切
               textAlign: 'center', 
               borderRadius: '16px', 
               border: '2px solid #007bff', 
