@@ -9,7 +9,6 @@ const Kiosk = () => {
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // 建議將 Key 全部改為小寫，避免匹配失敗
   const typeStyles = {
     'volunteer': { bg: '#FF9800', label: '義工', icon: '🧡' },
     'student': { bg: '#4CAF50', label: '學員', icon: '🌿' },
@@ -20,16 +19,25 @@ const Kiosk = () => {
   };
 
   useEffect(() => {
-    // 優先獲取網址參數
     const params = new URLSearchParams(window.location.search);
+    
+    // 1. 抓取網址傳來的身份 (type)
     const type = params.get('type');
     if (type) setUrlType(type.trim().toLowerCase());
 
+    // 2. ⚡ 新增：抓取網址傳來的搜尋號碼 (query)
+    const query = params.get('query');
+    if (query) {
+      // 確保只取數字，並且最多 4 位
+      setPhoneQuery(query.replace(/\D/g, '').slice(0, 4));
+    }
+
+    // 3. 載入名單
     fetch(`${API_BASE}/users`)
       .then(res => res.json())
       .then(data => setList(Array.isArray(data) ? data : []))
       .catch(err => setMessage('⚠️ 系統載入失敗'));
-  }, []);
+  }, []); // 僅在頁面加載時執行一次
 
   const filtered = phoneQuery.length >= 3 
     ? list.filter(item => item.phone?.replace(/\D/g, '').endsWith(phoneQuery))
@@ -49,6 +57,8 @@ const Kiosk = () => {
           setPhoneQuery('');
           setMessage('請輸入電話後 4 碼進行簽到');
           setIsProcessing(false);
+          // 如果是從網址帶入的簽到，簽到完可以考慮清空網址參數，避免刷新後又出現
+          window.history.replaceState({}, '', window.location.pathname);
         }, 3000);
       }
     } catch (err) {
@@ -84,56 +94,45 @@ const Kiosk = () => {
       )}
 
       <div style={{ marginTop: '30px' }}>
+        {filtered.map(item => {
+          const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
+          const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
 
-       {filtered.map(item => {
-  const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
-  const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
+          let styleKey = 'default';
 
-  let styleKey = 'default';
+          if (finalType.includes('volunteer') || finalType.includes('guest')) {
+            styleKey = 'volunteer';
+          } else if (finalType.includes('student')) {
+            styleKey = 'student';
+          } else if (finalType.includes('hall')) {
+            styleKey = 'hall-newcomer';
+          } else if (finalType.includes('expo')) {
+            styleKey = 'expo-newcomer';
+          } else if (finalType.includes('visitor')) {
+            styleKey = 'visitor';
+          }
 
-  if (finalType.includes('volunteer') || finalType.includes('guest')) {
-    styleKey = 'volunteer';
-  } else if (finalType.includes('student')) {
-    styleKey = 'student';
-  } else if (finalType.includes('hall')) {
-    styleKey = 'hall-newcomer';
-  } else if (finalType.includes('expo')) {
-    styleKey = 'expo-newcomer';
-  } else if (finalType.includes('visitor')) {
-    styleKey = 'visitor';
-  }
+          const style = typeStyles[styleKey] || typeStyles['default'];
 
-  const style = typeStyles[styleKey] || typeStyles['default'];
-
-  return (
-    <button 
-      key={item.id} 
-      onClick={() => handleCheckin(item.id, item.name)}
-      style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        width: '100%', 
-        padding: '20px', 
-        margin: '15px 0', 
-        backgroundColor: style.bg, // 保持這一個就好
-        color: 'white', 
-        border: 'none', 
-        borderRadius: '20px', 
-        cursor: 'pointer', 
-        boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-      }}
-    >
-      <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-        {style.icon} 我是 {item.name}
-      </div>
-      
-      <div style={{ marginTop: '8px', padding: '4px 15px', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '25px' }}>
-        顯示類別: {style.label} | : "{rawTypeFromDB || '空值'}"
-      </div>
-    </button>
-  );
-})}
+          return (
+            <button 
+              key={item.id} 
+              onClick={() => handleCheckin(item.id, item.name)}
+              style={{ 
+                display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', 
+                padding: '20px', margin: '15px 0', backgroundColor: style.bg, color: 'white', 
+                border: 'none', borderRadius: '20px', cursor: 'pointer', boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+              }}
+            >
+              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {style.icon} 我是 {item.name}
+              </div>
+              <div style={{ marginTop: '8px', padding: '4px 15px', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '25px' }}>
+                類別: {style.label} | 電話末碼: {item.phone?.slice(-4)}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
