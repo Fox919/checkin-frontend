@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// 1. 在組件外部定義深色函數，計算 3D 陰影顏色
+// 1. 在組件外部定義深色函數
 const getDarkerColor = (hex) => {
   const darkenMap = {
     '#FF9800': '#E68900', // Volunteer
@@ -59,17 +59,22 @@ const Kiosk = () => {
     try {
       const response = await fetch(`${API_BASE}/checkin/${id}`, { method: 'POST' });
       const data = await response.json();
+      
       if (data.success) {
         setMessage(`✅ 簽到成功！歡迎 ${name}`);
+        // 1.5秒後重置，讓下一個人可以簽到
         setTimeout(() => {
           setPhoneQuery('');
           setMessage('請輸入電話後 4 碼進行簽到');
-          setIsProcessing(false);
+          setIsProcessing(false); 
           window.history.replaceState({}, '', window.location.pathname);
-        }, 3000);
+        }, 1500); 
+      } else {
+        setMessage(`❌ 失敗: ${data.message || '請洽工作人員'}`);
+        setIsProcessing(false);
       }
     } catch (err) {
-      setMessage('⚠️ 連線失敗');
+      setMessage('⚠️ 連線失敗，請重試');
       setIsProcessing(false);
     }
   };
@@ -88,6 +93,7 @@ const Kiosk = () => {
         {message}
       </div>
       
+      {/* 這裡修正了 onChange 的語法錯誤 */}
       {!isProcessing && (
         <div style={{ position: 'relative', marginTop: '25px' }}>
           <input 
@@ -95,7 +101,14 @@ const Kiosk = () => {
             inputMode="numeric" 
             placeholder="請輸入" 
             value={phoneQuery}
-            onChange={(e) => setPhoneQuery(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+              setPhoneQuery(val);
+              // 如果手動輸入新號碼，確保提示文字恢復正常
+              if (message.includes('成功') || message.includes('失敗')) {
+                setMessage('請輸入電話後 4 碼進行簽到');
+              }
+            }}
             style={{ 
               width: '80%', 
               padding: '15px 10px', 
@@ -144,7 +157,7 @@ const Kiosk = () => {
                 justifyContent: 'center',
                 width: '90%', 
                 maxWidth: '400px', 
-                margin: '25px auto', // 增加上下間距，配合 3D 效果
+                margin: '25px auto', 
                 padding: '20px', 
                 backgroundColor: style.bg, 
                 color: 'white', 
@@ -152,12 +165,11 @@ const Kiosk = () => {
                 borderRadius: '20px', 
                 cursor: 'pointer',
                 position: 'relative',
-                boxShadow: `0 8px 0 ${darker}`, // 底部厚度
-                transform: 'translateY(-4px)',   // 浮起感
+                boxShadow: `0 8px 0 ${darker}`, 
+                transform: 'translateY(-4px)',   
                 transition: 'all 0.1s ease',
-                WebkitTapHighlightColor: 'transparent' // 移除行動端點擊藍框
+                WebkitTapHighlightColor: 'transparent'
               }}
-              // 點擊效果 (支援滑鼠與觸控)
               onMouseDown={(e) => {
                 e.currentTarget.style.transform = 'translateY(2px)';
                 e.currentTarget.style.boxShadow = `0 2px 0 ${darker}`;
