@@ -128,7 +128,16 @@ const Kiosk = () => {
             <p style={{ color: '#888', marginBottom: '15px', fontSize: '1.1rem' }}>找到以下成員，請點擊姓名簽到：</p>
             {filtered.map(item => {
               // 匹配身份樣式
-              const style = typeStyles[item.user_type] || typeStyles['default'];
+              // 1. 取得身份字串，若無則預設為 Visitor
+const rawType = item.user_type || 'Visitor';
+
+// 2. 尋找匹配樣式 (不論大小寫)
+// 我們將 typeStyles 的 Key 轉為小寫來比對，確保 Volunteer, volunteer, VOLUNTEER 都能抓到顏色
+const styleKey = Object.keys(typeStyles).find(
+  key => key.toLowerCase() === rawType.toLowerCase()
+) || 'default';
+
+const style = typeStyles[styleKey];
               
               return (
                 <button 
