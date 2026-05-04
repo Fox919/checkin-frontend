@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
+// 1. 在組件外部定義深色函數，計算 3D 陰影顏色
+const getDarkerColor = (hex) => {
+  const darkenMap = {
+    '#FF9800': '#E68900', // Volunteer
+    '#4CAF50': '#388E3C', // Student
+    '#2196F3': '#1976D2', // Hall
+    '#9C27B0': '#7B1FA2', // Expo
+    '#757575': '#616161', // Visitor
+    '#607D8B': '#455A64'  // Default
+  };
+  return darkenMap[hex] || '#333';
+};
+
 const Kiosk = () => {
   const [phoneQuery, setPhoneQuery] = useState('');
   const [list, setList] = useState([]);
@@ -86,7 +99,7 @@ const Kiosk = () => {
             style={{ 
               width: '80%', 
               padding: '15px 10px', 
-              fontSize: '1.4rem', // 從 3.5 降到 2.2，確保 placeholder 不會被裁切
+              fontSize: '1.4rem', 
               textAlign: 'center', 
               borderRadius: '16px', 
               border: '2px solid #007bff', 
@@ -100,7 +113,7 @@ const Kiosk = () => {
             autoFocus
           />
           <p style={{ marginTop: '10px', color: '#999', fontSize: '1.2rem' }}>
-            請輸入您電話號碼后 4 位
+            請輸入您電話號碼後 4 位
           </p>
         </div>
       )}
@@ -118,27 +131,61 @@ const Kiosk = () => {
           else if (finalType.includes('visitor')) styleKey = 'visitor';
 
           const style = typeStyles[styleKey] || typeStyles['default'];
+          const darker = getDarkerColor(style.bg);
 
           return (
             <button 
               key={item.id} 
               onClick={() => handleCheckin(item.id, item.name)}
               style={{ 
-                display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80%', 
-                padding: '18px', margin: '12px 0', backgroundColor: style.bg, color: 'white', 
-                border: 'none', borderRadius: '18px', cursor: 'pointer', 
-                boxShadow: '0 5px 15px rgba(0,0,0,0.12)',
-                transition: 'transform 0.1s active'
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '90%', 
+                maxWidth: '400px', 
+                margin: '25px auto', // 增加上下間距，配合 3D 效果
+                padding: '20px', 
+                backgroundColor: style.bg, 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '20px', 
+                cursor: 'pointer',
+                position: 'relative',
+                boxShadow: `0 8px 0 ${darker}`, // 底部厚度
+                transform: 'translateY(-4px)',   // 浮起感
+                transition: 'all 0.1s ease',
+                WebkitTapHighlightColor: 'transparent' // 移除行動端點擊藍框
+              }}
+              // 點擊效果 (支援滑鼠與觸控)
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = 'translateY(2px)';
+                e.currentTarget.style.boxShadow = `0 2px 0 ${darker}`;
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = `0 8px 0 ${darker}`;
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'translateY(2px)';
+                e.currentTarget.style.boxShadow = `0 2px 0 ${darker}`;
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = `0 8px 0 ${darker}`;
               }}
             >
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
                 {style.icon} 我是 {item.name}
               </div>
               <div style={{ 
-                marginTop: '6px', fontSize: '0.9rem', padding: '3px 12px', 
-                backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '20px' 
+                marginTop: '8px', 
+                fontSize: '1.1rem', 
+                padding: '4px 15px', 
+                backgroundColor: 'rgba(0,0,0,0.15)', 
+                borderRadius: '20px' 
               }}>
-                {style.label} · {item.phone?.slice(-4)}
+                {style.label}
               </div>
             </button>
           );
