@@ -86,7 +86,7 @@ const Kiosk = () => {
       setIsProcessing(false);
     }
   };
-  };
+  
 
   return (
     <div style={{ padding: '40px 20px', textAlign: 'center', maxWidth: '600px', margin: '0 auto', fontFamily: 'sans-serif' }}>
