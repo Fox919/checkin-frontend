@@ -61,14 +61,22 @@ const Kiosk = () => {
       const data = await response.json();
       
       if (data.success) {
-        setMessage(`✅ 簽到成功！歡迎 ${name}`);
-        // 1.5秒後重置，讓下一個人可以簽到
+        // --- 核心修正點 ---
+        if (data.already_done) {
+          // 如果後端回傳 already_done: true，顯示警告訊息
+          setMessage(`⚠️ ${data.message}`); // 顯示：歡迎回來！您今天已經簽到過囉 😊
+        } else {
+          // 如果是第一次簽到成功
+          setMessage(`✅ 簽到成功！歡迎 ${name}`);
+        }
+
+        // 延長提示顯示時間，讓用戶看清楚「已簽到」的提醒（建議從 1.5s 改為 2s 或更多）
         setTimeout(() => {
           setPhoneQuery('');
           setMessage('請輸入電話後 4 碼進行簽到');
           setIsProcessing(false); 
           window.history.replaceState({}, '', window.location.pathname);
-        }, 1500); 
+        }, 2000); 
       } else {
         setMessage(`❌ 對不起: ${data.message || '請洽工作人員'}`);
         setIsProcessing(false);
@@ -78,6 +86,7 @@ const Kiosk = () => {
       setIsProcessing(false);
     }
   };
+  };
 
   return (
     <div style={{ padding: '40px 20px', textAlign: 'center', maxWidth: '600px', margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -85,9 +94,13 @@ const Kiosk = () => {
       
       <div style={{ 
         fontSize: '1.2rem', minHeight: '50px', margin: '15px 0', padding: '10px 20px', borderRadius: '15px',
-        backgroundColor: message.includes('✅') ? '#d4edda' : '#f8f9fa',
-        color: message.includes('✅') ? '#155724' : '#666',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #eee',
+        // 增加判斷：如果是勾勾（成功）用綠色，如果是警告（重複）用黃色，否則用預設灰色
+        backgroundColor: message.includes('✅') ? '#d4edda' : 
+                         message.includes('⚠️') ? '#fff3cd' : '#f8f9fa',
+        color: message.includes('✅') ? '#155724' : 
+               message.includes('⚠️') ? '#856404' : '#666',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+        border: message.includes('⚠️') ? '1px solid #ffeeba' : '1px solid #eee',
         transition: 'all 0.3s ease'
       }}>
         {message}
