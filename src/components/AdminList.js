@@ -79,40 +79,35 @@ const AdminList = () => {
     if (!window.confirm(`確定要將「${userName}」的身份修改為「${typeLabel}」嗎？`)) return;
 
     try {
-      // 嘗試發送請求
+      // 優先嘗試 POST，這是後端最常用的方法
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
-        method: 'PATCH', // 如果失敗，試著改成 'POST' 或 'PUT'
+        method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_type: newType })
       });
 
-      // 如果 404，可能是路徑不對，嘗試另一個常見路徑
-      if (res.status === 404) {
-        console.warn("嘗試備用路徑...");
-        const backupRes = await fetch(`https://checkin-system-production-2a74.up.railway.app/api/users/${userId}/type`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_type: newType })
-        });
-        
-        if (backupRes.ok) {
-          const data = await backupRes.json();
-          setUsers(users.map(u => u.id === userId ? { ...u, user_type: newType } : u));
-          return;
-        }
-      }
-
-      const data = await res.json();
-      if (data.success || res.ok) {
-        // 同步更新本地狀態，這樣畫面上才會立刻變色
-        setUsers(users.map(u => u.id === userId ? { ...u, user_type: newType } : u));
+      if (res.ok) {
+        // 更新成功後，同步前端狀態
+        setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, user_type: newType } : u));
         alert("身分更新成功！");
       } else {
-        alert("更新失敗：" + (data.error || "未知錯誤"));
+        // 如果 POST 失敗 (例如 405 或 404)，嘗試 PATCH
+        const patchRes = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_type: newType })
+        });
+
+        if (patchRes.ok) {
+          setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, user_type: newType } : u));
+          alert("身分更新成功！");
+        } else {
+          alert(`更新失敗 (狀態碼: ${patchRes.status})`);
+        }
       }
     } catch (err) {
-      console.error("API 連線錯誤詳情:", err);
-      alert("⚠️ 連線伺服器失敗，請檢查網路或後端服務是否正常。");
+      console.error("API 連線錯誤:", err);
+      alert("⚠️ 連線伺服器失敗，請確認後端網址是否正確。");
     }
   };
 
