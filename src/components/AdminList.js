@@ -78,45 +78,27 @@ const AdminList = () => {
     const typeLabel = newType === 'volunteer' ? '義工' : newType === 'student' ? '學員' : '來賓';
     if (!window.confirm(`確定要將「${userName}」的身份修改為「${typeLabel}」嗎？`)) return;
 
-    // 這裡列出三種後端最可能的網址格式，代碼會按順序嘗試
-    const possibleEndpoints = [
-      { 
-        url: `https://checkin-system-production-2a74.up.railway.app/admin/update-type`, 
+    try {
+      // 確保使用 POST 方法，並將 ID 放在網址最後
+      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
         method: 'POST', 
-        body: { userId, new_type: newType } 
-      },
-      { 
-        url: `https://checkin-system-production-2a74.up.railway.app/api/users/${userId}/type`, 
-        method: 'PUT', 
-        body: { user_type: newType } 
-      },
-      { 
-        url: `https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, 
-        method: 'POST', 
-        body: { new_type: newType } 
-      }
-    ];
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_type: newType })
+      });
 
-    for (const endpoint of possibleEndpoints) {
-      try {
-        console.log(`正在嘗試連線: ${endpoint.url} (${endpoint.method})`);
-        const res = await fetch(endpoint.url, {
-          method: endpoint.method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(endpoint.body)
-        });
+      const data = await res.json();
 
-        if (res.ok) {
-          setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, user_type: newType } : u));
-          alert("身分更新成功！");
-          return; // 成功後直接退出循環
-        }
-      } catch (err) {
-        console.warn(`路徑 ${endpoint.url} 嘗試失敗，準備試下一個...`);
+      if (res.ok && data.success) {
+        // 同步前端狀態
+        setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, user_type: newType } : u));
+        alert(`成功將「${userName}」修改為 ${typeLabel}`);
+      } else {
+        alert("更新失敗：" + (data.error || "未知錯誤"));
       }
+    } catch (err) {
+      console.error("API 連線錯誤:", err);
+      alert("⚠️ 連線伺服器失敗，請確認後端是否已部署 POST 路由");
     }
-
-    alert("❌ 所有可能的連線路徑皆失敗。請確認後端 API 文件中的修改身分路徑。");
   };
 
 
