@@ -136,37 +136,30 @@ const AdminList = () => {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  // 優化後的 Badge 樣式
   const badgeStyle = (type) => {
-    let config = { bg: '#f5f5f5', text: '#616161', label: '來賓' };
-    if (type === 'volunteer') config = { bg: '#E3F2FD', text: '#1976D2', label: '義工' };
-    if (type === 'student') config = { bg: '#F1F8E9', text: '#388E3C', label: '學員' };
-    if (type?.includes('newcomer')) config = { bg: '#FFF3E0', text: '#E65100', label: '新人' };
-    if (type === 'visitor') config = { bg: '#EDE7F6', text: '#5E35B1', label: '正式訪客' };
+    let config = { bg: '#f5f5f5', text: '#616161' };
+    if (type === 'volunteer') config = { bg: '#E3F2FD', text: '#1976D2' };
+    else if (type === 'student') config = { bg: '#F1F8E9', text: '#388E3C' };
+    else if (type?.includes('newcomer')) config = { bg: '#FFF3E0', text: '#E65100' };
+    else if (type === 'visitor') config = { bg: '#EDE7F6', text: '#5E35B1' };
 
     return {
-      padding: '4px 8px',
-      borderRadius: '4px',
-      fontSize: '0.75rem',
-      fontWeight: 'bold',
-      backgroundColor: config.bg,
-      color: config.text,
-      display: 'inline-block'
+      padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
+      backgroundColor: config.bg, color: config.text, display: 'inline-block'
     };
   };
 
-  const contactTagStyle = { fontSize: '0.7rem', background: '#f0f0f0', padding: '2px 5px', borderRadius: '3px', marginRight: '3px', color: '#666' };
-  const tableHeaderStyle = { padding: '12px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem', whiteSpace: 'nowrap' };
+  const tableHeaderStyle = { padding: '12px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem' };
   const tableCellStyle = { padding: '10px', border: '1px solid #ddd', fontSize: '0.85rem' };
 
   const modalElement = isModalOpen && (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 4000 }}>
-      <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center' }}>
         <h3>管理權限驗證</h3>
-        <input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} autoFocus placeholder="輸入密碼" style={{ padding: '10px', marginBottom: '15px', width: '200px', borderRadius: '4px', border: '1px solid #ddd' }} />
+        <input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} autoFocus style={{ padding: '10px', marginBottom: '15px' }} />
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          <button onClick={() => setIsModalOpen(false)} style={{ padding: '8px 20px', cursor: 'pointer' }}>取消</button>
-          <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white', padding: '8px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>確認</button>
+          <button onClick={() => setIsModalOpen(false)}>取消</button>
+          <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white' }}>確認</button>
         </div>
       </div>
     </div>
@@ -174,9 +167,9 @@ const AdminList = () => {
 
   if (!authorized) {
     return (
-      <div style={{ padding: '100px 20px', textAlign: 'center', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
-        <h2 style={{ color: '#2c3e50', fontSize: '2rem' }}>☸️ 菩提禪修管理系統</h2>
-        <button onClick={() => handleOpenModal('login')} style={{ padding: '15px 40px', fontSize: '1.1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '30px', cursor: 'pointer' }}>進入管理後台</button>
+      <div style={{ padding: '100px 20px', textAlign: 'center' }}>
+        <h2>☸️ 菩提禪修管理系統</h2>
+        <button onClick={() => handleOpenModal('login')} style={{ padding: '15px 40px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '30px', cursor: 'pointer' }}>進入管理後台</button>
         {modalElement}
       </div>
     );
@@ -184,12 +177,31 @@ const AdminList = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1500px', margin: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-        <h2>📋 名單管理控制台</h2>
-        <button onClick={() => handleOpenModal('export')} style={{ backgroundColor: '#28a745', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>📥 匯出 CSV</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
+        <h2 style={{ margin: 0 }}>📋 名單管理控制台</h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={fetchUsers} style={{ padding: '8px 15px' }}>🔄 刷新</button>
+          <button onClick={() => handleOpenModal('export')} style={{ backgroundColor: '#28a745', color: 'white', padding: '8px 20px', border: 'none', borderRadius: '5px' }}>📥 匯出 CSV</button>
+        </div>
+      </div>
+
+      {/* 搜尋與篩選 UI（補回原本被刪掉的部分） */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <input 
+          type="text" placeholder="🔍 搜尋姓名、電話..." 
+          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+          style={{ padding: '10px', width: '250px', borderRadius: '5px', border: '1px solid #ddd' }} 
+        />
+        <select value={viewMode} onChange={(e) => setViewMode(e.target.value)} style={{ padding: '10px' }}>
+          <option value="all">顯示全部</option>
+          <option value="active">僅登記</option>
+          <option value="checked-in">今日已簽到</option>
+        </select>
+        <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px' }} />
+        <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all');}}>重置</button>
       </div>
       
-      {loading ? <div>載入中...</div> : (
+      {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
             <thead>
@@ -197,22 +209,19 @@ const AdminList = () => {
                 <th style={tableHeaderStyle}>姓名/性別</th>
                 <th style={tableHeaderStyle}>身分/操作</th>
                 <th style={tableHeaderStyle}>電話</th>
-                <th style={tableHeaderStyle}>管道/介紹人</th>
-                <th style={tableHeaderStyle}>聯絡偏好</th>
-                <th style={tableHeaderStyle}>接待人員</th>
+                <th style={tableHeaderStyle}>管道</th>
+                <th style={tableHeaderStyle}>接待人</th>
                 <th style={tableHeaderStyle}>備註</th>
                 <th style={tableHeaderStyle}>工具</th>
               </tr>
             </thead>
             <tbody>
               {filteredList.map(user => (
-                <tr key={user.id}>
+                <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={tableCellStyle}>
                     <div style={{ fontWeight: 'bold' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#95a5a6' }}>{user.gender === 'Male' ? '男' : '女'}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{user.gender === 'Male' ? '男' : '女'}</div>
                   </td>
-                  
-                  {/* 身分與快速升級按鈕 */}
                   <td style={tableCellStyle}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={badgeStyle(user.user_type)}>
@@ -221,28 +230,24 @@ const AdminList = () => {
                       {user.user_type !== 'volunteer' && (
                         <button 
                           onClick={() => handleUserTypeChange(user.id, user.name, 'volunteer')}
-                          style={{ padding: '2px 6px', fontSize: '0.7rem', backgroundColor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', borderRadius: '4px', cursor: 'pointer' }}
+                          style={{ padding: '2px 5px', fontSize: '0.65rem', backgroundColor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', borderRadius: '4px', cursor: 'pointer' }}
                         >
                           升為義工 🧡
                         </button>
                       )}
                     </div>
                   </td>
-
                   <td style={tableCellStyle}>{user.phone}</td>
                   <td style={tableCellStyle}>{user.discovery_source}</td>
                   <td style={tableCellStyle}>
-                    {user.contact_method?.split(',').map(m => <span key={m} style={contactTagStyle}>{m}</span>)}
+                    <input defaultValue={user.receptionist_name} onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} style={{ width: '70px', padding: '4px' }} />
                   </td>
                   <td style={tableCellStyle}>
-                    <input defaultValue={user.receptionist_name} onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} style={{ width: '80px' }} />
+                    <textarea defaultValue={user.notes} onBlur={(e) => handleNoteChange(user.id, e.target.value)} style={{ width: '120px', height: '35px', padding: '4px' }} />
                   </td>
                   <td style={tableCellStyle}>
-                    <textarea defaultValue={user.notes} onBlur={(e) => handleNoteChange(user.id, e.target.value)} style={{ width: '120px', height: '30px' }} />
-                  </td>
-                  <td style={{ ...tableCellStyle, textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '5px' }}>
-                      <button onClick={() => setSelectedQrId(user.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer' }}>QR碼</button>
+                      <button onClick={() => setSelectedQrId(user.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer' }}>QR</button>
                       <select 
                         value={user.user_type} 
                         onChange={(e) => handleUserTypeChange(user.id, user.name, e.target.value)}
@@ -261,8 +266,21 @@ const AdminList = () => {
           </table>
         </div>
       )}
+
+      {/* QR Code 彈窗（補回原本被刪掉的部分） */}
+      {selectedQrId && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
+          <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <h3>{users.find(u => u.id === selectedQrId)?.name} 的二維碼</h3>
+            <QRCodeCanvas value={String(selectedQrId)} size={200} />
+            <div style={{ marginTop: '20px' }}>
+              <button onClick={() => setSelectedQrId(null)}>關閉</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modalElement}
-      {/* QR Code 彈出視窗省略，保持原樣即可 */}
     </div>
   );
 };
