@@ -18,6 +18,7 @@ const AdminList = () => {
     try {
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
       const data = await res.json();
+      console.log("後端數據首筆範例:", data[0]); 
       setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗:", err);
@@ -97,18 +98,11 @@ const AdminList = () => {
   const exportToCSV = () => {
     const headers = ["姓名", "電話", "身分", "性別", "城市", "管道", "介紹人", "聯絡偏好", "YouTube", "接待人員", "狀態", "備註"];
     const csvRows = filteredList.map(u => [
-      `"${u.name || ''}"`,
-      `"${u.phone || ''}"`,
-      `"${u.user_type || ''}"`,
-      `"${u.gender === 'Male' ? '男' : '女'}"`,
-      `"${u.city || ''}"`,
-      `"${u.discovery_source || ''}"`,
-      `"${u.referrer_name || ''}"`,
-      `"${u.contact_method || ''}"`, 
-      `"${u.youtube_subscribed ? '已訂閱' : '未訂閱'}"`,
-      `"${u.receptionist_name || ''}"`,
-      `"${u.status || ''}"`,
-      `"${u.notes || ''}"`
+      `"${u.name || ''}"`, `"${u.phone || ''}"`, `"${u.user_type || ''}"`,
+      `"${u.gender === 'Male' ? '男' : '女'}"`, `"${u.city || ''}"`,
+      `"${u.discovery_source || ''}"`, `"${u.referrer_name || ''}"`,
+      `"${u.contact_method || ''}"`, `"${u.youtube_subscribed ? '已訂閱' : '未訂閱'}"`,
+      `"${u.receptionist_name || ''}"`, `"${u.status || ''}"`, `"${u.notes || ''}"`
     ].join(","));
     
     const csvContent = [headers.join(","), ...csvRows].join("\n");
@@ -116,7 +110,7 @@ const AdminList = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Bodhi_Master_List_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `Bodhi_List_${new Date().toISOString().slice(0,10)}.csv`);
     link.click();
   };
 
@@ -137,11 +131,13 @@ const AdminList = () => {
   });
 
   const badgeStyle = (type) => {
+    const lowerType = String(type || '').toLowerCase();
     let config = { bg: '#f5f5f5', text: '#616161' };
-    if (type === 'volunteer') config = { bg: '#E3F2FD', text: '#1976D2' };
-    else if (type === 'student') config = { bg: '#F1F8E9', text: '#388E3C' };
-    else if (type?.includes('newcomer')) config = { bg: '#FFF3E0', text: '#E65100' };
-    else if (type === 'visitor') config = { bg: '#EDE7F6', text: '#5E35B1' };
+    
+    if (lowerType === 'volunteer') config = { bg: '#E3F2FD', text: '#1976D2' };
+    else if (lowerType === 'student') config = { bg: '#F1F8E9', text: '#388E3C' };
+    else if (lowerType === 'visitor') config = { bg: '#EDE7F6', text: '#5E35B1' };
+    else if (lowerType.includes('newcomer')) config = { bg: '#FFF3E0', text: '#E65100' };
 
     return {
       padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
@@ -185,7 +181,6 @@ const AdminList = () => {
         </div>
       </div>
 
-      {/* 搜尋與篩選 UI（補回原本被刪掉的部分） */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         <input 
           type="text" placeholder="🔍 搜尋姓名、電話..." 
@@ -225,9 +220,11 @@ const AdminList = () => {
                   <td style={tableCellStyle}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={badgeStyle(user.user_type)}>
-                        {user.user_type === 'volunteer' ? '義工' : user.user_type === 'student' ? '學員' : '來賓'}
+                        {String(user.user_type || '').toLowerCase() === 'volunteer' ? '義工' : 
+                         String(user.user_type || '').toLowerCase() === 'student' ? '學員' : 
+                         String(user.user_type || '').toLowerCase() === 'visitor' ? '正式訪客' : '來賓'}
                       </span>
-                      {user.user_type !== 'volunteer' && (
+                      {String(user.user_type || '').toLowerCase() !== 'volunteer' && (
                         <button 
                           onClick={() => handleUserTypeChange(user.id, user.name, 'volunteer')}
                           style={{ padding: '2px 5px', fontSize: '0.65rem', backgroundColor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', borderRadius: '4px', cursor: 'pointer' }}
@@ -249,7 +246,7 @@ const AdminList = () => {
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <button onClick={() => setSelectedQrId(user.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer' }}>QR</button>
                       <select 
-                        value={user.user_type} 
+                        value={String(user.user_type || 'guest').toLowerCase()} 
                         onChange={(e) => handleUserTypeChange(user.id, user.name, e.target.value)}
                         style={{ fontSize: '0.75rem' }}
                       >
@@ -267,7 +264,6 @@ const AdminList = () => {
         </div>
       )}
 
-      {/* QR Code 彈窗（補回原本被刪掉的部分） */}
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
@@ -279,7 +275,6 @@ const AdminList = () => {
           </div>
         </div>
       )}
-
       {modalElement}
     </div>
   );
