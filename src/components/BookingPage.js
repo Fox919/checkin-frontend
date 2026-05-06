@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 
 const BookingPage = () => {
   const [users, setUsers] = useState([]);
   const [phoneQuery, setPhoneQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [offerings, setOfferings] = useState([]);
-  const [startDate, setStartDate] = useState(new Date());
+  
+  // 預設日期為今天 (格式: YYYY-MM-DD)
+  const today = new Date().toISOString().split('T')[0];
+  const [bookingDate, setBookingDate] = useState(today);
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // 1. 初始化資料
   useEffect(() => {
     fetch(`${API_BASE}/users`)
       .then(res => res.json())
       .then(data => setUsers(data))
-      .catch(err => console.error('Fetch users error:', err));
+      .catch(err => console.error('載入用戶失敗:', err));
 
     setOfferings([
       { id: 1, type: 'service', title: '一對一能量加持', icon: '✨', info: '每週三、六、日' },
@@ -26,13 +26,11 @@ const BookingPage = () => {
     ]);
   }, [API_BASE]);
 
-  // 2. 使用 useMemo 優化過濾
   const matchedUsers = useMemo(() => {
     if (phoneQuery.length < 3) return [];
     return users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery));
   }, [phoneQuery, users]);
 
-  // 3. 自動選取邏輯
   useEffect(() => {
     if (matchedUsers.length === 1) {
       setSelectedUser(matchedUsers[0]);
@@ -41,13 +39,8 @@ const BookingPage = () => {
     }
   }, [phoneQuery, matchedUsers]);
 
-  // 4. 提交預約
-  const submitBooking = async (item, date) => {
-    // 使用簡單的本地日期格式化，避開時區 Bug
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const dateString = `${yyyy}-${mm}-${dd}`;
+  const submitBooking = async (item) => {
+    if (!selectedUser) return;
 
     try {
       const res = await fetch(`${API_BASE}/book`, {
@@ -56,12 +49,12 @@ const BookingPage = () => {
         body: JSON.stringify({
           userId: selectedUser.id,
           itemId: item.id,
-          bookingDate: dateString
+          bookingDate: bookingDate
         })
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ 預約成功！\n日期：${dateString}\n項目：${item.title}\n預約人：${selectedUser.name}`);
+        alert(`✅ 預約成功！\n日期：${bookingDate}\n項目：${item.title}\n預約人：${selectedUser.name}`);
         setPhoneQuery('');
         setSelectedUser(null);
       }
@@ -74,11 +67,12 @@ const BookingPage = () => {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
       <h2 style={{ textAlign: 'center', color: '#2c3e50' }}>🙏 課程與服務預約</h2>
 
-      {/* Step 1 */}
+      {/* Step 1: 確認身分 */}
       <section style={{ 
         background: selectedUser ? '#e8f5e9' : '#f8f9fa', 
         padding: '20px', borderRadius: '15px', marginBottom: '20px', 
-        border: selectedUser ? '2px solid #4caf50' : '1px solid transparent' 
+        border: selectedUser ? '2px solid #4caf50' : '1px solid transparent',
+        transition: 'all 0.3s'
       }}>
         <h3 style={{ marginTop: 0 }}>Step 1: 確認身分</h3>
         <input 
@@ -90,49 +84,51 @@ const BookingPage = () => {
         />
         <div style={{ marginTop: '10px' }}>
           {matchedUsers.map(u => (
-            <button key={u.id} onClick={() => { setSelectedUser(u); setPhoneQuery(''); }} style={{ margin: '5px', padding: '10px 20px', borderRadius: '20px', border: 'none', backgroundColor: selectedUser?.id === u.id ? '#4caf50' : '#e9ecef', color: selectedUser?.id === u.id ? 'white' : 'black', cursor: 'pointer' }}>
+            <button key={u.id} onClick={() => { setSelectedUser(u); setPhoneQuery(''); }} style={{ margin: '5px', padding: '10px 20px', borderRadius: '20px', border: 'none', backgroundColor: selectedUser?.id === u.id ? '#4caf50' : '#e9ecef', color: selectedUser?.id === u.id ? 'white' : 'black', cursor: 'pointer', fontWeight: 'bold' }}>
               我是 {u.name}
             </button>
           ))}
         </div>
-        {selectedUser && <p style={{ color: '#2e7d32', fontWeight: 'bold' }}>✓ 預約人：{selectedUser.name}</p>}
+        {selectedUser && <p style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '10px' }}>✓ 預約人：{selectedUser.name}</p>}
       </section>
 
-      {/* Step 2: 選擇日期 */}
-      <section style={{ marginBottom: '30px', textAlign: 'center', opacity: selectedUser ? 1 : 0.5 }}>
-        <h3 style={{ borderLeft: '5px solid #2196f3', paddingLeft: '10px', textAlign: 'left' }}>Step 2: 選擇預約日期</h3>
-        <div style={{ background: 'white', padding: '10px', borderRadius: '10px', display: 'inline-block', border: '1px solid #eee' }}>
-          <DatePicker
-            selected={startDate}
-            onChange={(date) => setStartDate(date)}
-            minDate={new Date()} 
-            inline 
-            dateFormat="yyyy-MM-dd"
-          />
-        </div>
+      {/* Step 2: 選擇日期 (原生 HTML5 日期選擇器) */}
+      <section style={{ marginBottom: '30px', opacity: selectedUser ? 1 : 0.5 }}>
+        <h3 style={{ borderLeft: '5px solid #2196f3', paddingLeft: '10px' }}>Step 2: 選擇預約日期</h3>
+        <input 
+          type="date" 
+          value={bookingDate}
+          min={today}
+          onChange={(e) => setBookingDate(e.target.value)}
+          style={{ 
+            width: '100%', padding: '15px', fontSize: '1.2rem', 
+            borderRadius: '10px', border: '2px solid #2196f3',
+            outline: 'none', background: 'white'
+          }}
+        />
       </section>
 
-      {/* Step 3: 選擇項目 */}
+      {/* Step 3: 點擊項目 */}
       <section>
         <h3 style={{ borderLeft: '5px solid #ff9800', paddingLeft: '10px' }}>Step 3: 點擊項目完成預約</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
           {offerings.map(item => (
             <div 
               key={item.id}
-              onClick={() => selectedUser && submitBooking(item, startDate)}
+              onClick={() => submitBooking(item)}
               style={{ 
-                padding: '15px', borderRadius: '12px', border: '1px solid #eee',
+                padding: '20px', borderRadius: '12px', border: '1px solid #eee',
                 background: 'white', boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
                 cursor: selectedUser ? 'pointer' : 'not-allowed',
                 opacity: selectedUser ? 1 : 0.5,
                 filter: selectedUser ? 'none' : 'grayscale(100%)',
                 textAlign: 'center',
-                transition: 'transform 0.2s'
+                transition: 'all 0.2s'
               }}
             >
-              <div style={{ fontSize: '1.8rem' }}>{item.icon}</div>
-              <div style={{ fontWeight: 'bold' }}>{item.title}</div>
-              <div style={{ fontSize: '0.8rem', color: '#888' }}>{item.info}</div>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{item.icon}</div>
+              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{item.title}</div>
+              <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '5px' }}>{item.info}</div>
             </div>
           ))}
         </div>
