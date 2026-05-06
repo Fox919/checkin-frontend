@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import DatePicker, { registerLocale } from 'react-datepicker';
+import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-
-// ✅ 修正點 1: 改用靜態引入語系，避免 Webpack 報錯
-import zhTW from 'date-fns/locale/zh-TW';
-
-// 註冊中文語系
-registerLocale('zh-TW', zhTW);
 
 const BookingPage = () => {
   const [users, setUsers] = useState([]);
@@ -22,7 +16,7 @@ const BookingPage = () => {
     fetch(`${API_BASE}/users`)
       .then(res => res.json())
       .then(data => setUsers(data))
-      .catch(err => console.error('無法載入用戶:', err));
+      .catch(err => console.error('Fetch users error:', err));
 
     setOfferings([
       { id: 1, type: 'service', title: '一對一能量加持', icon: '✨', info: '每週三、六、日' },
@@ -34,9 +28,8 @@ const BookingPage = () => {
 
   // 2. 使用 useMemo 優化過濾
   const matchedUsers = useMemo(() => {
-    return phoneQuery.length >= 3 
-      ? users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery))
-      : [];
+    if (phoneQuery.length < 3) return [];
+    return users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery));
   }, [phoneQuery, users]);
 
   // 3. 自動選取邏輯
@@ -50,10 +43,11 @@ const BookingPage = () => {
 
   // 4. 提交預約
   const submitBooking = async (item, date) => {
-    // 處理時區偏差，確保日期正確
-    const offset = date.getTimezoneOffset();
-    const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
-    const dateString = adjustedDate.toISOString().split('T')[0];
+    // 使用簡單的本地日期格式化，避開時區 Bug
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const dateString = `${yyyy}-${mm}-${dd}`;
 
     try {
       const res = await fetch(`${API_BASE}/book`, {
@@ -77,7 +71,7 @@ const BookingPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'system-ui' }}>
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
       <h2 style={{ textAlign: 'center', color: '#2c3e50' }}>🙏 課程與服務預約</h2>
 
       {/* Step 1 */}
@@ -104,7 +98,7 @@ const BookingPage = () => {
         {selectedUser && <p style={{ color: '#2e7d32', fontWeight: 'bold' }}>✓ 預約人：{selectedUser.name}</p>}
       </section>
 
-      {/* Step 2 */}
+      {/* Step 2: 選擇日期 */}
       <section style={{ marginBottom: '30px', textAlign: 'center', opacity: selectedUser ? 1 : 0.5 }}>
         <h3 style={{ borderLeft: '5px solid #2196f3', paddingLeft: '10px', textAlign: 'left' }}>Step 2: 選擇預約日期</h3>
         <div style={{ background: 'white', padding: '10px', borderRadius: '10px', display: 'inline-block', border: '1px solid #eee' }}>
@@ -113,12 +107,12 @@ const BookingPage = () => {
             onChange={(date) => setStartDate(date)}
             minDate={new Date()} 
             inline 
-            locale="zh-TW"
+            dateFormat="yyyy-MM-dd"
           />
         </div>
       </section>
 
-      {/* Step 3 */}
+      {/* Step 3: 選擇項目 */}
       <section>
         <h3 style={{ borderLeft: '5px solid #ff9800', paddingLeft: '10px' }}>Step 3: 點擊項目完成預約</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
