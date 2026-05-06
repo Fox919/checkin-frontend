@@ -5,7 +5,7 @@ const BookingPage = () => {
   const [phoneQuery, setPhoneQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [offerings, setOfferings] = useState([]);
-  
+  const [, setMessage] = useState('');
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
