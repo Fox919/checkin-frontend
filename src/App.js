@@ -49,7 +49,7 @@ function App() {
   <Route path="/" element={<Register key="home" autoCheckin={true} />} />
   <Route path="/register" element={<Register key="reg" autoCheckin={false} />} />
   <Route path="/on-site" element={<Register key="onsite" autoCheckin={true} />} />
-  
+  <Route path="/book" element={<BookingPage />} />
   <Route path="/kiosk" element={<Kiosk />} />
   <Route path="/checkin" element={<Checkin />} />
   <Route path="/admin" element={<AdminList />} />
