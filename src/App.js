@@ -4,6 +4,7 @@ import Register from './components/Register';
 import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
 import Checkin from './Checkin'; 
+import BookingPage from './components/BookingPage';
 // trigger
 // test
 function App() {
@@ -36,6 +37,10 @@ function App() {
         
         <Link to="/kiosk" style={{ marginRight: '10px' }}>
           <button>快速簽到</button>
+        </Link>
+       {/* 在導覽列中加入預約按鈕 */}
+         <Link to="/book" style={{ marginRight: '10px' }}>
+        <button style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeeba' }}>課程預約</button>
         </Link>
 
         <Link to="/admin">
