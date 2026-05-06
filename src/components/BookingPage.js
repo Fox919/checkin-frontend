@@ -5,19 +5,17 @@ const BookingPage = () => {
   const [phoneQuery, setPhoneQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [offerings, setOfferings] = useState([]);
-  const [, setMessage] = useState('');
+  const [message, setMessage] = useState('');
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // 1. 初始化資料：讀取用戶名單與服務項目
+  // 1. 初始化資料
   useEffect(() => {
-    // 獲取用戶 (用於身分核對)
     fetch(`${API_BASE}/users`)
       .then(res => res.json())
       .then(data => setUsers(data))
       .catch(() => setMessage('⚠️ 無法載入用戶名單'));
 
-    // 獲取服務項目 (這部分你可以先用 Mock Data，等後端寫好再對接)
     const mockOfferings = [
       { id: 1, type: 'service', title: '一對一能量加持', info: '每週三、六、日', icon: '✨' },
       { id: 2, type: 'service', title: '藥師靈籤 | 抽籤問事', info: '引領人生方向', icon: '🏮' },
@@ -27,14 +25,30 @@ const BookingPage = () => {
     setOfferings(mockOfferings);
   }, []);
 
+  // 過濾電話匹配的用戶
+  const matchedUsers = phoneQuery.length >= 3 
+    ? users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery))
+    : [];
+
+  // ✨ 優化 1：自動選取邏輯
+  // 當匹配結果剛好只有 1 個人的時候，自動幫用戶選定
+  useEffect(() => {
+    if (matchedUsers.length === 1) {
+      setSelectedUser(matchedUsers[0]);
+    } else if (phoneQuery.length === 0) {
+      setSelectedUser(null);
+    }
+  }, [phoneQuery, matchedUsers.length]);
+
   // 2. 處理預約提交
   const handleBook = async (item) => {
     if (!selectedUser) {
-      alert("請先輸入電話並選擇您的姓名");
+      alert("⚠️ 請先在上方輸入電話並確認您的姓名（解鎖項目）");
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // 自動捲回上方提醒用戶
       return;
     }
 
-    const bookingDate = prompt("請輸入預約日期 (格式: YYYY-MM-DD)", new Date().toISOString().split('T')[0]);
+    const bookingDate = prompt(`您好 ${selectedUser.name}，請輸入預約「${item.title}」的日期 (YYYY-MM-DD)`, new Date().toISOString().split('T')[0]);
     if (!bookingDate) return;
 
     try {
@@ -58,17 +72,20 @@ const BookingPage = () => {
     }
   };
 
-  // 過濾電話匹配的用戶
-  const matchedUsers = phoneQuery.length >= 3 
-    ? users.filter(u => u.phone?.endsWith(phoneQuery))
-    : [];
-
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'system-ui' }}>
       <h2 style={{ textAlign: 'center', color: '#2c3e50' }}>🙏 課程與服務預約</h2>
+      {message && <p style={{ color: 'red', textAlign: 'center' }}>{message}</p>}
 
       {/* 第一步：確認身分 */}
-      <section style={{ background: '#f8f9fa', padding: '20px', borderRadius: '15px', marginBottom: '30px' }}>
+      <section style={{ 
+        background: selectedUser ? '#e8f5e9' : '#f8f9fa', 
+        padding: '20px', 
+        borderRadius: '15px', 
+        marginBottom: '30px',
+        border: selectedUser ? '2px solid #4caf50' : '2px solid transparent',
+        transition: 'all 0.3s'
+      }}>
         <h3 style={{ marginTop: 0 }}>Step 1: 誰要預約？</h3>
         <input 
           type="tel"
@@ -84,20 +101,21 @@ const BookingPage = () => {
               onClick={() => { setSelectedUser(u); setPhoneQuery(''); }}
               style={{ 
                 margin: '5px', padding: '10px 20px', borderRadius: '20px', border: 'none',
-                backgroundColor: selectedUser?.id === u.id ? '#007bff' : '#e9ecef',
+                backgroundColor: selectedUser?.id === u.id ? '#4caf50' : '#e9ecef',
                 color: selectedUser?.id === u.id ? 'white' : 'black',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontWeight: 'bold'
               }}
             >
               我是 {u.name}
             </button>
           ))}
         </div>
-        {selectedUser && <p style={{ color: '#28a745', fontWeight: 'bold' }}>✓ 已選定：{selectedUser.name}</p>}
+        {selectedUser && <p style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '10px' }}>✓ 已選定預約人：{selectedUser.name}</p>}
       </section>
 
       {/* 第二步：選擇項目 */}
-      <section>
+      <section style={{ position: 'relative' }}>
         <h3 style={{ borderLeft: '5px solid #ff9800', paddingLeft: '10px' }}>Step 2: 選擇預約項目</h3>
         
         {['service', 'course'].map(category => (
@@ -111,21 +129,37 @@ const BookingPage = () => {
                   key={item.id}
                   onClick={() => handleBook(item)}
                   style={{ 
-                    padding: '15px', borderRadius: '12px', border: '1px solid #eee',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer',
-                    transition: 'transform 0.2s'
+                    padding: '20px', borderRadius: '12px', border: '1px solid #eee',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)', 
+                    cursor: selectedUser ? 'pointer' : 'not-allowed', // ✨ 優化 2: 沒選人時顯示禁止符號
+                    opacity: selectedUser ? 1 : 0.5,                  // ✨ 優化 2: 沒選人時變半透明
+                    filter: selectedUser ? 'none' : 'grayscale(100%)', // ✨ 優化 2: 沒選人時變黑白
+                    backgroundColor: 'white',
+                    transition: 'all 0.3s',
+                    transform: 'scale(1)'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseOver={(e) => {
+                    if(selectedUser) e.currentTarget.style.transform = 'scale(1.03)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
                 >
-                  <div style={{ fontSize: '1.5rem', marginBottom: '5px' }}>{item.icon}</div>
-                  <div style={{ fontWeight: 'bold' }}>{item.title}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#888' }}>{item.info}</div>
+                  <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{item.icon}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: selectedUser ? '#333' : '#999' }}>{item.title}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '5px' }}>{item.info}</div>
                 </div>
               ))}
             </div>
           </div>
         ))}
+        
+        {/* 如果沒選人，顯示一個輕微的提示浮層（可選） */}
+        {!selectedUser && (
+          <p style={{ textAlign: 'center', color: '#999', fontStyle: 'italic' }}>
+            — 請先完成 Step 1 以解鎖預約項目 —
+          </p>
+        )}
       </section>
     </div>
   );
