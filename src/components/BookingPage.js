@@ -40,6 +40,24 @@ const BookingPage = () => {
     }
   }, [phoneQuery, matchedUsers]);
 
+// 2. ✨ 使用 useMemo 優化 matchedUsers
+  const matchedUsers = useMemo(() => {
+    return phoneQuery.length >= 3 
+      ? users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery))
+      : [];
+  }, [phoneQuery, users]); // 只有當電話輸入或總用戶名單改變時才重新計算
+
+  // 3. ✨ 自動選取邏輯的 useEffect
+  useEffect(() => {
+    if (matchedUsers.length === 1) {
+      setSelectedUser(matchedUsers[0]);
+    } else if (phoneQuery.length === 0) {
+      setSelectedUser(null);
+    }
+  }, [phoneQuery, matchedUsers]); // 現在這裡的 matchedUsers 是穩定的了
+
+
+
   // 2. 處理預約提交
   const handleBook = async (item) => {
     if (!selectedUser) {
