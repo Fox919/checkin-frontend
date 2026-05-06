@@ -38,7 +38,7 @@ const BookingPage = () => {
     } else if (phoneQuery.length === 0) {
       setSelectedUser(null);
     }
-  }, [phoneQuery, matchedUsers.length]);
+  }, [phoneQuery, matchedUsers]);
 
   // 2. 處理預約提交
   const handleBook = async (item) => {
