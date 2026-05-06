@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // 1. 加入 useMemo 匯入
 
 const BookingPage = () => {
   const [users, setUsers] = useState([]);
@@ -25,44 +25,27 @@ const BookingPage = () => {
     setOfferings(mockOfferings);
   }, []);
 
-  // 過濾電話匹配的用戶
-  const matchedUsers = phoneQuery.length >= 3 
-    ? users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery))
-    : [];
-
-  // ✨ 優化 1：自動選取邏輯
-  // 當匹配結果剛好只有 1 個人的時候，自動幫用戶選定
-  useEffect(() => {
-    if (matchedUsers.length === 1) {
-      setSelectedUser(matchedUsers[0]);
-    } else if (phoneQuery.length === 0) {
-      setSelectedUser(null);
-    }
-  }, [phoneQuery, matchedUsers]);
-
-// 2. ✨ 使用 useMemo 優化 matchedUsers
+  // 2. ✨ 使用 useMemo 優化 matchedUsers (只定義這一次)
   const matchedUsers = useMemo(() => {
     return phoneQuery.length >= 3 
       ? users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery))
       : [];
-  }, [phoneQuery, users]); // 只有當電話輸入或總用戶名單改變時才重新計算
+  }, [phoneQuery, users]);
 
-  // 3. ✨ 自動選取邏輯的 useEffect
+  // 3. ✨ 自動選取邏輯
   useEffect(() => {
     if (matchedUsers.length === 1) {
       setSelectedUser(matchedUsers[0]);
     } else if (phoneQuery.length === 0) {
       setSelectedUser(null);
     }
-  }, [phoneQuery, matchedUsers]); // 現在這裡的 matchedUsers 是穩定的了
+  }, [phoneQuery, matchedUsers]); // 這裡的依賴項現在是穩定的了
 
-
-
-  // 2. 處理預約提交
+  // 4. 處理預約提交
   const handleBook = async (item) => {
     if (!selectedUser) {
       alert("⚠️ 請先在上方輸入電話並確認您的姓名（解鎖項目）");
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // 自動捲回上方提醒用戶
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -149,9 +132,9 @@ const BookingPage = () => {
                   style={{ 
                     padding: '20px', borderRadius: '12px', border: '1px solid #eee',
                     boxShadow: '0 4px 6px rgba(0,0,0,0.05)', 
-                    cursor: selectedUser ? 'pointer' : 'not-allowed', // ✨ 優化 2: 沒選人時顯示禁止符號
-                    opacity: selectedUser ? 1 : 0.5,                  // ✨ 優化 2: 沒選人時變半透明
-                    filter: selectedUser ? 'none' : 'grayscale(100%)', // ✨ 優化 2: 沒選人時變黑白
+                    cursor: selectedUser ? 'pointer' : 'not-allowed',
+                    opacity: selectedUser ? 1 : 0.5,
+                    filter: selectedUser ? 'none' : 'grayscale(100%)',
                     backgroundColor: 'white',
                     transition: 'all 0.3s',
                     transform: 'scale(1)'
@@ -172,7 +155,6 @@ const BookingPage = () => {
           </div>
         ))}
         
-        {/* 如果沒選人，顯示一個輕微的提示浮層（可選） */}
         {!selectedUser && (
           <p style={{ textAlign: 'center', color: '#999', fontStyle: 'italic' }}>
             — 請先完成 Step 1 以解鎖預約項目 —
