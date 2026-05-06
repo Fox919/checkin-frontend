@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import DatePicker, { registerLocale } from 'react-datepicker'; 
+import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+
+// ✅ 修正點 1: 改用靜態引入語系，避免 Webpack 報錯
 import zhTW from 'date-fns/locale/zh-TW';
 
 // 註冊中文語系
@@ -11,12 +13,11 @@ const BookingPage = () => {
   const [phoneQuery, setPhoneQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [offerings, setOfferings] = useState([]);
-  
-  // 1. 移除未使用的 message 狀態，改用 console 記錄錯誤或 alert
   const [startDate, setStartDate] = useState(new Date());
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
+  // 1. 初始化資料
   useEffect(() => {
     fetch(`${API_BASE}/users`)
       .then(res => res.json())
@@ -24,19 +25,21 @@ const BookingPage = () => {
       .catch(err => console.error('無法載入用戶:', err));
 
     setOfferings([
-      { id: 1, type: 'service', title: '一對一能量加持', info: '每週三、六、日', icon: '✨' },
-      { id: 2, type: 'service', title: '藥師靈籤 | 抽籤問事', info: '引領人生方向', icon: '🏮' },
-      { id: 3, type: 'course', title: '8天禪修健身班', info: '補充生命能量', icon: '🌿' },
-      { id: 4, type: 'course', title: '7天禪修減壓班', info: '快速放鬆身心', icon: '🧘' }
+      { id: 1, type: 'service', title: '一對一能量加持', icon: '✨', info: '每週三、六、日' },
+      { id: 2, type: 'service', title: '藥師靈籤', icon: '🏮', info: '引領人生方向' },
+      { id: 3, type: 'course', title: '8天禪修健身班', icon: '🌿', info: '補充生命能量' },
+      { id: 4, type: 'course', title: '7天禪修減壓班', icon: '🧘', info: '快速放鬆身心' }
     ]);
   }, [API_BASE]);
 
+  // 2. 使用 useMemo 優化過濾
   const matchedUsers = useMemo(() => {
     return phoneQuery.length >= 3 
       ? users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery))
       : [];
   }, [phoneQuery, users]);
 
+  // 3. 自動選取邏輯
   useEffect(() => {
     if (matchedUsers.length === 1) {
       setSelectedUser(matchedUsers[0]);
@@ -45,8 +48,9 @@ const BookingPage = () => {
     }
   }, [phoneQuery, matchedUsers]);
 
+  // 4. 提交預約
   const submitBooking = async (item, date) => {
-    // 格式化日期為 YYYY-MM-DD，並處理時區偏差
+    // 處理時區偏差，確保日期正確
     const offset = date.getTimezoneOffset();
     const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
     const dateString = adjustedDate.toISOString().split('T')[0];
@@ -76,11 +80,11 @@ const BookingPage = () => {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'system-ui' }}>
       <h2 style={{ textAlign: 'center', color: '#2c3e50' }}>🙏 課程與服務預約</h2>
 
-      {/* Step 1: 確認身分 */}
+      {/* Step 1 */}
       <section style={{ 
         background: selectedUser ? '#e8f5e9' : '#f8f9fa', 
         padding: '20px', borderRadius: '15px', marginBottom: '20px', 
-        border: selectedUser ? '2px solid #4caf50' : '2px solid transparent' 
+        border: selectedUser ? '2px solid #4caf50' : '1px solid transparent' 
       }}>
         <h3 style={{ marginTop: 0 }}>Step 1: 確認身分</h3>
         <input 
@@ -100,7 +104,7 @@ const BookingPage = () => {
         {selectedUser && <p style={{ color: '#2e7d32', fontWeight: 'bold' }}>✓ 預約人：{selectedUser.name}</p>}
       </section>
 
-      {/* Step 2: 選擇日期 */}
+      {/* Step 2 */}
       <section style={{ marginBottom: '30px', textAlign: 'center', opacity: selectedUser ? 1 : 0.5 }}>
         <h3 style={{ borderLeft: '5px solid #2196f3', paddingLeft: '10px', textAlign: 'left' }}>Step 2: 選擇預約日期</h3>
         <div style={{ background: 'white', padding: '10px', borderRadius: '10px', display: 'inline-block', border: '1px solid #eee' }}>
@@ -114,7 +118,7 @@ const BookingPage = () => {
         </div>
       </section>
 
-      {/* Step 3: 點擊項目完成預約 */}
+      {/* Step 3 */}
       <section>
         <h3 style={{ borderLeft: '5px solid #ff9800', paddingLeft: '10px' }}>Step 3: 點擊項目完成預約</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
