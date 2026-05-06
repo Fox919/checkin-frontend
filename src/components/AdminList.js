@@ -49,13 +49,18 @@ const AdminList = () => {
 
   const handleNoteChange = async (userId, newNote) => {
     try {
-      await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
+      const res = await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, note: newNote })
+        // 重點：這裡的 Key 要從 note 改成 notes，與後端一致
+        body: JSON.stringify({ userId, notes: newNote }) 
       });
+      
+      if (!res.ok) {
+        console.error("備註儲存失敗，請檢查網路");
+      }
     } catch (err) {
-      console.error("更新備註失敗");
+      console.error("更新備註發生錯誤:", err);
     }
   };
 
