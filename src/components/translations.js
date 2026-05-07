@@ -20,9 +20,19 @@ export const translations = {
     status_canceled: "已取消",
     cancel_btn: "取消預約",
     course_unit: "天課程",
-    no_records: "查無預約記錄"
+    no_records: "查無預約記錄",
+    "禪修健身班": "禪修健身班",
+    "一對一能量加持": "一對一能量加持",
+    "八卦內功基礎班": "八卦內功基礎班",
+    "咨詢問事": "咨詢問事",
+    "禪修減壓班": "禪修減壓班"
   },
   'en-US': {
+    "禪修健身班": "Health & Happiness Meditation Retreat",
+    "一對一能量加持": "1-on-1 Energy Healing",
+    "八卦內功基礎班": "Energy Bagua Foundation Class",
+    "咨詢問事": "Divine Guidance Service",
+    "禪修減壓班": "Stress Relief Meditation Class",
     title: "Event Registration",
     system_title: "🏛️ Meditation Booking",
     current_user: "👤 Current User",
