@@ -41,26 +41,33 @@ const BookingPage = () => {
     return allSlots;
   }, [selectedItem, bookingDate]);
 
-  // --- 2. 初始資料獲取 ---
-  useEffect(() => {
-    fetch(`${API_BASE}/users`).then(res => res.json()).then(data => setUsers(data));
-    fetch(`${API_BASE}/api/offerings`)
-      .then(res => res.json())
-      .then(data => {
-        const dynamicOfferings = data.map(item => {
-          const config = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : item.config;
-          if (item.type === 'service') {
-            return {
-              ...item,
-              config,
-              availableDays: Object.keys(config.regular_schedule || {}).map(Number)
-            };
-          }
-          return { ...item, config };
-        });
-        setOfferings(dynamicOfferings);
+  // 2. 修改後的 useEffect
+useEffect(() => {
+  fetch(`${API_BASE}/users`).then(res => res.json()).then(data => setUsers(data));
+  fetch(`${API_BASE}/api/offerings`)
+    .then(res => res.json())
+    .then(data => {
+      const dynamicOfferings = data.map(item => {
+        // 解析 config
+        const config = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : item.config;
+        
+        // 封裝處理後的項目
+        const processedItem = {
+          ...item,
+          icon: item.icon || '🌿', // 如果資料庫剛好沒填，給一個預設葉子
+          config
+        };
+
+        // 如果是服務類，計算可預約的星期幾 (0-6)
+        if (item.type === 'service') {
+          processedItem.availableDays = Object.keys(config.regular_schedule || {}).map(Number);
+        }
+        
+        return processedItem;
       });
-  }, []);
+      setOfferings(dynamicOfferings);
+    });
+}, []);
 
   // --- 3. 身分匹配與管理邏輯 ---
   const matchedUsers = useMemo(() => {
@@ -74,15 +81,23 @@ const BookingPage = () => {
   }, [matchedUsers, phoneQuery]);
 
   const fetchMyBookings = async (userId) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
-      const data = await res.json();
+  try {
+    const res = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
+    const data = await res.json();
+    
+    // 如果後端回傳的是錯誤物件而非陣列
+    if (res.ok && Array.isArray(data)) {
       setMyBookings(data);
       setStep(3); 
-    } catch (err) {
-      alert("讀取預約資料失敗");
+    } else {
+      console.error("後端回傳格式錯誤:", data);
+      alert("讀取失敗：" + (data.error || "未知錯誤"));
     }
-  };
+  } catch (err) {
+    console.error("網路請求失敗:", err);
+    alert("無法連線到伺服器");
+  }
+};
 
   const handleCancel = async (bookingId) => {
     if (!window.confirm("確定要取消這筆預約嗎？")) return;
@@ -121,9 +136,9 @@ const BookingPage = () => {
 
   // 排序預約記錄 (由新到舊)
   const sortedBookings = useMemo(() => {
-    return [...myBookings].sort((a, b) => new Date(b.booking_date) - new Date(a.booking_date));
-  }, [myBookings]);
-
+  if (!Array.isArray(myBookings)) return []; // 如果不是陣列，回傳空陣列，防止崩潰
+  return [...myBookings].sort((a, b) => new Date(b.booking_date) - new Date(a.booking_date));
+}, [myBookings]);
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif', color: '#2c3e50' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>🏛️ 禪修預約系統</h2>
@@ -260,32 +275,43 @@ const BookingPage = () => {
         </section>
       )}
 
-      {/* 第三步：預約管理清單 */}
-      {step === 3 && (
-        <section>
-          <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '15px', fontWeight: 'bold' }}> ← 返回 </button>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>📋 {selectedUser?.name} 的預約清單</h3>
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {sortedBookings.length > 0 ? sortedBookings.map(bk => (
-                <div key={bk.id} style={{ padding: '15px', borderRadius: '12px', border: '1px solid #eee', borderLeft: `5px solid ${bk.type === 'course' ? '#3498db' : '#e67e22'}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>{bk.title}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>日期：{bk.booking_date} {bk.type === 'course' && "(8天課程)"}</div>
-                      {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.75rem', color: bk.status === 'active' ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>{bk.status === 'active' ? '● 預約中' : '已取消'}</div>
-                      {bk.status === 'active' && <button onClick={() => handleCancel(bk.id)} style={{ marginTop: '10px', padding: '5px 10px', borderRadius: '5px', border: '1px solid #e74c3c', color: '#e74c3c', background: 'none', fontSize: '0.8rem', cursor: 'pointer' }}>取消</button>}
-                    </div>
-                  </div>
+{/* 第三步：預約管理清單 */}
+{step === 3 && (
+  <section>
+    <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '15px', fontWeight: 'bold' }}> ← 返回 </button>
+    <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+      <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>📋 {selectedUser?.name} 的預約清單</h3>
+      <div style={{ display: 'grid', gap: '15px' }}>
+        {sortedBookings.length > 0 ? sortedBookings.map(bk => (
+          <div key={bk.id} style={{ padding: '15px', borderRadius: '12px', border: '1px solid #eee', borderLeft: `5px solid ${bk.type === 'course' ? '#3498db' : '#e67e22'}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
+                  {/* 直接讀取預約記錄中的 icon */}
+                  {bk.icon || '📅'} {bk.title}
                 </div>
-              )) : <p style={{ textAlign: 'center', color: '#999' }}>查無預約記錄</p>}
+                <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>
+                  日期：{bk.booking_date} {bk.type === 'course' && "(8天課程)"}
+                </div>
+                {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: bk.status === 'active' ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>
+                  {bk.status === 'active' ? '● 預約中' : '已取消'}
+                </div>
+                {bk.status === 'active' && (
+                  <button onClick={() => handleCancel(bk.id)} style={{ marginTop: '10px', padding: '5px 10px', borderRadius: '5px', border: '1px solid #e74c3c', color: '#e74c3c', background: 'none', fontSize: '0.8rem', cursor: 'pointer' }}>
+                    取消
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </section>
-      )}
+        )) : <p style={{ textAlign: 'center', color: '#999' }}>查無預約記錄</p>}
+      </div>
+    </div>
+  </section>
+)}
     </div>
   );
 };
