@@ -115,25 +115,34 @@ useEffect(() => {
   };
 
   const submitBooking = async () => {
-    if (!selectedUser || !selectedItem) return;
-    try {
-      const res = await fetch(`${API_BASE}/book`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: selectedUser.id,
-          itemId: selectedItem.id,
-          bookingDate: bookingDate,
-          bookingTime: selectedItem.type === 'course' ? '全天' : selectedTime
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`✅ 預約成功！`);
-        setStep(1); setSelectedItem(null); setSelectedTime(''); setPhoneQuery(''); setSelectedUser(null);
-      }
-    } catch (err) { alert("⚠️ 預約失敗"); }
-  };
+  if (!selectedUser || !selectedItem) return;
+  try {
+    const res = await fetch(`${API_BASE}/book`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: selectedUser.id,
+        itemId: selectedItem.id,
+        bookingDate: bookingDate,
+        bookingTime: selectedItem.type === 'course' ? '全天' : selectedTime
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${selectedUser.name}，預約成功！`);
+      
+      // --- 優化點：保留使用者，只清空項目與時間 ---
+      setStep(1);           // 回到項目列表
+      setSelectedItem(null); // 清空目前選中的項目
+      setSelectedTime('');  // 清空選中的時間
+      // 不清空 phoneQuery 和 selectedUser，讓使用者可以連續預約
+          setBookingDate(new Date().toISOString().split('T')[0]);
+      
+    }
+  } catch (err) { 
+    alert("⚠️ 預約失敗"); 
+  }
+};
 
   // 排序預約記錄 (由新到舊)
   const sortedBookings = useMemo(() => {
@@ -147,6 +156,16 @@ useEffect(() => {
       {/* 第一步：項目列表 */}
       {step === 1 && (
         <section>
+    {selectedUser && (
+      <div style={{ marginBottom: '15px', padding: '10px', background: '#f8f9fa', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>👤 當前預約人：{selectedUser.name}</span>
+        <button onClick={() => { setSelectedUser(null); setPhoneQuery(''); }} 
+                style={{ fontSize: '0.8rem', color: '#e74c3c', border: 'none', background: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+          切換身分
+        </button>
+      </div>
+    )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
             {offerings.map(item => (
               <div key={item.id} onClick={() => { setSelectedItem(item); setStep(2); }} 
