@@ -177,7 +177,7 @@ const BookingPage = () => {
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('select_date')}</label>
                 <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}>
                   <option value="">-- {t('select_date')} --</option>
-                  {selectedItem.config.sessions?.map((s, idx) => (
+                  {selectedItem.config?.sessions?.map((s, idx) => (
                     <option key={idx} value={s.date}>{s.date} {s.label}</option>
                   ))}
                 </select>
