@@ -14,29 +14,22 @@ const BookingPage = () => {
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
   useEffect(() => {
-    // 獲取用戶清單
     fetch(`${API_BASE}/users`).then(res => res.json()).then(data => setUsers(data));
 
-    // 獲取動態項目配置
     fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
       .then(data => {
         const dynamicOfferings = data.map(item => {
-          // 確保 config 是物件
           const config = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : item.config;
-          
           if (item.type === 'service') {
             return {
               ...item,
               config,
-              // ✨ 改進：根據管理後台設定的 regular_schedule 獲取時段
               getTimeSlots: (dateString) => {
-                // 修正 JS Date 在不同瀏覽器對 "-" 解析的差異
                 const d = new Date(dateString.replace(/-/g, '/'));
-                const day = d.getDay().toString(); // "0", "3", "6" 等
+                const day = d.getDay().toString();
                 return config.regular_schedule?.[day] || [];
               },
-              // ✨ 改進：判斷哪些日子在日曆上是可選的
               availableDays: Object.keys(config.regular_schedule || {}).map(Number)
             };
           }
@@ -46,7 +39,6 @@ const BookingPage = () => {
       });
   }, []);
 
-  // 身分自動辨認 (保持不變)
   const matchedUsers = useMemo(() => {
     if (phoneQuery.length < 3) return [];
     return users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery));
@@ -57,7 +49,6 @@ const BookingPage = () => {
     else if (phoneQuery.length === 0) setSelectedUser(null);
   }, [phoneQuery, matchedUsers]);
 
-  // 獲取當前可選時段
   const currentSlots = useMemo(() => {
     if (selectedItem?.type !== 'service' || !selectedItem.getTimeSlots) return [];
     return selectedItem.getTimeSlots(bookingDate);
@@ -65,7 +56,6 @@ const BookingPage = () => {
 
   const submitBooking = async () => {
     if (!selectedUser || !selectedItem) return;
-    // 課程模式需要選日期(班次)，服務模式需要選日期+時間
     if (selectedItem.type === 'service' && (!bookingDate || !selectedTime)) return;
     if (selectedItem.type === 'course' && !bookingDate) return;
 
@@ -92,14 +82,12 @@ const BookingPage = () => {
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif', color: '#2c3e50' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>🏛️ 禪修預約系統</h2>
 
-      {/* Step 1: 選擇項目 */}
       {step === 1 && (
         <section>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
             {offerings.map(item => (
               <div key={item.id} onClick={() => { 
                 setSelectedItem(item); 
-                // 如果是課程，預設清空日期等待下拉選單選擇
                 if (item.type === 'course') setBookingDate(''); 
                 setStep(2); 
               }} 
@@ -116,7 +104,6 @@ const BookingPage = () => {
         </section>
       )}
 
-      {/* Step 2: 預約詳情 */}
       {step === 2 && selectedItem && (
         <section>
           <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> ← 返回 </button>
@@ -127,13 +114,17 @@ const BookingPage = () => {
             {/* --- 模式 A：班次下拉選單 (Course) --- */}
             {selectedItem.type === 'course' && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>選擇班次</label>
-                <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)}
-                  style={{ width: '100%', padding: '15px', borderRadius: '10px', border: '2px solid #3498db', fontSize: '1rem' }}>
-                  <option value="">-- 請選擇可用期次 --</option>
-                  {/* ✨ 從 config.sessions 讀取 */}
-                  {selectedItem.config?.sessions?.map(s => (
-                    <option key={s.id} value={s.date}>{s.label} ({s.date})</option>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次</label>
+                <select 
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem' }}
+                >
+                  <option value="">-- 請選擇日期 --</option>
+                  {selectedItem.config.sessions && selectedItem.config.sessions.map((s, idx) => (
+                    <option key={idx} value={s.date}>
+                      {s.date} {s.label ? `(${s.label})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -149,7 +140,6 @@ const BookingPage = () => {
                       const d = new Date(); d.setDate(d.getDate() + i);
                       const dString = d.toISOString().split('T')[0];
                       const dayOfWeek = d.getDay();
-                      // ✨ 從動態設定的 availableDays 判斷
                       const isAllowed = selectedItem.availableDays?.includes(dayOfWeek);
                       const isSelected = bookingDate === dString;
                       return (
@@ -178,9 +168,9 @@ const BookingPage = () => {
             )}
 
             {/* 3. 通用身分確認 */}
-            <div style={{ marginBottom: '25px' }}>
+            <div style={{ marginBottom: '25px', marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{selectedItem.type === 'course' ? '2. 確認身分' : '3. 確認身分'}</label>
-              <input type="tel" placeholder="電話後 4 碼" value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} 
+              <input type="tel" placeholder="輸入電話後 4 碼" value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} 
                 style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
               <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {matchedUsers.map(u => (
@@ -194,8 +184,8 @@ const BookingPage = () => {
 
             <button onClick={submitBooking} 
               disabled={!selectedUser || (selectedItem.type === 'service' && !selectedTime) || (selectedItem.type === 'course' && !bookingDate)}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#3498db' : '#ccc', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>
-              確認預約
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#3498db' : '#ccc', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s' }}>
+              確認提交預約
             </button>
           </div>
         </section>
