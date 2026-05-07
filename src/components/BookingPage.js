@@ -21,7 +21,7 @@ const BookingPage = () => {
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // --- 2. 時段計算與身分匹配 (Memoized) ---
+  // --- 2. 時段計算與身分匹配 ---
   const currentSlots = useMemo(() => {
     if (!selectedItem || selectedItem.type !== 'service' || !selectedItem.config?.regular_schedule) return [];
     const parts = bookingDate.split('-');
@@ -48,7 +48,7 @@ const BookingPage = () => {
     return users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery));
   }, [phoneQuery, users]);
 
-  // --- 3. 副作用處理 (Data Fetching) ---
+  // --- 3. 數據抓取 ---
   useEffect(() => {
     fetch(`${API_BASE}/users`).then(res => res.json()).then(data => setUsers(data));
     fetch(`${API_BASE}/api/offerings`)
@@ -56,18 +56,16 @@ const BookingPage = () => {
       .then(data => {
         const dynamicOfferings = data.map(item => {
           const config = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : item.config;
-          const extractedDuration = config.duration_days || (item.duration ? parseInt(item.duration) : 7);
           const processedItem = {
             ...item,
             icon: item.icon || '🌿',
-            config: { ...config, duration: extractedDuration },
+            config: config,
           };
           if (item.type === 'service') {
             processedItem.availableDays = Object.keys(config.regular_schedule || {}).map(Number);
           }
           return processedItem;
         });
-      console.log("Offerings Data:", data);
         setOfferings(dynamicOfferings);
       });
   }, []);
@@ -93,8 +91,7 @@ const BookingPage = () => {
     if (!window.confirm(t('cancel_confirm'))) return;
     try {
       const res = await fetch(`${API_BASE}/api/bookings/${bookingId}/cancel`, { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
+      if (res.ok) {
         alert("✅ " + t('status_canceled'));
         fetchMyBookings(selectedUser.id);
       }
@@ -125,7 +122,6 @@ const BookingPage = () => {
     } catch (err) { alert("⚠️ Failed"); }
   };
 
-  // --- 5. 渲染 UI ---
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif', color: '#2c3e50' }}>
       
@@ -151,13 +147,16 @@ const BookingPage = () => {
           )}
           <div style={{ display: 'grid', gap: '15px' }}>
             {offerings.map(item => (
-              <div key={item.id} onClick={() => { setSelectedItem(item); 
-   if (item.type === 'course' && item.config?.sessions?.length > 0) {
-        setBookingDate(item.config.sessions[0].date);
-      } else {
-        setBookingDate(new Date().toISOString().split('T')[0]);
-      } 
- setStep(2); }} style={{ padding: '20px', borderRadius: '15px', border: '1px solid #eee', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+              <div key={item.id} onClick={() => { 
+                setSelectedItem(item); 
+                // 進入時如果是課程，預設選取第一個日期，否則日曆會空白
+                if (item.type === 'course' && item.config?.sessions?.length > 0) {
+                  setBookingDate(item.config.sessions[0].date);
+                } else {
+                  setBookingDate(new Date().toISOString().split('T')[0]);
+                }
+                setStep(2); 
+              }} style={{ padding: '20px', borderRadius: '15px', border: '1px solid #eee', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
                 <div style={{ fontSize: '2.5rem', marginRight: '20px' }}>{item.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{t(item.title)}</div>
@@ -173,10 +172,8 @@ const BookingPage = () => {
       {/* Step 2: 填寫詳情 */}
       {step === 2 && selectedItem && (
         <section>
-          <button onClick={() => console.log("選中的課程原始資料:", item); // 在控制台看這個
-  setSelectedItem(item); 
-  setStep(2);
-   setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> {t('back')}  </button>
+          {/* 返回按鈕修復 */}
+          <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> {t('back')} </button>
           
           <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>{selectedItem.icon} {t(selectedItem.title)}</h3>
@@ -232,7 +229,6 @@ const BookingPage = () => {
             <div style={{ borderTop: '2px solid #f5f5f5', paddingTop: '20px' }}>
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('id_confirm')}</label>
               <input type="tel" placeholder={t('phone_placeholder')} value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
-              
               <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {matchedUsers.map(u => (
                   <button key={u.id} onClick={() => setSelectedUser(u)} style={{ padding: '10px 18px', borderRadius: '25px', border: 'none', backgroundColor: selectedUser?.id === u.id ? '#2ecc71' : '#f1f2f6', color: selectedUser?.id === u.id ? 'white' : 'black', fontWeight: 'bold' }}>
@@ -240,7 +236,6 @@ const BookingPage = () => {
                   </button>
                 ))}
               </div>
-
               {selectedUser && (
                 <button onClick={() => fetchMyBookings(selectedUser.id)} style={{ width: '100%', background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', marginTop: '15px', textDecoration: 'underline', fontSize: '0.9rem' }}>
                   {t('view_my_bookings')}
