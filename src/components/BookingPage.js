@@ -283,7 +283,6 @@ useEffect(() => {
       <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>📋 {selectedUser?.name} 的預約清單</h3>
       <div style={{ display: 'grid', gap: '15px' }}>
         {sortedBookings.length > 0 ? sortedBookings.map(bk => {
-          // 判斷是否為有效預約 (active 或 pending)
           const isValid = bk.status === 'active' || bk.status === 'pending';
           
           return (
@@ -293,14 +292,14 @@ useEffect(() => {
                   <div style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
                     {bk.icon || '📅'} {bk.title}
                   </div>
+                  {/* ✨ 日期顯示優化點 */}
                   <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>
-                    日期：{bk.booking_date} {bk.type === 'course' && "(8天課程)"}
+                    日期：{bk.booking_date ? bk.booking_date.split('T')[0] : ''} {bk.type === 'course' && "(8天課程)"}
                   </div>
                   {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
-                  {/* 狀態顯示邏輯 */}
                   <div style={{ 
                     fontSize: '0.75rem', 
                     color: isValid ? '#2ecc71' : '#e74c3c', 
@@ -309,7 +308,6 @@ useEffect(() => {
                     {bk.status === 'active' ? '● 預約成功' : bk.status === 'pending' ? '● 審核中' : '已取消'}
                   </div>
 
-                  {/* 取消按鈕：只有在有效狀態下才顯示 */}
                   {isValid && (
                     <button 
                       onClick={() => handleCancel(bk.id)} 
