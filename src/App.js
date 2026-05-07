@@ -56,6 +56,8 @@ function App() {
   <Route path="/on-site" element={<Register key="onsite" autoCheckin={true} />} />
   <Route path="/book" element={<BookingPage />} />
   <Route path="/kiosk" element={<Kiosk />} />
+  <Route path="/" element={<BookingPage />} />
+  <Route path="/admin-login-secret" element={<AdminPage />} />
   <Route path="/checkin" element={<Checkin />} />
   <Route path="/admin" element={<AdminList />} />
 </Routes>
