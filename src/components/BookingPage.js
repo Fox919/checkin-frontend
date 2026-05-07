@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
+// 定義星期名稱對照表
+const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+
 const BookingPage = () => {
   const [users, setUsers] = useState([]);
   const [phoneQuery, setPhoneQuery] = useState('');
@@ -13,20 +16,35 @@ const BookingPage = () => {
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // --- 1. 時段計算邏輯 (修正日期偏移問題) ---
+  // --- 1. 時段計算邏輯 (含：星期檢查 + 今天過期時段過濾) ---
   const currentSlots = useMemo(() => {
     if (!selectedItem || selectedItem.type !== 'service' || !selectedItem.config?.regular_schedule) {
       return [];
     }
     
-    // 解析 YYYY-MM-DD 確保使用當地時間
     const parts = bookingDate.split('-');
     const d = new Date(parts[0], parts[1] - 1, parts[2]);
-    const dayKey = d.getDay().toString(); // 0 是周日, 6 是周六
+    const dayKey = d.getDay().toString();
     
-    const slots = selectedItem.config.regular_schedule[dayKey] || [];
-    console.log(`[日期對齊檢查] 字串: ${bookingDate}, 解析後星期: ${dayKey}`);
-    return slots;
+    // 原始設定的所有時段
+    const allSlots = selectedItem.config.regular_schedule[dayKey] || [];
+    
+    // 過濾邏輯：如果是今天，隱藏過去的時間
+    const now = new Date();
+    const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    if (bookingDate === todayString) {
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      return allSlots.filter(time => {
+        const [h, m] = time.split(':').map(Number);
+        // 留 15 分鐘前置量，否則使用者剛選完時間就過期了
+        return h > currentHour || (h === currentHour && m > currentMinute + 15);
+      });
+    }
+    
+    return allSlots;
   }, [selectedItem, bookingDate]);
 
   // --- 2. 初始資料獲取 ---
@@ -62,6 +80,13 @@ const BookingPage = () => {
     else if (phoneQuery.length === 0) setSelectedUser(null);
   }, [matchedUsers, phoneQuery]);
 
+  // 當時段因為過濾而消失時，清空已選中的時間
+  useEffect(() => {
+    if (selectedTime && !currentSlots.includes(selectedTime)) {
+      setSelectedTime('');
+    }
+  }, [currentSlots, selectedTime]);
+
   // --- 4. 提交預約 ---
   const submitBooking = async () => {
     if (!selectedUser || !selectedItem) return;
@@ -93,12 +118,13 @@ const BookingPage = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
             {offerings.map(item => (
               <div key={item.id} onClick={() => { setSelectedItem(item); setStep(2); }} 
-                style={{ padding: '20px', borderRadius: '15px', border: '1px solid #eee', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'white' }}>
+                style={{ padding: '20px', borderRadius: '15px', border: '1px solid #eee', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
                 <div style={{ fontSize: '2.5rem', marginRight: '20px' }}>{item.icon}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 'bold' }}>{item.title}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{item.title}</div>
                   <div style={{ fontSize: '0.85rem', color: '#888' }}>{item.info}</div>
                 </div>
+                <div style={{ color: '#3498db' }}>▶</div>
               </div>
             ))}
           </div>
@@ -107,14 +133,14 @@ const BookingPage = () => {
 
       {step === 2 && selectedItem && (
         <section>
-          <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px' }}> ← 返回 </button>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 5px 15px rgba(0,0,0,0.1)' }}>
+          <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> ← 返回 </button>
+          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ textAlign: 'center' }}>{selectedItem.icon} {selectedItem.title}</h3>
 
             {selectedItem.type === 'course' ? (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontWeight: 'bold' }}>1. 選擇班次</label>
-                <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} style={{ width: '100%', padding: '12px', marginTop: '10px' }}>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次</label>
+                <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}>
                   <option value="">-- 請選擇日期 --</option>
                   {selectedItem.config.sessions?.map((s, idx) => (
                     <option key={idx} value={s.date}>{s.date} {s.label}</option>
@@ -124,50 +150,67 @@ const BookingPage = () => {
             ) : (
               <>
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ fontWeight: 'bold' }}>1. 選擇日期</label>
-                  <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', marginTop: '10px' }}>
+                  <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇日期</label>
+                  <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', paddingBottom: '10px' }}>
                     {[...Array(14)].map((_, i) => {
-                      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i);
-                      const dString = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                      const isAllowed = selectedItem.availableDays?.includes(d.getDay());
+                      const d = new Date();
+                      d.setHours(0, 0, 0, 0);
+                      d.setDate(d.getDate() + i);
+                      const dString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      
+                      const dayIndex = d.getDay();
+                      const isAllowed = selectedItem.availableDays?.includes(dayIndex);
                       const isSelected = bookingDate === dString;
+
                       return (
-                        <div key={dString} onClick={() => isAllowed && setBookingDate(dString)}
-                          style={{ flex: '0 0 60px', padding: '10px', borderRadius: '10px', textAlign: 'center', 
-                                   background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f5f5f5'), 
-                                   color: isSelected ? '#fff' : (isAllowed ? '#333' : '#ccc'),
-                                   border: '1px solid #eee', cursor: isAllowed ? 'pointer' : 'not-allowed' }}>
-                          <div style={{ fontSize: '0.7rem' }}>{d.getMonth()+1}月</div>
-                          <div style={{ fontWeight: 'bold' }}>{d.getDate()}</div>
+                        <div 
+                          key={dString} 
+                          onClick={() => isAllowed && setBookingDate(dString)}
+                          style={{ 
+                            flex: '0 0 65px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', 
+                            background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f8f9fa'), 
+                            color: isSelected ? '#fff' : (isAllowed ? '#333' : '#ccc'),
+                            border: '1px solid #eee', cursor: isAllowed ? 'pointer' : 'not-allowed',
+                            boxShadow: isSelected ? '0 4px 8px rgba(52,152,219,0.3)' : 'none'
+                          }}
+                        >
+                          <div style={{ fontSize: '0.7rem' }}>{d.getMonth() + 1}月</div>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
+                          <div style={{ fontSize: '0.7rem' }}>週{weekDays[dayIndex]}</div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
+
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ fontWeight: 'bold' }}>2. 選擇時段</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '10px' }}>
+                  <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>2. 選擇時段</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                     {currentSlots.length > 0 ? currentSlots.map(time => (
                       <button key={time} onClick={() => setSelectedTime(time)}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #eee', 
-                                 backgroundColor: selectedTime === time ? '#e67e22' : '#fff', color: selectedTime === time ? 'white' : '#333' }}>
+                        style={{ 
+                          padding: '10px', borderRadius: '8px', border: '1px solid #eee', 
+                          backgroundColor: selectedTime === time ? '#e67e22' : '#fff', color: selectedTime === time ? 'white' : '#333' 
+                        }}>
                         {time}
                       </button>
-                    )) : <p style={{ color: '#999' }}>當日無可用時段</p>}
+                    )) : <p style={{ color: '#999', gridColumn: 'span 3', textAlign: 'center' }}>當日無可用時段</p>}
                   </div>
                 </div>
               </>
             )}
 
-            <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
-              <label style={{ fontWeight: 'bold' }}>身份確認</label>
+            <div style={{ borderTop: '1px solid #eee', paddingTop: '20px', marginTop: '20px' }}>
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>身份確認</label>
               <input type="tel" placeholder="輸入電話後 4 碼" value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} 
-                style={{ width: '100%', padding: '12px', marginTop: '10px', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
               <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {matchedUsers.map(u => (
                   <button key={u.id} onClick={() => setSelectedUser(u)} 
-                    style={{ padding: '8px 15px', borderRadius: '20px', border: 'none', 
-                             backgroundColor: selectedUser?.id === u.id ? '#2ecc71' : '#f1f2f6', color: selectedUser?.id === u.id ? 'white' : 'black' }}>
+                    style={{ 
+                      padding: '8px 15px', borderRadius: '20px', border: 'none', 
+                      backgroundColor: selectedUser?.id === u.id ? '#2ecc71' : '#f1f2f6', color: selectedUser?.id === u.id ? 'white' : 'black', fontWeight: 'bold' 
+                    }}>
                     我是 {u.name}
                   </button>
                 ))}
@@ -176,8 +219,11 @@ const BookingPage = () => {
 
             <button onClick={submitBooking} 
               disabled={!selectedUser || (selectedItem.type === 'service' && !selectedTime) || (selectedItem.type === 'course' && !bookingDate)}
-              style={{ width: '100%', padding: '16px', marginTop: '20px', borderRadius: '12px', border: 'none', 
-                       backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#3498db' : '#ccc', color: 'white', fontWeight: 'bold' }}>
+              style={{ 
+                width: '100%', padding: '16px', marginTop: '20px', borderRadius: '12px', border: 'none', 
+                backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#3498db' : '#ccc', 
+                color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' 
+              }}>
               確認提交預約
             </button>
           </div>
