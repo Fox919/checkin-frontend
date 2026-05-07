@@ -13,44 +13,37 @@ const BookingPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [bookingDate, setBookingDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState('');
+  const [myBookings, setMyBookings] = useState([]);
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // --- 1. 時段計算邏輯 (含：星期檢查 + 今天過期時段過濾) ---
+  // --- 1. 時段計算邏輯 ---
   const currentSlots = useMemo(() => {
     if (!selectedItem || selectedItem.type !== 'service' || !selectedItem.config?.regular_schedule) {
       return [];
     }
-    
     const parts = bookingDate.split('-');
     const d = new Date(parts[0], parts[1] - 1, parts[2]);
     const dayKey = d.getDay().toString();
-    
-    // 原始設定的所有時段
     const allSlots = selectedItem.config.regular_schedule[dayKey] || [];
     
-    // 過濾邏輯：如果是今天，隱藏過去的時間
     const now = new Date();
     const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     
     if (bookingDate === todayString) {
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
-      
       return allSlots.filter(time => {
         const [h, m] = time.split(':').map(Number);
-        // 留 15 分鐘前置量，否則使用者剛選完時間就過期了
         return h > currentHour || (h === currentHour && m > currentMinute + 15);
       });
     }
-    
     return allSlots;
   }, [selectedItem, bookingDate]);
 
   // --- 2. 初始資料獲取 ---
   useEffect(() => {
     fetch(`${API_BASE}/users`).then(res => res.json()).then(data => setUsers(data));
-
     fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
       .then(data => {
@@ -69,7 +62,7 @@ const BookingPage = () => {
       });
   }, []);
 
-  // --- 3. 身分匹配 ---
+  // --- 3. 身分匹配與管理邏輯 ---
   const matchedUsers = useMemo(() => {
     if (phoneQuery.length < 3) return [];
     return users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery));
@@ -80,14 +73,31 @@ const BookingPage = () => {
     else if (phoneQuery.length === 0) setSelectedUser(null);
   }, [matchedUsers, phoneQuery]);
 
-  // 當時段因為過濾而消失時，清空已選中的時間
-  useEffect(() => {
-    if (selectedTime && !currentSlots.includes(selectedTime)) {
-      setSelectedTime('');
+  const fetchMyBookings = async (userId) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
+      const data = await res.json();
+      setMyBookings(data);
+      setStep(3); 
+    } catch (err) {
+      alert("讀取預約資料失敗");
     }
-  }, [currentSlots, selectedTime]);
+  };
 
-  // --- 4. 提交預約 ---
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm("確定要取消這筆預約嗎？")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/bookings/${bookingId}/cancel`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert("✅ 預約已成功取消");
+        fetchMyBookings(selectedUser.id);
+      }
+    } catch (err) {
+      alert("❌ 取消失敗");
+    }
+  };
+
   const submitBooking = async () => {
     if (!selectedUser || !selectedItem) return;
     try {
@@ -103,16 +113,22 @@ const BookingPage = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ 預約成功！\n項目：${selectedItem.title}\n時間：${bookingDate} ${selectedItem.type === 'course' ? '' : selectedTime}`);
+        alert(`✅ 預約成功！`);
         setStep(1); setSelectedItem(null); setSelectedTime(''); setPhoneQuery(''); setSelectedUser(null);
       }
     } catch (err) { alert("⚠️ 預約失敗"); }
   };
 
+  // 排序預約記錄 (由新到舊)
+  const sortedBookings = useMemo(() => {
+    return [...myBookings].sort((a, b) => new Date(b.booking_date) - new Date(a.booking_date));
+  }, [myBookings]);
+
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif', color: '#2c3e50' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>🏛️ 禪修預約系統</h2>
 
+      {/* 第一步：項目列表 */}
       {step === 1 && (
         <section>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
@@ -131,155 +147,145 @@ const BookingPage = () => {
         </section>
       )}
 
-             {/* 第二步：填寫詳情 */}
-{step === 2 && selectedItem && (
-  <section>
-    <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> ← 返回 </button>
-    
-    <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-      <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>{selectedItem.icon} {selectedItem.title}</h3>
+      {/* 第二步：填寫詳情 */}
+      {step === 2 && selectedItem && (
+        <section>
+          <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> ← 返回 </button>
+          
+          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>{selectedItem.icon} {selectedItem.title}</h3>
 
-      {/* ==================== A. 課程模式 (例如：健身班) ==================== */}
-      {selectedItem.type === 'course' && (
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次日期</label>
-          <select 
-            value={bookingDate} 
-            onChange={(e) => setBookingDate(e.target.value)} 
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', backgroundColor: '#fff' }}
-          >
-            <option value="">-- 請選擇開始日期 --</option>
-            {selectedItem.config.sessions?.map((s, idx) => (
-              <option key={idx} value={s.date}>{s.date} {s.label}</option>
-            ))}
-          </select>
-
-          {/* 班次日期預覽區塊 */}
-          {bookingDate ? (
-            <div style={{ marginTop: '20px', padding: '15px', background: '#f0f7ff', borderRadius: '12px', border: '1px dashed #3498db' }}>
-              <div style={{ fontSize: '0.9rem', color: '#2980b9', marginBottom: '12px', fontWeight: 'bold' }}>
-                📅 課程安排預覽 (連續 8 天)：
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                {[...Array(8)].map((_, i) => {
-                  const start = bookingDate.split('-');
-                  const d = new Date(start[0], start[1] - 1, start[2]);
-                  d.setDate(d.getDate() + i);
-                  return (
-                    <div key={i} style={{ 
-                      background: i === 0 ? '#3498db' : '#fff', 
-                      color: i === 0 ? '#fff' : '#333',
-                      padding: '8px 4px', borderRadius: '8px', border: '1px solid #dcecf9', textAlign: 'center' 
-                    }}>
-                      <div style={{ fontSize: '0.65rem' }}>{i === 0 ? '首日' : `第 ${i+1} 天`}</div>
-                      <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{d.getMonth()+1}/{d.getDate()}</div>
-                      <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>{weekDays[d.getDay()]}</div>
+            {/* A. 課程模式 */}
+            {selectedItem.type === 'course' && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次日期</label>
+                <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} 
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem' }}>
+                  <option value="">-- 請選擇開始日期 --</option>
+                  {selectedItem.config.sessions?.map((s, idx) => (
+                    <option key={idx} value={s.date}>{s.date} {s.label}</option>
+                  ))}
+                </select>
+                {bookingDate && (
+                  <div style={{ marginTop: '20px', padding: '15px', background: '#f0f7ff', borderRadius: '12px', border: '1px dashed #3498db' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#2980b9', marginBottom: '12px', fontWeight: 'bold' }}>📅 課程安排預覽 (連續 8 天)：</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                      {[...Array(8)].map((_, i) => {
+                        const start = bookingDate.split('-');
+                        const d = new Date(start[0], start[1] - 1, start[2]);
+                        d.setDate(d.getDate() + i);
+                        return (
+                          <div key={i} style={{ background: i === 0 ? '#3498db' : '#fff', color: i === 0 ? '#fff' : '#333', padding: '8px 4px', borderRadius: '8px', border: '1px solid #dcecf9', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem' }}>{i === 0 ? '首日' : `第 ${i+1} 天`}</div>
+                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{d.getMonth()+1}/{d.getDate()}</div>
+                            <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>{weekDays[d.getDay()]}</div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-              <p style={{ marginTop: '12px', fontSize: '0.75rem', color: '#7f8c8d', lineHeight: '1.4' }}>
-                ℹ️ 提示：此為帶狀課程，預約後系統將為您保留上述所有時段。
-              </p>
-            </div>
-          ) : (
-            <div style={{ marginTop: '20px', textAlign: 'center', padding: '30px', color: '#999', border: '1px dashed #eee', borderRadius: '12px' }}>
-              請先選擇班次以查看課程清單
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ==================== B. 服務模式 (例如：諮詢問事) ==================== */}
-      {selectedItem.type === 'service' && (
-        <>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇預約日期</label>
-            <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', paddingBottom: '10px' }}>
-              {[...Array(14)].map((_, i) => {
-                const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i);
-                const dString = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                const dayIndex = d.getDay();
-                const isAllowed = selectedItem.availableDays?.includes(dayIndex);
-                const isSelected = bookingDate === dString;
-                return (
-                  <div key={dString} onClick={() => isAllowed && setBookingDate(dString)}
-                    style={{ 
-                      flex: '0 0 65px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', 
-                      background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f8f9fa'), 
-                      color: isSelected ? '#fff' : (isAllowed ? '#333' : '#ccc'),
-                      border: '1px solid #eee', cursor: isAllowed ? 'pointer' : 'not-allowed',
-                      boxShadow: isSelected ? '0 4px 8px rgba(52,152,219,0.3)' : 'none'
-                    }}>
-                    <div style={{ fontSize: '0.7rem' }}>{d.getMonth()+1}月</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
-                    <div style={{ fontSize: '0.7rem' }}>週{weekDays[dayIndex]}</div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                )}
+              </div>
+            )}
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>2. 選擇具體時段</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-              {currentSlots.length > 0 ? currentSlots.map(time => (
-                <button key={time} onClick={() => setSelectedTime(time)}
-                  style={{ 
-                    padding: '12px 5px', borderRadius: '8px', border: '1px solid #eee', 
-                    backgroundColor: selectedTime === time ? '#e67e22' : '#fff', 
-                    color: selectedTime === time ? 'white' : '#333',
-                    fontWeight: selectedTime === time ? 'bold' : 'normal'
-                  }}>
-                  {time}
-                </button>
-              )) : (
-                <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '20px', color: '#999', background: '#f9f9f9', borderRadius: '8px' }}>
-                  抱歉，該日已無可預約時段
+            {/* B. 服務模式 */}
+            {selectedItem.type === 'service' && (
+              <>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇預約日期</label>
+                  <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', paddingBottom: '10px' }}>
+                    {[...Array(14)].map((_, i) => {
+                      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i);
+                      const dString = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                      const isAllowed = selectedItem.availableDays?.includes(d.getDay());
+                      const isSelected = bookingDate === dString;
+                      return (
+                        <div key={dString} onClick={() => isAllowed && setBookingDate(dString)}
+                          style={{ flex: '0 0 65px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f8f9fa'), color: isSelected ? '#fff' : (isAllowed ? '#333' : '#ccc'), border: '1px solid #eee', cursor: isAllowed ? 'pointer' : 'not-allowed' }}>
+                          <div style={{ fontSize: '0.7rem' }}>{d.getMonth()+1}月</div>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
+                          <div style={{ fontSize: '0.7rem' }}>週{weekDays[d.getDay()]}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>2. 選擇具體時段</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                    {currentSlots.map(time => (
+                      <button key={time} onClick={() => setSelectedTime(time)}
+                        style={{ padding: '12px 5px', borderRadius: '8px', border: '1px solid #eee', backgroundColor: selectedTime === time ? '#e67e22' : '#fff', color: selectedTime === time ? 'white' : '#333' }}>
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* 身份確認區 */}
+            <div style={{ borderTop: '2px solid #f5f5f5', paddingTop: '20px', marginTop: '20px' }}>
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>身份確認</label>
+              <input type="tel" placeholder="輸入電話後 4 碼" value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} 
+                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
+              
+              {matchedUsers.length > 0 && (
+                <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {matchedUsers.map(u => (
+                    <button key={u.id} onClick={() => setSelectedUser(u)} 
+                      style={{ padding: '10px 18px', borderRadius: '25px', border: 'none', backgroundColor: selectedUser?.id === u.id ? '#2ecc71' : '#f1f2f6', color: selectedUser?.id === u.id ? 'white' : 'black', fontWeight: 'bold' }}>
+                      我是 {u.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {selectedUser && (
+                <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                  <button onClick={() => fetchMyBookings(selectedUser.id)} 
+                    style={{ background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                    🔍 查看/管理 {selectedUser.name} 的預約記錄
+                  </button>
                 </div>
               )}
             </div>
+
+            <button onClick={submitBooking} 
+              disabled={!selectedUser || (selectedItem.type === 'service' && !selectedTime) || (selectedItem.type === 'course' && !bookingDate)}
+              style={{ width: '100%', padding: '18px', marginTop: '25px', borderRadius: '15px', border: 'none', backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#2c3e50' : '#ccc', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>
+              確認提交預約
+            </button>
           </div>
-        </>
+        </section>
       )}
 
-      {/* 共通部分：身份確認 */}
-      <div style={{ borderTop: '2px solid #f5f5f5', paddingTop: '20px', marginTop: '20px' }}>
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>
-          {selectedItem.type === 'course' ? '2. 身份確認' : '3. 身份確認'}
-        </label>
-        <input type="tel" placeholder="輸入電話後 4 碼" value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} 
-          style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #ddd', boxSizing: 'border-box', fontSize: '1rem' }} />
-        
-        {matchedUsers.length > 0 && (
-          <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {matchedUsers.map(u => (
-              <button key={u.id} onClick={() => setSelectedUser(u)} 
-                style={{ 
-                  padding: '10px 18px', borderRadius: '25px', border: 'none', 
-                  backgroundColor: selectedUser?.id === u.id ? '#2ecc71' : '#f1f2f6', 
-                  color: selectedUser?.id === u.id ? 'white' : 'black', 
-                  fontWeight: 'bold', cursor: 'pointer', transition: '0.2s'
-                }}>
-                我是 {u.name}
-              </button>
-            ))}
+      {/* 第三步：預約管理清單 */}
+      {step === 3 && (
+        <section>
+          <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '15px', fontWeight: 'bold' }}> ← 返回 </button>
+          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>📋 {selectedUser?.name} 的預約清單</h3>
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {sortedBookings.length > 0 ? sortedBookings.map(bk => (
+                <div key={bk.id} style={{ padding: '15px', borderRadius: '12px', border: '1px solid #eee', borderLeft: `5px solid ${bk.type === 'course' ? '#3498db' : '#e67e22'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{bk.title}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>日期：{bk.booking_date} {bk.type === 'course' && "(8天課程)"}</div>
+                      {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: bk.status === 'active' ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>{bk.status === 'active' ? '● 預約中' : '已取消'}</div>
+                      {bk.status === 'active' && <button onClick={() => handleCancel(bk.id)} style={{ marginTop: '10px', padding: '5px 10px', borderRadius: '5px', border: '1px solid #e74c3c', color: '#e74c3c', background: 'none', fontSize: '0.8rem', cursor: 'pointer' }}>取消</button>}
+                    </div>
+                  </div>
+                </div>
+              )) : <p style={{ textAlign: 'center', color: '#999' }}>查無預約記錄</p>}
+            </div>
           </div>
-        )}
-      </div>
-
-      <button onClick={submitBooking} 
-        disabled={!selectedUser || (selectedItem.type === 'service' && !selectedTime) || (selectedItem.type === 'course' && !bookingDate)}
-        style={{ 
-          width: '100%', padding: '18px', marginTop: '25px', borderRadius: '15px', border: 'none', 
-          backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#2c3e50' : '#ccc', 
-          color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-        }}>
-        確認提交預約
-      </button>
-    </div>
-  </section>
-)}
+        </section>
+      )}
     </div>
   );
 };
