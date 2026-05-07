@@ -30,7 +30,7 @@ const BookingPage = () => {
         }
       },
       { 
-        id: 2, type: 'service', title: '藥師靈籤', icon: '🏮', info: '每日皆可', 
+        id: 2, type: 'service', title: '求签问事', icon: '🏮', info: '每日皆可', 
         availableDays: 'all',
         getTimeSlots: () => ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
       },
