@@ -67,6 +67,7 @@ const BookingPage = () => {
           }
           return processedItem;
         });
+      console.log("Offerings Data:", data);
         setOfferings(dynamicOfferings);
       });
   }, []);
@@ -150,7 +151,13 @@ const BookingPage = () => {
           )}
           <div style={{ display: 'grid', gap: '15px' }}>
             {offerings.map(item => (
-              <div key={item.id} onClick={() => { setSelectedItem(item); setStep(2); }} style={{ padding: '20px', borderRadius: '15px', border: '1px solid #eee', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+              <div key={item.id} onClick={() => { setSelectedItem(item); 
+   if (item.type === 'course' && item.config?.sessions?.length > 0) {
+        setBookingDate(item.config.sessions[0].date);
+      } else {
+        setBookingDate(new Date().toISOString().split('T')[0]);
+      } 
+ setStep(2); }} style={{ padding: '20px', borderRadius: '15px', border: '1px solid #eee', display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
                 <div style={{ fontSize: '2.5rem', marginRight: '20px' }}>{item.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{t(item.title)}</div>
@@ -166,7 +173,10 @@ const BookingPage = () => {
       {/* Step 2: 填寫詳情 */}
       {step === 2 && selectedItem && (
         <section>
-          <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> {t('back')} </button>
+          <button onClick={() => console.log("選中的課程原始資料:", item); // 在控制台看這個
+  setSelectedItem(item); 
+  setStep(2);
+   setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> {t('back')}  </button>
           
           <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>{selectedItem.icon} {t(selectedItem.title)}</h3>
