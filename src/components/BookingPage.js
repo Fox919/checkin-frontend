@@ -13,6 +13,25 @@ const BookingPage = () => {
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
+  // --- 1. 合併後的時段計算邏輯 (強化版) ---
+  const currentSlots = useMemo(() => {
+    // 檢查是否有選中項目且為服務類型
+    if (!selectedItem || selectedItem.type !== 'service' || !selectedItem.config?.regular_schedule) {
+      return [];
+    }
+    
+    // 解析選中的日期
+    const d = new Date(bookingDate.replace(/-/g, '/'));
+    const dayKey = d.getDay().toString(); // 0-6 的字串
+    
+    // 直接從 config 抓取對應星期的時段
+    const slots = selectedItem.config.regular_schedule[dayKey] || [];
+    
+    console.log(`[時段檢查] 日期: ${bookingDate}, 星期: ${dayKey}, 時段數: ${slots.length}`);
+    return slots;
+  }, [selectedItem, bookingDate]);
+
+  // --- 2. 初始資料獲取 ---
   useEffect(() => {
     fetch(`${API_BASE}/users`).then(res => res.json()).then(data => setUsers(data));
 
@@ -21,15 +40,12 @@ const BookingPage = () => {
       .then(data => {
         const dynamicOfferings = data.map(item => {
           const config = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : item.config;
+          
           if (item.type === 'service') {
             return {
               ...item,
               config,
-              getTimeSlots: (dateString) => {
-                const d = new Date(dateString.replace(/-/g, '/'));
-                const day = d.getDay().toString();
-                return config.regular_schedule?.[day] || [];
-              },
+              // 保留可用星期的陣列，用於日曆顯示
               availableDays: Object.keys(config.regular_schedule || {}).map(Number)
             };
           }
@@ -39,6 +55,7 @@ const BookingPage = () => {
       });
   }, []);
 
+  // --- 3. 身分匹配邏輯 ---
   const matchedUsers = useMemo(() => {
     if (phoneQuery.length < 3) return [];
     return users.filter(u => u.phone?.replace(/\D/g, '').endsWith(phoneQuery));
@@ -47,13 +64,9 @@ const BookingPage = () => {
   useEffect(() => {
     if (matchedUsers.length === 1) setSelectedUser(matchedUsers[0]);
     else if (phoneQuery.length === 0) setSelectedUser(null);
-  }, [phoneQuery, matchedUsers]);
+  }, [matchedUsers, phoneQuery]);
 
-  const currentSlots = useMemo(() => {
-    if (selectedItem?.type !== 'service' || !selectedItem.getTimeSlots) return [];
-    return selectedItem.getTimeSlots(bookingDate);
-  }, [selectedItem, bookingDate]);
-
+  // --- 4. 提交預約 ---
   const submitBooking = async () => {
     if (!selectedUser || !selectedItem) return;
     if (selectedItem.type === 'service' && (!bookingDate || !selectedTime)) return;
@@ -82,6 +95,7 @@ const BookingPage = () => {
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif', color: '#2c3e50' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>🏛️ 禪修預約系統</h2>
 
+      {/* 第一步：項目清單 */}
       {step === 1 && (
         <section>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
@@ -104,6 +118,7 @@ const BookingPage = () => {
         </section>
       )}
 
+      {/* 第二步：填寫詳情 */}
       {step === 2 && selectedItem && (
         <section>
           <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' }}> ← 返回 </button>
@@ -111,7 +126,7 @@ const BookingPage = () => {
           <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ textAlign: 'center' }}>{selectedItem.icon} {selectedItem.title}</h3>
 
-            {/* --- 模式 A：班次下拉選單 (Course) --- */}
+            {/* A. 課程模式 */}
             {selectedItem.type === 'course' && (
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次</label>
@@ -130,7 +145,7 @@ const BookingPage = () => {
               </div>
             )}
 
-            {/* --- 模式 B：日曆 + 時段 (Service) --- */}
+            {/* B. 服務模式 */}
             {selectedItem.type === 'service' && (
               <>
                 <div style={{ marginBottom: '20px' }}>
@@ -143,7 +158,12 @@ const BookingPage = () => {
                       const isAllowed = selectedItem.availableDays?.includes(dayOfWeek);
                       const isSelected = bookingDate === dString;
                       return (
-                        <div key={dString} onClick={() => isAllowed && setBookingDate(dString)} 
+                        <div key={dString} onClick={() => {
+                          if (isAllowed) {
+                            setBookingDate(dString);
+                            setSelectedTime(''); 
+                          }
+                        }} 
                           style={{ flex: '0 0 65px', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', cursor: isAllowed ? 'pointer' : 'not-allowed', background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f8f9fa'), color: isSelected ? 'white' : (isAllowed ? '#333' : '#ccc'), border: '1px solid #eee' }}>
                           <div style={{ fontSize: '0.7rem' }}>{d.getMonth()+1}月</div>
                           <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{d.getDate()}</div>
@@ -167,7 +187,7 @@ const BookingPage = () => {
               </>
             )}
 
-            {/* 3. 通用身分確認 */}
+            {/* 3. 身分確認 */}
             <div style={{ marginBottom: '25px', marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{selectedItem.type === 'course' ? '2. 確認身分' : '3. 確認身分'}</label>
               <input type="tel" placeholder="輸入電話後 4 碼" value={phoneQuery} onChange={(e) => setPhoneQuery(e.target.value)} 
@@ -184,7 +204,7 @@ const BookingPage = () => {
 
             <button onClick={submitBooking} 
               disabled={!selectedUser || (selectedItem.type === 'service' && !selectedTime) || (selectedItem.type === 'course' && !bookingDate)}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#3498db' : '#ccc', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s' }}>
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: (selectedUser && (selectedTime || selectedItem.type==='course')) ? '#3498db' : '#ccc', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>
               確認提交預約
             </button>
           </div>
