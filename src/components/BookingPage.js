@@ -282,32 +282,56 @@ useEffect(() => {
     <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
       <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>📋 {selectedUser?.name} 的預約清單</h3>
       <div style={{ display: 'grid', gap: '15px' }}>
-        {sortedBookings.length > 0 ? sortedBookings.map(bk => (
-          <div key={bk.id} style={{ padding: '15px', borderRadius: '12px', border: '1px solid #eee', borderLeft: `5px solid ${bk.type === 'course' ? '#3498db' : '#e67e22'}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
-                  {/* 直接讀取預約記錄中的 icon */}
-                  {bk.icon || '📅'} {bk.title}
+        {sortedBookings.length > 0 ? sortedBookings.map(bk => {
+          // 判斷是否為有效預約 (active 或 pending)
+          const isValid = bk.status === 'active' || bk.status === 'pending';
+          
+          return (
+            <div key={bk.id} style={{ padding: '15px', borderRadius: '12px', border: '1px solid #eee', borderLeft: `5px solid ${bk.type === 'course' ? '#3498db' : '#e67e22'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
+                    {bk.icon || '📅'} {bk.title}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>
+                    日期：{bk.booking_date} {bk.type === 'course' && "(8天課程)"}
+                  </div>
+                  {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>
-                  日期：{bk.booking_date} {bk.type === 'course' && "(8天課程)"}
+                
+                <div style={{ textAlign: 'right' }}>
+                  {/* 狀態顯示邏輯 */}
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    color: isValid ? '#2ecc71' : '#e74c3c', 
+                    fontWeight: 'bold' 
+                  }}>
+                    {bk.status === 'active' ? '● 預約成功' : bk.status === 'pending' ? '● 審核中' : '已取消'}
+                  </div>
+
+                  {/* 取消按鈕：只有在有效狀態下才顯示 */}
+                  {isValid && (
+                    <button 
+                      onClick={() => handleCancel(bk.id)} 
+                      style={{ 
+                        marginTop: '10px', 
+                        padding: '5px 10px', 
+                        borderRadius: '5px', 
+                        border: '1px solid #e74c3c', 
+                        color: '#e74c3c', 
+                        background: 'none', 
+                        fontSize: '0.8rem', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      取消預約
+                    </button>
+                  )}
                 </div>
-                {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', color: bk.status === 'active' ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>
-                  {bk.status === 'active' ? '● 預約中' : '已取消'}
-                </div>
-                {bk.status === 'active' && (
-                  <button onClick={() => handleCancel(bk.id)} style={{ marginTop: '10px', padding: '5px 10px', borderRadius: '5px', border: '1px solid #e74c3c', color: '#e74c3c', background: 'none', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    取消
-                  </button>
-                )}
               </div>
             </div>
-          </div>
-        )) : <p style={{ textAlign: 'center', color: '#999' }}>查無預約記錄</p>}
+          );
+        }) : <p style={{ textAlign: 'center', color: '#999' }}>查無預約記錄</p>}
       </div>
     </div>
   </section>
