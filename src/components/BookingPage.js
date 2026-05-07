@@ -48,27 +48,28 @@ useEffect(() => {
     .then(res => res.json())
     .then(data => {
       const dynamicOfferings = data.map(item => {
-        // 解析 config
         const config = typeof item.config === 'string' ? JSON.parse(item.config || '{}') : item.config;
         
-        // 封裝處理後的項目
+        // ✨ 精準提取天數邏輯：
+        // 優先從 config.duration_days 抓，次之從 item.duration 字串中抓數字，最後預設 7
+        const extractedDuration = 
+          config.duration_days || 
+          (item.duration ? parseInt(item.duration) : 7);
+
         const processedItem = {
           ...item,
-          icon: item.icon || '🌿', // 如果資料庫剛好沒填，給一個預設葉子
-          config
+          icon: item.icon || '🌿',
+          config: { ...config, duration: extractedDuration }, // 統一塞入 duration 屬性
         };
 
-        // 如果是服務類，計算可預約的星期幾 (0-6)
         if (item.type === 'service') {
           processedItem.availableDays = Object.keys(config.regular_schedule || {}).map(Number);
         }
-        
         return processedItem;
       });
       setOfferings(dynamicOfferings);
     });
 }, []);
-
   // --- 3. 身分匹配與管理邏輯 ---
   const matchedUsers = useMemo(() => {
     if (phoneQuery.length < 3) return [];
@@ -170,38 +171,41 @@ useEffect(() => {
           <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>{selectedItem.icon} {selectedItem.title}</h3>
 
-            {/* A. 課程模式 */}
-            {selectedItem.type === 'course' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次日期</label>
-                <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} 
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem' }}>
-                  <option value="">-- 請選擇開始日期 --</option>
-                  {selectedItem.config.sessions?.map((s, idx) => (
-                    <option key={idx} value={s.date}>{s.date} {s.label}</option>
-                  ))}
-                </select>
-                {bookingDate && (
-                  <div style={{ marginTop: '20px', padding: '15px', background: '#f0f7ff', borderRadius: '12px', border: '1px dashed #3498db' }}>
-                    <div style={{ fontSize: '0.9rem', color: '#2980b9', marginBottom: '12px', fontWeight: 'bold' }}>📅 課程安排預覽 (連續 8 天)：</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                      {[...Array(8)].map((_, i) => {
-                        const start = bookingDate.split('-');
-                        const d = new Date(start[0], start[1] - 1, start[2]);
-                        d.setDate(d.getDate() + i);
-                        return (
-                          <div key={i} style={{ background: i === 0 ? '#3498db' : '#fff', color: i === 0 ? '#fff' : '#333', padding: '8px 4px', borderRadius: '8px', border: '1px solid #dcecf9', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.65rem' }}>{i === 0 ? '首日' : `第 ${i+1} 天`}</div>
-                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{d.getMonth()+1}/{d.getDate()}</div>
-                            <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>{weekDays[d.getDay()]}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+           {/* A. 課程模式預覽區 */}
+{selectedItem.type === 'course' && (
+  <div style={{ marginBottom: '20px' }}>
+    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>1. 選擇班次日期</label>
+    <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} 
+      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem' }}>
+      <option value="">-- 請選擇開始日期 --</option>
+      {selectedItem.config.sessions?.map((s, idx) => (
+        <option key={idx} value={s.date}>{s.date} {s.label || '正式班'}</option>
+      ))}
+    </select>
+    
+    {bookingDate && (
+      <div style={{ marginTop: '20px', padding: '15px', background: '#f0f7ff', borderRadius: '12px', border: '1px dashed #3498db' }}>
+        <div style={{ fontSize: '0.9rem', color: '#2980b9', marginBottom: '12px', fontWeight: 'bold' }}>
+          📅 課程安排預覽 (連續 {selectedItem.config.duration} 天)：
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+          {[...Array(selectedItem.config.duration)].map((_, i) => {
+            const start = bookingDate.split('-');
+            const d = new Date(start[0], start[1] - 1, start[2]);
+            d.setDate(d.getDate() + i);
+            return (
+              <div key={i} style={{ background: i === 0 ? '#3498db' : '#fff', color: i === 0 ? '#fff' : '#333', padding: '8px 4px', borderRadius: '8px', border: '1px solid #dcecf9', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem' }}>{i === 0 ? '首日' : `第 ${i+1} 天`}</div>
+                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{d.getMonth()+1}/{d.getDate()}</div>
+                <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>{weekDays[d.getDay()]}</div>
               </div>
-            )}
+            );
+          })}
+        </div>
+      </div>
+    )}
+  </div>
+)}
 
             {/* B. 服務模式 */}
             {selectedItem.type === 'service' && (
@@ -294,8 +298,10 @@ useEffect(() => {
                   </div>
                   {/* ✨ 日期顯示優化點 */}
                   <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '5px' }}>
-                    日期：{bk.booking_date ? bk.booking_date.split('T')[0] : ''} {bk.type === 'course' && "(8天課程)"}
-                  </div>
+  {/* 只顯示日期並動態顯示天數 */}
+  日期：{bk.booking_date ? bk.booking_date.split('T')[0] : ''} 
+  {bk.type === 'course' && ` (${bk.config?.duration || 7}天課程)`}
+</div>
                   {bk.type === 'service' && <div style={{ fontSize: '0.85rem', color: '#666' }}>時間：{bk.booking_time}</div>}
                 </div>
                 
