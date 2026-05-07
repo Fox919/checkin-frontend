@@ -17,7 +17,7 @@ const AdminPage = () => {
       return;
     }
 
-    fetch(`${API_BASE}/offerings`)
+    fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
       .then(data => {
         // 確保 config 是物件格式
@@ -30,17 +30,24 @@ const AdminPage = () => {
   }, []);
 
   const handleSave = async () => {
-    try {
-      await fetch(`${API_BASE}/offerings/${editingItem.id}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config: editingItem.config })
-      });
-      alert('✅ 設定已更新，前端已同步！');
-    } catch (err) {
-      alert('❌ 儲存失敗');
-    }
+  // 儲存前確保資料格式正確
+  const configToSave = {
+    ...editingItem.config,
+    sessions: editingItem.config.sessions || [],
+    regular_schedule: editingItem.config.regular_schedule || { "0": [], "3": [], "6": [] }
   };
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/offerings/${editingItem.id}/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: configToSave })
+    });
+    if (res.ok) alert('✅ 設定已更新！');
+  } catch (err) {
+    alert('❌ 儲存失敗');
+  }
+};
 
   // 處理服務模式的 Checkbox 切換
   const toggleTimeSlot = (day, time) => {
@@ -84,7 +91,7 @@ const AdminPage = () => {
             {editingItem.type === 'course' && (
               <div>
                 <h3>📅 開班期次管理</h3>
-                {editingItem.config.sessions?.map((s, idx) => (
+                {(editingItem.config.sessions || []).map((s, idx) => (
                   <div key={idx} style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <input style={{ padding: '8px' }} value={s.label} placeholder="如: 5月班" onChange={(e) => {
                       const newSessions = [...editingItem.config.sessions];
