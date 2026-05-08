@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 const AdminBatchManager = ({ onSave }) => {
   const [batchName, setBatchName] = useState(''); // 例如：5月健身班
   const [startDate, setStartDate] = useState('');
-  const [totalDays, setTotalDays] = useState(8); // 預設 8 堂課
+  const [totalDays] = useState(8); // 預設 8 堂課
   const [sessions, setSessions] = useState([]); // 存儲每一堂的詳情
 
   // --- 1. 自動產生邏輯 ---
