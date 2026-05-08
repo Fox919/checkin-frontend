@@ -200,10 +200,10 @@ const BookingPage = () => {
                   border: '1px solid #eee', cursor: 'pointer' 
                 }}
               >
-                <div style={{ fontSize: '0.7rem' }}>{d.getMonth() + 1}月</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
-                <div style={{ fontSize: '0.7rem' }}>{weekDays[d.getDay()]}</div>
-              </div>
+                <div style={{ fontSize: '0.7rem' }}>{isNaN(d.getMonth()) ? '--' : (d.getMonth() + 1) + '月'}</div>
+      <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{s.date ? s.date.split('-')[2] : '--'}</div>
+      <div style={{ fontSize: '0.7rem' }}>{isNaN(d.getDay()) ? '--' : weekDays[d.getDay()]}</div>
+    </div>
             );
           })}
 
