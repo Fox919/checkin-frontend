@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-// 修正引用路徑以避免 Critical dependency 警告
+// 修正引用路徑，避免 Critical dependency
 import enUS from 'date-fns/locale/en-US';
 import { format, parseISO } from 'date-fns';
 
@@ -27,7 +27,7 @@ const AdminBatchManager = ({ onSave }) => {
 
   const handleAutoGenerate = () => {
     if (!batchName || !startDate || !selectedOfferingId) {
-      alert("Please fill all fields!");
+      alert("Please select a course and enter batch details.");
       return;
     }
     const newSessions = [];
@@ -46,10 +46,10 @@ const AdminBatchManager = ({ onSave }) => {
   };
 
   return (
-    <div style={{ padding: '20px', background: '#fff', borderRadius: '12px' }}>
-      <h2 style={{ fontSize: '1.2rem', marginBottom: '15px' }}>Course Batch Setup</h2>
+    <div style={{ padding: '20px', background: '#fff', borderRadius: '10px' }}>
+      <h3>Course Batch Manager</h3>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
         <select value={selectedOfferingId} onChange={(e) => setSelectedOfferingId(e.target.value)}>
           <option value="">-- Select Course --</option>
           {offeringList.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
@@ -75,15 +75,15 @@ const AdminBatchManager = ({ onSave }) => {
           <option value="PM Session">PM Session</option>
         </select>
 
-        <button onClick={handleAutoGenerate} style={{ background: '#3498db', color: '#fff', padding: '10px', border: 'none', borderRadius: '5px' }}>
-          Generate Preview
+        <button onClick={handleAutoGenerate} style={{ background: '#3498db', color: '#fff', padding: '10px', cursor: 'pointer' }}>
+          Generate Schedule
         </button>
       </div>
 
       {sessions.length > 0 && (
-        <div style={{ marginTop: '20px' }}>
+        <div>
           {sessions.map((s, idx) => (
-            <div key={s.id} style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
+            <div key={s.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
               <span>Day {idx + 1}:</span>
               <input 
                 type="date" 
@@ -104,8 +104,8 @@ const AdminBatchManager = ({ onSave }) => {
               />
             </div>
           ))}
-          <button onClick={() => onSave(selectedOfferingId, sessions)} style={{ width: '100%', marginTop: '10px', background: '#2ecc71', color: '#fff', padding: '10px', border: 'none' }}>
-            Confirm & Save
+          <button onClick={() => onSave(selectedOfferingId, sessions)} style={{ background: '#2ecc71', color: '#fff', padding: '15px', width: '100%', border: 'none' }}>
+            Publish Batch
           </button>
         </div>
       )}
