@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import enUS from 'date-fns/locale/en-US'; // 確保路徑正確
+import enUS from 'date-fns/locale/en-US/index.js'; 
+
+import { format, parseISO } from 'date-fns';
 import { format, parseISO } from 'date-fns';
 //jjhkj
 const AdminBatchManager = ({ onSave }) => {
