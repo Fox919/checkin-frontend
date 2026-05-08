@@ -178,52 +178,85 @@ const BookingPage = () => {
           <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>{selectedItem.icon} {t(selectedItem.title)}</h3>
 
-            {/* A. 課程日期選擇 */}
-            {selectedItem.type === 'course' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('select_date')}</label>
-                <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}>
-                  <option value="">-- {t('select_date')} --</option>
-                  {selectedItem.config?.sessions?.map((s, idx) => (
-                    <option key={idx} value={s.date}>{s.date} {s.label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+         <div style={{ marginBottom: '20px' }}>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('select_date')}</label>
+        
+        <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', paddingBottom: '10px' }}>
 
-            {/* B. 服務時段選擇 */}
-            {selectedItem.type === 'service' && (
-              <>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('select_date')}</label>
-                  <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', paddingBottom: '10px' }}>
-                    {[...Array(14)].map((_, i) => {
-                      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i);
-                      const dStr = d.toISOString().split('T')[0];
-                      const isAllowed = selectedItem.availableDays?.includes(d.getDay());
-                      const isSelected = bookingDate === dStr;
-                      return (
-                        <div key={dStr} onClick={() => isAllowed && setBookingDate(dStr)} style={{ flex: '0 0 65px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f8f9fa'), color: isSelected ? '#fff' : (isAllowed ? '#333' : '#ccc'), border: '1px solid #eee', cursor: isAllowed ? 'pointer' : 'not-allowed' }}>
-                          <div style={{ fontSize: '0.7rem' }}>{d.getMonth()+1}月</div>
-                          <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
-                          <div style={{ fontSize: '0.7rem' }}>{weekDays[d.getDay()]}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('select_time')}</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                    {currentSlots.map(time => (
-                      <button key={time} onClick={() => setSelectedTime(time)} style={{ padding: '12px 5px', borderRadius: '8px', border: '1px solid #eee', backgroundColor: selectedTime === time ? '#e67e22' : '#fff', color: selectedTime === time ? 'white' : '#333' }}>
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+
+{/* 情況 A：如果是課程 (course) -> 顯示那 8 天的日曆卡片 */}
+          {selectedItem.type === 'course' && selectedItem.config?.sessions?.map((s, idx) => {
+            onst safeDate = s.date.replace(/-/g, '/');
+  const d = new Date(safeDate);
+  const isSelected = bookingDate === s.date;
+            return (
+              <div 
+                key={idx} 
+                onClick={() => setBookingDate(s.date)} 
+                style={{ 
+                  flex: '0 0 70px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', 
+                  background: isSelected ? '#3498db' : '#fff', 
+                  color: isSelected ? '#fff' : '#333', 
+                  border: '1px solid #eee', cursor: 'pointer' 
+                }}
+              >
+                <div style={{ fontSize: '0.7rem' }}>{d.getMonth() + 1}月</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
+                <div style={{ fontSize: '0.7rem' }}>{weekDays[d.getDay()]}</div>
+              </div>
+            );
+          })}
+
+          {/* 情況 B：如果是服務 (service) -> 顯示未來 14 天的日曆卡片 */}
+          {selectedItem.type === 'service' && [...Array(14)].map((_, i) => {
+            const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i);
+            const dStr = d.toISOString().split('T')[0];
+            const isAllowed = selectedItem.availableDays?.includes(d.getDay());
+            const isSelected = bookingDate === dStr;
+            return (
+              <div 
+                key={dStr} 
+                onClick={() => isAllowed && setBookingDate(dStr)} 
+                style={{ 
+                  flex: '0 0 65px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', 
+                  background: isSelected ? '#3498db' : (isAllowed ? '#fff' : '#f8f9fa'), 
+                  color: isSelected ? '#fff' : (isAllowed ? '#333' : '#ccc'), 
+                  border: '1px solid #eee', cursor: isAllowed ? 'pointer' : 'not-allowed' 
+                }}
+              >
+                <div style={{ fontSize: '0.7rem' }}>{d.getMonth()+1}月</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.getDate()}</div>
+                <div style={{ fontSize: '0.7rem' }}>{weekDays[d.getDay()]}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* --- 下拉選單 (保留，或二選一) --- */}
+      {selectedItem.type === 'course' && (
+        <div style={{ marginBottom: '20px' }}>
+          <select value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}>
+            {selectedItem.config?.sessions?.map((s, idx) => (
+              <option key={idx} value={s.date}>{s.date} {s.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* --- 時段選擇 (只有 Service 才顯示) --- */}
+      {selectedItem.type === 'service' && (
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>{t('select_time')}</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            {currentSlots.map(time => (
+              <button key={time} onClick={() => setSelectedTime(time)} style={{ padding: '12px 5px', borderRadius: '8px', border: '1px solid #eee', backgroundColor: selectedTime === time ? '#e67e22' : '#fff', color: selectedTime === time ? 'white' : '#333' }}>
+                {time}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
             {/* 身分確認 */}
             <div style={{ borderTop: '2px solid #f5f5f5', paddingTop: '20px' }}>
