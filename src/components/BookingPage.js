@@ -186,7 +186,7 @@ const BookingPage = () => {
 
 {/* 情況 A：如果是課程 (course) -> 顯示那 8 天的日曆卡片 */}
           {selectedItem.type === 'course' && selectedItem.config?.sessions?.map((s, idx) => {
-            onst safeDate = s.date.replace(/-/g, '/');
+            const safeDate = s.date.replace(/-/g, '/');
   const d = new Date(safeDate);
   const isSelected = bookingDate === s.date;
             return (
