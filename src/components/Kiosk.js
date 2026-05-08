@@ -61,13 +61,14 @@ const Kiosk = () => {
       const data = await response.json();
       
       if (data.success) {
+     setPhoneQuery(''); // 立刻清空輸入框，讓下方按鈕消失
         // --- 核心修正點 ---
         if (data.already_done) {
           // 如果後端回傳 already_done: true，顯示警告訊息
           setMessage(`⚠️ ${data.message}`); // 顯示：歡迎回來！您今天已經簽到過囉 😊
         } else {
           // 如果是第一次簽到成功
-          setMessage(`✅ 簽到成功！歡迎 ${name}`);
+          setMessage(`✅ 簽到成功！歡迎 ${data.name || name}`);
         }
 
         // 延長提示顯示時間，讓用戶看清楚「已簽到」的提醒（建議從 1.5s 改為 2s 或更多）

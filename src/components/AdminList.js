@@ -64,20 +64,26 @@ const AdminList = () => {
     }
   };
 
-  const handleReceptionistChange = async (userId, name) => {
-    try {
-      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/api/users/${userId}/receptionist`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receptionistName: name })
-      });
-      if (res.ok) {
-        setUsers(users.map(u => u.id === userId ? { ...u, receptionist_name: name } : u));
-      }
-    } catch (err) {
-      alert("更新接待人員失敗");
+  // 修改後的 handleReceptionistChange
+const handleReceptionistChange = async (userId, name) => {
+  try {
+    // 建議將路徑修改為與 update-note 類似的風格，方便後端統一管理
+    const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-receptionist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, receptionistName: name })
+    });
+    
+    if (res.ok) {
+      // 成功後只需更新 local state
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, receptionist_name: name } : u));
+    } else {
+      console.error("更新接待人失敗");
     }
-  };
+  } catch (err) {
+    console.error("網路錯誤:", err);
+  }
+};
 
   const handleUserTypeChange = async (userId, userName, newType) => {
     const typeLabel = newType === 'volunteer' ? '義工' : newType === 'student' ? '學員' : '來賓';
