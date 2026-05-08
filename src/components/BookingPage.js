@@ -217,21 +217,23 @@ const BookingPage = () => {
               end++;
             }
 
-            return sessions.slice(start, end + 1).map((s, idx) => {
-              const isSelected = bookingDate === s.date;
-              const d = new Date(s.date.replace(/-/g, '/'));
-              return (
-                <div key={idx} onClick={() => setBookingDate(s.date)} style={{ 
-                  flex: '0 0 70px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', 
-                  background: isSelected ? '#3498db' : '#fff', color: isSelected ? '#fff' : '#333', 
-                  border: '1px solid #eee', cursor: 'pointer', boxShadow: isSelected ? '0 4px 8px rgba(52,152,219,0.3)' : 'none' 
-                }}>
-                  <div style={{ fontSize: '0.7rem' }}>{idx + 1} 堂</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{s.date.split('-')[2]}</div>
-                  <div style={{ fontSize: '0.7rem' }}>{weekDays[d.getDay()]}</div>
-                </div>
-              );
-            });
+// 在 Step 2 的橫向日曆渲染處修改：
+return sessions.slice(start, end + 1).map((s, idx) => {
+  const isSelected = bookingDate === s.date;
+  const d = new Date(s.date.replace(/-/g, '/'));
+  return (
+    <div key={idx} onClick={() => setBookingDate(s.date)} style={{ 
+      flex: '0 0 70px', padding: '12px 5px', borderRadius: '12px', textAlign: 'center', 
+      background: isSelected ? '#3498db' : '#fff', color: isSelected ? '#fff' : '#333', 
+      border: '1px solid #eee', cursor: 'pointer'
+    }}>
+      {/* 這裡改為「第一天」、「第二天」... */}
+      <div style={{ fontSize: '0.7rem' }}>第 {idx + 1} 天</div> 
+      <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{s.date.split('-')[2]}</div>
+      <div style={{ fontSize: '0.7rem' }}>{weekDays[d.getDay()]}</div>
+    </div>
+  );
+});
           })()}
 
           {selectedItem.type === 'service' && [...Array(14)].map((_, i) => {
