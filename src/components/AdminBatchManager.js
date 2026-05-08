@@ -4,45 +4,52 @@ const AdminBatchManager = ({ onSave }) => {
   const [batchName, setBatchName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [totalDays, setTotalDays] = useState(8);
-  const [courseType, setCourseType] = useState('全天');
+  const [courseType, setCourseType] = useState('Full Day');
   const [sessions, setSessions] = useState([]);
 
-  // --- 新增：管理課程清單與選中項 ---
   const [offeringList, setOfferingList] = useState([]);
   const [selectedOfferingId, setSelectedOfferingId] = useState('');
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // 1. 組件載入時抓取課程
+  // 1. Fetch available courses on mount
   useEffect(() => {
     fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
       .then(data => {
-        // 只過濾出課程 (course) 類型的
+        // Filter for items of type 'course'
         setOfferingList(data.filter(i => i.type === 'course'));
       })
-      .catch(err => console.error("抓取失敗:", err));
+      .catch(err => console.error("Fetch error:", err));
   }, []);
 
-  // 2. 自動產生連續日期邏輯 (+1)
+  // 2. Auto-generate daily sessions logic
   const handleAutoGenerate = () => {
     if (!batchName || !startDate || !selectedOfferingId) {
-      alert("請選擇課程、輸入班級名稱並選擇開課日期");
+      alert("Please select a course, enter batch name, and choose a start date.");
       return;
     }
 
     const newSessions = [];
-    let current = new Date(startDate.replace(/-/g, '/'));
+    // Split date to avoid timezone offset issues
+    const [year, month, day] = startDate.split('-').map(Number);
+    let current = new Date(year, month - 1, day);
 
     for (let i = 0; i < totalDays; i++) {
-      const dateStr = current.toISOString().split('T')[0];
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
       newSessions.push({
         id: Date.now() + i,
         date: dateStr,
-        label: i === 0 ? `${batchName}` : `第 ${i + 1} 天 (${courseType})`,
+        // Labeling in English: Day 1, Day 2, etc.
+        label: i === 0 ? `${batchName}` : `Day ${i + 1} (${courseType})`,
         is_start: i === 0,
         type: courseType
       });
-      // 密集班邏輯：日期每次 +1 天
+      
+      // Increment date by 1 day
       current.setDate(current.getDate() + 1);
     }
     setSessions(newSessions);
@@ -55,74 +62,76 @@ const AdminBatchManager = ({ onSave }) => {
   };
 
   return (
-    <div style={{ background: '#f4f7f6', padding: '20px', borderRadius: '15px', maxWidth: '800px', margin: '20px auto' }}>
-      <h3 style={{ borderBottom: '2px solid #3498db', paddingBottom: '10px' }}>📅 密集班期次管理</h3>
+    <div style={{ background: '#f4f7f6', padding: '20px', borderRadius: '15px', maxWidth: '800px', margin: '20px auto', fontFamily: 'sans-serif' }}>
+      <h3 style={{ borderBottom: '2px solid #3498db', paddingBottom: '10px', color: '#2c3e50' }}>
+        📅 Intensive Batch Management
+      </h3>
 
-      {/* --- A. 選擇要套用的課程項目 --- */}
+      {/* --- Section A: Select Course --- */}
       <div style={{ marginBottom: '20px' }}>
-        <label style={labelStyle}>第一步：選擇課程項目</label>
+        <label style={labelStyle}>Step 1: Select Course Offering</label>
         <select 
           value={selectedOfferingId} 
           onChange={(e) => setSelectedOfferingId(e.target.value)}
           style={inputStyle}
         >
-          <option value="">-- 請選擇課程 (例如：健身班) --</option>
+          <option value="">-- Select Course (e.g., Fitness Class) --</option>
           {offeringList.map(item => (
             <option key={item.id} value={item.id}>{item.title}</option>
           ))}
         </select>
       </div>
 
-      {/* --- B. 設定班級資訊 --- */}
+      {/* --- Section B: Batch Configuration --- */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr auto', gap: '10px', marginBottom: '20px', alignItems: 'end' }}>
         <div>
-          <label style={labelStyle}>班級名稱</label>
-          <input type="text" placeholder="6月密集健身班" value={batchName} onChange={(e) => setBatchName(e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Batch Name</label>
+          <input type="text" placeholder="June Intensive" value={batchName} onChange={(e) => setBatchName(e.target.value)} style={inputStyle} />
         </div>
         <div>
-          <label style={labelStyle}>開課第一天</label>
+          <label style={labelStyle}>Start Date</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={inputStyle} />
         </div>
         <div>
-          <label style={labelStyle}>天數</label>
+          <label style={labelStyle}>Days</label>
           <select value={totalDays} onChange={(e) => setTotalDays(Number(e.target.value))} style={inputStyle}>
-            <option value="7">7 天</option>
-            <option value="8">8 天</option>
+            <option value="7">7 Days</option>
+            <option value="8">8 Days</option>
           </select>
         </div>
         <div>
-          <label style={labelStyle}>預設時段</label>
+          <label style={labelStyle}>Default Session</label>
           <select value={courseType} onChange={(e) => setCourseType(e.target.value)} style={inputStyle}>
-            <option value="全天">全天</option>
-            <option value="上午半天">上午半天</option>
-            <option value="下午半天">下午半天</option>
+            <option value="Full Day">Full Day</option>
+            <option value="AM Session">AM Session</option>
+            <option value="PM Session">PM Session</option>
           </select>
         </div>
-        <button onClick={handleAutoGenerate} style={btnGenerateStyle}>產生</button>
+        <button onClick={handleAutoGenerate} style={btnGenerateStyle}>Generate</button>
       </div>
 
-      {/* --- C. 預覽與修改清單 --- */}
+      {/* --- Section C: Preview & Edit List --- */}
       {sessions.length > 0 && (
         <div style={{ background: '#fff', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: '#7f8c8d' }}>Preview Schedule</h4>
           {sessions.map((s, idx) => (
-            <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '80px 150px 1fr 100px', gap: '10px', marginBottom: '8px', alignItems: 'center', borderBottom: '1px solid #f9f9f9', paddingBottom: '5px' }}>
-              <span style={{ fontWeight: 'bold' }}>{idx === 0 ? "第一天" : `第 ${idx+1} 天`}</span>
+            <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '80px 150px 1fr 120px', gap: '10px', marginBottom: '8px', alignItems: 'center', borderBottom: '1px solid #f9f9f9', paddingBottom: '5px' }}>
+              <span style={{ fontWeight: 'bold', color: '#34495e' }}>{idx === 0 ? "Start" : `Day ${idx+1}`}</span>
               <input type="date" value={s.date} onChange={(e) => updateSession(idx, 'date', e.target.value)} style={smallInputStyle} />
               <input type="text" value={s.label} onChange={(e) => updateSession(idx, 'label', e.target.value)} style={smallInputStyle} />
               <select value={s.type} onChange={(e) => updateSession(idx, 'type', e.target.value)} style={smallInputStyle}>
-                <option value="全天">全天</option>
-                <option value="上午半天">半天</option>
-                <option value="下午半天">半天</option>
+                <option value="Full Day">Full Day</option>
+                <option value="AM Session">AM Session</option>
+                <option value="PM Session">PM Session</option>
               </select>
             </div>
           ))}
           
-          {/* 修改這裡：傳回 ID 和 sessions */}
           <button 
             onClick={() => onSave(selectedOfferingId, sessions)} 
             style={btnSaveStyle}
           >
-            ✅ 確認儲存並發佈期次
+            ✅ Save & Publish Schedule
           </button>
         </div>
       )}
@@ -130,6 +139,7 @@ const AdminBatchManager = ({ onSave }) => {
   );
 };
 
+// Styles
 const labelStyle = { fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' };
 const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ddd', boxSizing: 'border-box' };
 const smallInputStyle = { padding: '5px', borderRadius: '4px', border: '1px solid #eee', fontSize: '0.85rem', width: '100%' };
