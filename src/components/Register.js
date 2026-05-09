@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { useSearchParams, useNavigate } from 'react-router-dom'; // 建議使用 useNavigate
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const t = {
   'zh-TW': {
@@ -19,7 +19,9 @@ const t = {
     success: "登記成功！請截圖保存下方的二維碼。",
     retry: "重新登記", error: "失敗",
     duplicatePrompt: "提醒：此成員已登記過。可以直接進行快速簽到：",
-    fastCheckin: "前往快速簽到"
+    fastCheckin: "前往快速簽到",
+    blessing: "是否已接受加持？",
+    blessed: "已加持 ✨"
   },
   'zh-CN': {
     title: "活动人员登记",
@@ -37,7 +39,8 @@ const t = {
     success: "登记成功！请截图保存下方的二维码。",
     retry: "重新登记", error: "失败",
     duplicatePrompt: "提醒：此成员已登记过。可以直接进行快速签到：",
-    fastCheckin: "前往快速签到"
+    fastCheckin: "前往快速签到",
+    blessed: "已加持 ✨"
   },
   'en-US': {
     title: "Registration",
@@ -55,35 +58,38 @@ const t = {
     success: "Successful! Please screenshot your QR code.",
     retry: "Register Again", error: "Error",
     duplicatePrompt: "Note: Already registered. You can use Fast Check-in:",
-    fastCheckin: "Go to Fast Check-in"
+    fastCheckin: "Go to Fast Check-in",
+    blessed: "Blessed ✨"
   }
 };
 
 const Register = ({ autoCheckin }) => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate(); // 使用 react-router 的導航
-  const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
+  const navigate = useNavigate();
   
+  // 修正：增加 lang state (原本代碼可能漏了)
+  const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
+  const eventSource = searchParams.get('source');
+
   const [formData, setFormData] = useState({
     lastName: '', firstName: '', 
-    gender: '', 
     phone: '', email: '', 
     contact_method: [], 
-    discovery_source: '', referrer_name: '', other_source_text: '',
-    user_type: 'Visitor'
+    discovery_source: eventSource || '', 
+    is_blessed: false, 
+    user_type: searchParams.get('type') || 'Visitor'
   });
-  
+
   const [qrValue, setQrValue] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showDuplicateCard, setShowDuplicateCard] = useState(false); // 控制重複提醒卡片
+  const [showDuplicateCard, setShowDuplicateCard] = useState(false);
 
   const translations = t[lang];
 
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
-    const validTypes = ['Hall-Newcomer', 'Expo-Newcomer', 'Volunteer', 'Student', 'Visitor'];
-    if (typeFromUrl && validTypes.includes(typeFromUrl)) {
+    if (typeFromUrl) {
       setFormData(prev => ({ ...prev, user_type: typeFromUrl }));
     }
   }, [searchParams]);
@@ -96,7 +102,6 @@ const Register = ({ autoCheckin }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // 當用戶修改輸入時，隱藏提醒卡片
     if (showDuplicateCard) setShowDuplicateCard(false);
   };
 
@@ -108,7 +113,6 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
   };
 
-  // 修改重複檢查邏輯
   const checkUserExists = async () => {
     const { lastName, firstName, phone } = formData;
     if (lastName.trim() && firstName.trim() && phone.trim().length >= 8) {
@@ -119,19 +123,19 @@ const Register = ({ autoCheckin }) => {
           body: JSON.stringify({ lastName, firstName, phone }),
         });
         const data = await response.json();
-        if (data.isDuplicate) {
-          setShowDuplicateCard(true); // 顯示引導卡片，不再使用彈窗
-        }
+        if (data.isDuplicate) setShowDuplicateCard(true);
       } catch (error) { console.error(error); }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.contact_method.length === 0) {
-      alert(lang === 'en-US' ? "Please select a contact method" : "請選擇聯絡方式");
-      return;
-    }
+    const hasName = formData.lastName.trim() || formData.firstName.trim();
+    const hasPhone = formData.phone.trim().length > 0;
+    const hasEmail = formData.email.trim().length > 0;
+
+    if (!hasName) { alert("Please enter your name."); return; }
+    if (!hasPhone && !hasEmail) { alert("Please provide Phone or Email."); return; }
 
     setIsSubmitting(true);
     try {
@@ -140,7 +144,6 @@ const Register = ({ autoCheckin }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, lang, autoCheckin }),
       });
-
       const data = await response.json();
       if (response.ok) {
         setQrValue(String(data.id));
@@ -149,11 +152,8 @@ const Register = ({ autoCheckin }) => {
       } else {
         setMessage(data.error || 'Failed');
       }
-    } catch (error) {
-      setMessage('Connection Error');
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (error) { setMessage('Connection Error'); }
+    finally { setIsSubmitting(false); }
   };
 
   const getHeaderColor = () => {
@@ -168,7 +168,6 @@ const Register = ({ autoCheckin }) => {
   return (
     <div style={{ padding: '20px', maxWidth: '500px', margin: 'auto', textAlign: 'center', fontFamily: 'sans-serif', backgroundColor: '#fff', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
       
-      {/* 語言切換 */}
       <div style={{ marginBottom: '20px' }}>
         {['zh-TW', 'zh-CN', 'en-US'].map((l) => (
           <button key={l} onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '8px 15px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '20px', backgroundColor: lang === l ? '#007bff' : '#fff', color: lang === l ? '#fff' : '#333', fontWeight: 'bold' }}>
@@ -177,53 +176,42 @@ const Register = ({ autoCheckin }) => {
         ))}
       </div>
 
-      {/* ⚡ 新增：重複登記引導卡片 ⚡ */}
       {showDuplicateCard && (
-        <div style={{ 
-          marginBottom: '20px', padding: '15px', backgroundColor: '#fff3cd', 
-          border: '1px solid #ffeeba', borderRadius: '12px', textAlign: 'center',
-          animation: 'fadeIn 0.3s ease'
-        }}>
-          <p style={{ color: '#856404', fontWeight: 'bold', marginBottom: '10px', fontSize: '0.95rem' }}>
-            {translations.duplicatePrompt}
-          </p>
-          <button 
-            onClick={() => {
-              // 跳轉到 Kiosk 頁面，自動帶入身份與號碼末4碼
-              const last4Digits = formData.phone.slice(-4);
-              navigate(`/kiosk?type=${formData.user_type}&query=${last4Digits}`);
-            }}
-            style={{ 
-              backgroundColor: getHeaderColor(), color: 'white', border: 'none', 
-              padding: '10px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-            }}
-          >
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: '12px', textAlign: 'center' }}>
+          <p style={{ color: '#856404', fontWeight: 'bold', marginBottom: '10px' }}>{translations.duplicatePrompt}</p>
+          <button onClick={() => navigate(`/kiosk?type=${formData.user_type}&query=${formData.phone.slice(-4)}`)} style={{ backgroundColor: getHeaderColor(), color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
             🏃 {translations.fastCheckin}
           </button>
         </div>
       )}
 
-      <h2 style={{ color: getHeaderColor(), marginBottom: '10px' }}>
-        {autoCheckin ? translations.checkinTitle : translations.title}
-      </h2>
-      
-      <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '20px' }}>
-        ({formData.user_type === 'Visitor' ? 'Bodhi Meditation' : `Channel: ${formData.user_type}`})
-      </p>
+      <h2 style={{ color: getHeaderColor(), marginBottom: '10px' }}>{autoCheckin ? translations.checkinTitle : translations.title}</h2>
+      <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '20px' }}>Bodhi Meditation ({formData.user_type})</p>
 
       {!qrValue ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
-          
           <div style={{ display: 'flex', gap: '10px' }}>
-            <input name="lastName" placeholder={translations.lastName} value={formData.lastName} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
-            <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
+            <input name="lastName" placeholder={translations.lastName} value={formData.lastName} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
+            <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
           </div>
 
-          <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} required style={inputStyle} />
+          <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
-          {/* ... 中間表單內容保持不變 ... */}
+          {/* ✨ 加持選項 (醒目黃框) ✨ */}
+          <div style={{ padding: '12px', border: '2px solid #ffe082', borderRadius: '8px', backgroundColor: '#fff8e1' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
+              <input 
+                type="checkbox" 
+                checked={formData.is_blessed} 
+                onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
+                style={{ width: '20px', height: '20px', marginRight: '10px' }}
+              />
+              {translations.blessed}
+            </label>
+          </div>
+
+          {/* 聯繫偏好 */}
           <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
             <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -251,9 +239,7 @@ const Register = ({ autoCheckin }) => {
             <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={inputStyle} />
           )}
 
-          <input type="hidden" name="user_type" value={formData.user_type} />
-
-          <button type="submit" disabled={isSubmitting} style={{ padding: '15px', background: getHeaderColor(), color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '10px' }}>
+          <button type="submit" disabled={isSubmitting} style={{ padding: '15px', background: getHeaderColor(), color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}>
             {isSubmitting ? '...' : translations.submit}
           </button>
         </form>

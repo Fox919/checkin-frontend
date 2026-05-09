@@ -13,12 +13,24 @@ const AdminList = () => {
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
 
+  // 格式化時間：月/日 時:分
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '-';
+    const date = new Date(timeStr);
+    return date.toLocaleString('zh-TW', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
       const data = await res.json();
-      console.log("後端數據首筆範例:", data[0]); 
       setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗:", err);
@@ -49,80 +61,54 @@ const AdminList = () => {
 
   const handleNoteChange = async (userId, newNote) => {
     try {
-      const res = await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
+      await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // 重點：這裡的 Key 要從 note 改成 notes，與後端一致
         body: JSON.stringify({ userId, notes: newNote }) 
       });
-      
-      if (!res.ok) {
-        console.error("備註儲存失敗，請檢查網路");
-      }
     } catch (err) {
       console.error("更新備註發生錯誤:", err);
     }
   };
 
-  // 修改後的 handleReceptionistChange
-const handleReceptionistChange = async (userId, name) => {
-  try {
-    // 建議將路徑修改為與 update-note 類似的風格，方便後端統一管理
-    const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-receptionist`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, receptionistName: name })
-    });
-    
-    if (res.ok) {
-      // 成功後只需更新 local state
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, receptionist_name: name } : u));
-    } else {
-      console.error("更新接待人失敗");
+  const handleReceptionistChange = async (userId, name) => {
+    try {
+      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-receptionist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, receptionistName: name })
+      });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, receptionist_name: name } : u));
+      }
+    } catch (err) {
+      console.error("網路錯誤:", err);
     }
-  } catch (err) {
-    console.error("網路錯誤:", err);
-  }
-};
+  };
 
   const handleUserTypeChange = async (userId, userName, newType) => {
-    const typeLabel = newType === 'volunteer' ? '義工' : newType === 'student' ? '學員' : '來賓';
-    if (!window.confirm(`確定要將「${userName}」的身份修改為「${typeLabel}」嗎？`)) return;
-
     try {
-      // 確保使用 POST 方法，並將 ID 放在網址最後
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_type: newType })
       });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        // 同步前端狀態
+      if (res.ok) {
         setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, user_type: newType } : u));
-        alert(`成功將「${userName}」修改為 ${typeLabel}`);
-      } else {
-        alert("更新失敗：" + (data.error || "未知錯誤"));
       }
     } catch (err) {
       console.error("API 連線錯誤:", err);
-      alert("⚠️ 連線伺服器失敗，請確認後端是否已部署 POST 路由");
     }
   };
 
-
   const exportToCSV = () => {
-    const headers = ["姓名", "電話", "身分", "性別", "城市", "管道", "介紹人", "聯絡偏好", "YouTube", "接待人員", "狀態", "備註"];
+    const headers = ["姓名", "電話", "Email", "身份", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
     const csvRows = filteredList.map(u => [
-      `"${u.name || ''}"`, `"${u.phone || ''}"`, `"${u.user_type || ''}"`,
-      `"${u.gender === 'Male' ? '男' : '女'}"`, `"${u.city || ''}"`,
-      `"${u.discovery_source || ''}"`, `"${u.referrer_name || ''}"`,
-      `"${u.contact_method || ''}"`, `"${u.youtube_subscribed ? '已訂閱' : '未訂閱'}"`,
-      `"${u.receptionist_name || ''}"`, `"${u.status || ''}"`, `"${u.notes || ''}"`
+      `"${u.name || ''}"`, `"${u.phone || ''}"`, `"${u.email || ''}"`, `"${u.user_type || ''}"`,
+      `"${u.discovery_source || ''}"`, `"${u.is_blessed ? '是' : '否'}"`, 
+      `"${u.created_at || ''}"`, `"${u.last_checkin_time || ''}"`,
+      `"${u.receptionist_name || ''}"`, `"${u.notes || ''}"`
     ].join(","));
-    
     const csvContent = [headers.join(","), ...csvRows].join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -137,31 +123,14 @@ const handleReceptionistChange = async (userId, name) => {
     const matchesSearch = 
       user.name?.toLowerCase().includes(searchStr) || 
       user.phone?.includes(searchTerm) ||
-      user.city?.toLowerCase().includes(searchStr) ||
       user.receptionist_name?.toLowerCase().includes(searchStr);
 
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
-    const rawDate = viewMode === 'checked-in' ? user.last_checkin_date : user.created_at;
-    const targetDate = rawDate ? String(rawDate) : ''; 
-    const matchesDate = !selectedDate || targetDate.startsWith(selectedDate);
+    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
+    const matchesDate = !selectedDate || (rawDate && String(rawDate).startsWith(selectedDate));
 
     return matchesSearch && matchesStatus && matchesDate;
   });
-
-  const badgeStyle = (type) => {
-    const lowerType = String(type || '').toLowerCase();
-    let config = { bg: '#f5f5f5', text: '#616161' };
-    
-    if (lowerType === 'volunteer') config = { bg: '#E3F2FD', text: '#1976D2' };
-    else if (lowerType === 'student') config = { bg: '#F1F8E9', text: '#388E3C' };
-    else if (lowerType === 'visitor') config = { bg: '#EDE7F6', text: '#5E35B1' };
-    else if (lowerType.includes('newcomer')) config = { bg: '#FFF3E0', text: '#E65100' };
-
-    return {
-      padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
-      backgroundColor: config.bg, color: config.text, display: 'inline-block'
-    };
-  };
 
   const tableHeaderStyle = { padding: '12px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem' };
   const tableCellStyle = { padding: '10px', border: '1px solid #ddd', fontSize: '0.85rem' };
@@ -190,7 +159,7 @@ const handleReceptionistChange = async (userId, name) => {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1500px', margin: 'auto' }}>
+    <div style={{ padding: '20px', maxWidth: '1600px', margin: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>📋 名單管理控制台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -201,7 +170,7 @@ const handleReceptionistChange = async (userId, name) => {
 
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         <input 
-          type="text" placeholder="🔍 搜尋姓名、電話..." 
+          type="text" placeholder="🔍 搜尋姓名、電話、接待..." 
           value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
           style={{ padding: '10px', width: '250px', borderRadius: '5px', border: '1px solid #ddd' }} 
         />
@@ -218,42 +187,33 @@ const handleReceptionistChange = async (userId, name) => {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
             <thead>
-              <tr>
-                <th style={tableHeaderStyle}>姓名/性別</th>
-                <th style={tableHeaderStyle}>身分/操作</th>
-                <th style={tableHeaderStyle}>電話</th>
-                <th style={tableHeaderStyle}>管道</th>
-                <th style={tableHeaderStyle}>接待人</th>
-                <th style={tableHeaderStyle}>備註</th>
-                <th style={tableHeaderStyle}>工具</th>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={tableHeaderStyle}>Name (加持✨)</th>
+                <th style={tableHeaderStyle}>Contact (Phone/Email)</th>
+                <th style={tableHeaderStyle}>Source</th>
+                <th style={tableHeaderStyle}>Reg. Date (登記)</th>
+                <th style={tableHeaderStyle}>Last Check-in (簽到)</th>
+                <th style={tableHeaderStyle}>Reception (接待)</th>
+                <th style={tableHeaderStyle}>Notes</th>
+                <th style={tableHeaderStyle}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredList.map(user => (
-                <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
+                <tr key={user.id}>
                   <td style={tableCellStyle}>
-                    <div style={{ fontWeight: 'bold' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{user.gender === 'Male' ? '男' : '女'}</div>
+                    <strong>{user.name}</strong>
+                    {user.is_blessed === 1 && <span style={{ marginLeft: '5px', color: '#f39c12' }}>✨</span>}
                   </td>
                   <td style={tableCellStyle}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <span style={badgeStyle(user.user_type)}>
-                        {String(user.user_type || '').toLowerCase() === 'volunteer' ? '義工' : 
-                         String(user.user_type || '').toLowerCase() === 'student' ? '學員' : 
-                         String(user.user_type || '').toLowerCase() === 'visitor' ? '正式訪客' : '來賓'}
-                      </span>
-                      {String(user.user_type || '').toLowerCase() !== 'volunteer' && (
-                        <button 
-                          onClick={() => handleUserTypeChange(user.id, user.name, 'volunteer')}
-                          style={{ padding: '2px 5px', fontSize: '0.65rem', backgroundColor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                          升為義工 🧡
-                        </button>
-                      )}
-                    </div>
+                    <div>{user.phone || '-'}</div>
+                    <div style={{ color: '#7f8c8d', fontSize: '0.75rem' }}>{user.email || ''}</div>
                   </td>
-                  <td style={tableCellStyle}>{user.phone}</td>
                   <td style={tableCellStyle}>{user.discovery_source}</td>
+                  <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+                  <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+                    {formatTime(user.last_checkin_time)}
+                  </td>
                   <td style={tableCellStyle}>
                     <input defaultValue={user.receptionist_name} onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} style={{ width: '70px', padding: '4px' }} />
                   </td>
@@ -264,14 +224,14 @@ const handleReceptionistChange = async (userId, name) => {
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <button onClick={() => setSelectedQrId(user.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer' }}>QR</button>
                       <select 
-                        value={String(user.user_type || 'guest').toLowerCase()} 
+                        value={String(user.user_type || 'visitor').toLowerCase()} 
                         onChange={(e) => handleUserTypeChange(user.id, user.name, e.target.value)}
                         style={{ fontSize: '0.75rem' }}
                       >
-                        <option value="guest">來賓</option>
+                        <option value="visitor">正式訪客</option>
                         <option value="student">學員</option>
                         <option value="volunteer">義工</option>
-                        <option value="visitor">正式訪客</option>
+                        <option value="guest">來賓</option>
                       </select>
                     </div>
                   </td>
