@@ -14,7 +14,7 @@ import { format, parseISO } from 'date-fns';
   const [selectedOfferingId, setSelectedOfferingId] = useState('');
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
-
+//ggg
   useEffect(() => {
     fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
