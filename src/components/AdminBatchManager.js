@@ -4,9 +4,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import enUS from 'date-fns/locale/en-US/index.js'; 
 
 import { format, parseISO } from 'date-fns';
-import { format, parseISO } from 'date-fns';
-//jjhkj
-const AdminBatchManager = ({ onSave }) => {
+  const AdminBatchManager = ({ onSave }) => {
   const [batchName, setBatchName] = useState('');
   const [startDate, setStartDate] = useState(new Date());
   const [totalDays, setTotalDays] = useState(8);
