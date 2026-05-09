@@ -197,7 +197,19 @@ const Register = ({ autoCheckin }) => {
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
-          {/* ✨ 條件渲染：僅外展活動顯示加持選項 ✨ */}
+          
+
+          {/* 聯繫偏好 */}
+          <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
+            <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <label><input type="checkbox" value="Call" onChange={handleContactChange} /> {translations.call}</label>
+              <label><input type="checkbox" value="Text" onChange={handleContactChange} /> {translations.text}</label>
+              <label><input type="checkbox" value="Email" onChange={handleContactChange} /> {translations.emailPref}</label>
+            </div>
+          </div>
+
+         {/* ✨ 條件渲染：僅外展活動顯示加持選項 ✨ */}
           {eventSource && (
             <div style={{ 
               marginTop: '5px', 
@@ -219,15 +231,6 @@ const Register = ({ autoCheckin }) => {
             </div>
           )}
 
-          {/* 聯繫偏好 */}
-          <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
-            <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <label><input type="checkbox" value="Call" onChange={handleContactChange} /> {translations.call}</label>
-              <label><input type="checkbox" value="Text" onChange={handleContactChange} /> {translations.text}</label>
-              <label><input type="checkbox" value="Email" onChange={handleContactChange} /> {translations.emailPref}</label>
-            </div>
-          </div>
 
           {/* 🚀 條件渲染：若無 eventSource 才顯示來源下拉選單 🚀 */}
           {!eventSource && (
