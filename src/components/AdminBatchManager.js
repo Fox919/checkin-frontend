@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import enUS from 'date-fns/locale/en-US/index.js'; 
+import { enUS } from 'date-fns/locale';
 
 import { format, parseISO } from 'date-fns';
   const AdminBatchManager = ({ onSave }) => {
