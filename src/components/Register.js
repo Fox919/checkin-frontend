@@ -21,7 +21,7 @@ const t = {
     duplicatePrompt: "提醒：此成員已登記過。可以直接進行快速簽到：",
     fastCheckin: "前往快速簽到",
     blessing: "是否已接受加持？",
-    blessed: "已加持 ✨"
+    blessed: "已接受加持 ✨"
   },
   'zh-CN': {
     title: "活动人员登记",
@@ -40,7 +40,7 @@ const t = {
     retry: "重新登记", error: "失败",
     duplicatePrompt: "提醒：此成员已登记过。可以直接进行快速签到：",
     fastCheckin: "前往快速签到",
-    blessed: "已加持 ✨"
+    blessed: "已接受加持 ✨"
   },
   'en-US': {
     title: "Registration",
@@ -59,7 +59,7 @@ const t = {
     retry: "Register Again", error: "Error",
     duplicatePrompt: "Note: Already registered. You can use Fast Check-in:",
     fastCheckin: "Go to Fast Check-in",
-    blessed: "Blessed ✨"
+    blessed: "Received Blessing ✨"
   }
 };
 
@@ -67,7 +67,6 @@ const Register = ({ autoCheckin }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // 修正：增加 lang state (原本代碼可能漏了)
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const eventSource = searchParams.get('source');
 
@@ -170,7 +169,7 @@ const Register = ({ autoCheckin }) => {
       
       <div style={{ marginBottom: '20px' }}>
         {['zh-TW', 'zh-CN', 'en-US'].map((l) => (
-          <button key={l} onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '8px 15px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '20px', backgroundColor: lang === l ? '#007bff' : '#fff', color: lang === l ? '#fff' : '#333', fontWeight: 'bold' }}>
+          <button key={l} type="button" onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '8px 15px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '20px', backgroundColor: lang === l ? '#007bff' : '#fff', color: lang === l ? '#fff' : '#333', fontWeight: 'bold' }}>
             {l === 'zh-TW' ? '繁體' : l === 'zh-CN' ? '简体' : 'EN'}
           </button>
         ))}
@@ -179,7 +178,7 @@ const Register = ({ autoCheckin }) => {
       {showDuplicateCard && (
         <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: '12px', textAlign: 'center' }}>
           <p style={{ color: '#856404', fontWeight: 'bold', marginBottom: '10px' }}>{translations.duplicatePrompt}</p>
-          <button onClick={() => navigate(`/kiosk?type=${formData.user_type}&query=${formData.phone.slice(-4)}`)} style={{ backgroundColor: getHeaderColor(), color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
+          <button type="button" onClick={() => navigate(`/kiosk?type=${formData.user_type}&query=${formData.phone.slice(-4)}`)} style={{ backgroundColor: getHeaderColor(), color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
             🏃 {translations.fastCheckin}
           </button>
         </div>
@@ -198,18 +197,27 @@ const Register = ({ autoCheckin }) => {
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
-          {/* ✨ 加持選項 (醒目黃框) ✨ */}
-          <div style={{ padding: '12px', border: '2px solid #ffe082', borderRadius: '8px', backgroundColor: '#fff8e1' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
-              <input 
-                type="checkbox" 
-                checked={formData.is_blessed} 
-                onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
-                style={{ width: '20px', height: '20px', marginRight: '10px' }}
-              />
-              {translations.blessed}
-            </label>
-          </div>
+          {/* ✨ 條件渲染：僅外展活動顯示加持選項 ✨ */}
+          {eventSource && (
+            <div style={{ 
+              marginTop: '5px', 
+              padding: '12px', 
+              border: '2px solid #ffe082', 
+              borderRadius: '8px', 
+              backgroundColor: '#fff8e1', 
+              textAlign: 'left' 
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.is_blessed} 
+                  onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
+                  style={{ width: '20px', height: '20px', marginRight: '10px' }}
+                />
+                {translations.blessed}
+              </label>
+            </div>
+          )}
 
           {/* 聯繫偏好 */}
           <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
@@ -221,22 +229,27 @@ const Register = ({ autoCheckin }) => {
             </div>
           </div>
 
-          <label style={{ fontSize: '0.9rem', color: '#666' }}>{translations.source}</label>
-          <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
-            <option value="">-- Select --</option>
-            <option value="Google/YouTube">{translations.google}</option>
-            <option value="Facebook/IG">{translations.facebook}</option>
-            <option value="Friend">{translations.friend}</option>
-            <option value="Magazine">{translations.magazine}</option>
-            <option value="Website">{translations.website}</option>
-            <option value="Other">{translations.other}</option>
-          </select>
+          {/* 🚀 條件渲染：若無 eventSource 才顯示來源下拉選單 🚀 */}
+          {!eventSource && (
+            <>
+              <label style={{ fontSize: '0.9rem', color: '#666' }}>{translations.source}</label>
+              <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
+                <option value="">-- Select --</option>
+                <option value="Google/YouTube">{translations.google}</option>
+                <option value="Facebook/IG">{translations.facebook}</option>
+                <option value="Friend">{translations.friend}</option>
+                <option value="Magazine">{translations.magazine}</option>
+                <option value="Website">{translations.website}</option>
+                <option value="Other">{translations.other}</option>
+              </select>
 
-          {formData.discovery_source === 'Friend' && (
-            <input name="referrer_name" placeholder={translations.referrer} value={formData.referrer_name} onChange={handleChange} required style={inputStyle} />
-          )}
-          {formData.discovery_source === 'Other' && (
-            <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={inputStyle} />
+              {formData.discovery_source === 'Friend' && (
+                <input name="referrer_name" placeholder={translations.referrer} value={formData.referrer_name} onChange={handleChange} required style={inputStyle} />
+              )}
+              {formData.discovery_source === 'Other' && (
+                <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={inputStyle} />
+              )}
+            </>
           )}
 
           <button type="submit" disabled={isSubmitting} style={{ padding: '15px', background: getHeaderColor(), color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}>
@@ -248,7 +261,7 @@ const Register = ({ autoCheckin }) => {
           <QRCodeCanvas value={qrValue} size={220} />
           <h3 style={{ marginTop: '20px' }}>{formData.lastName}{formData.firstName}</h3>
           <p>{translations.success}</p>
-          <button onClick={() => { setQrValue(''); setMessage(''); setShowDuplicateCard(false); }} style={{ marginTop: '20px', padding: '12px', width: '100%', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '8px' }}>
+          <button type="button" onClick={() => { setQrValue(''); setMessage(''); setShowDuplicateCard(false); }} style={{ marginTop: '20px', padding: '12px', width: '100%', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '8px' }}>
             {translations.retry}
           </button>
         </div>
