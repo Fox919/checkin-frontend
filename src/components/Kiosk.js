@@ -68,7 +68,8 @@ const Kiosk = () => {
           setMessage(`⚠️ ${data.message}`); // 顯示：歡迎回來！您今天已經簽到過囉 😊
         } else {
           // 如果是第一次簽到成功
-          setMessage(`✅ 簽到成功！歡迎 ${data.name || name}`);
+          const displayName = data.name || name || '成員';
+    setMessage(`✅ 簽到成功！歡迎 ${displayName}`);
         }
 
         // 延長提示顯示時間，讓用戶看清楚「已簽到」的提醒（建議從 1.5s 改為 2s 或更多）

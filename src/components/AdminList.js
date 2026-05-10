@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
+// 定義來源對照表，將數字轉回文字
+const sourceMap = {
+  '1': '外展活動',
+  '2': '社區推廣',
+  // 如果未來有 3, 4 可以繼續增加
+};
+
 const AdminList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,10 +20,11 @@ const AdminList = () => {
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
 
-  // 格式化時間：月/日 時:分
+  // 1. 強化的格式化時間函數：防止顯示 "undefined"
   const formatTime = (timeStr) => {
-    if (!timeStr) return '-';
+    if (!timeStr || timeStr === 'undefined' || timeStr === 'null') return '-';
     const date = new Date(timeStr);
+    if (isNaN(date.getTime())) return '-'; // 防止無效日期
     return date.toLocaleString('zh-TW', {
       month: '2-digit',
       day: '2-digit',
@@ -43,6 +51,38 @@ const AdminList = () => {
     if (authorized) fetchUsers();
   }, [authorized]);
 
+  // 2. 接待人變更處理 (增加立即更新本地 State 的邏輯)
+  const handleReceptionistChange = async (userId, name) => {
+    try {
+      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-receptionist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, receptionistName: name })
+      });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, receptionist_name: name } : u));
+      }
+    } catch (err) {
+      console.error("網路錯誤:", err);
+    }
+  };
+
+  // 3. 備註變更處理 (增加立即更新本地 State 的邏輯)
+  const handleNoteChange = async (userId, newNote) => {
+    try {
+      const res = await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, notes: newNote }) 
+      });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, notes: newNote } : u));
+      }
+    } catch (err) {
+      console.error("更新備註發生錯誤:", err);
+    }
+  };
+
   const handleOpenModal = (type) => {
     setActionType(type);
     setIsModalOpen(true);
@@ -56,33 +96,6 @@ const AdminList = () => {
       setTempPassword('');
     } else {
       alert("密碼錯誤！");
-    }
-  };
-
-  const handleNoteChange = async (userId, newNote) => {
-    try {
-      await fetch('https://checkin-system-production-2a74.up.railway.app/admin/update-note', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, notes: newNote }) 
-      });
-    } catch (err) {
-      console.error("更新備註發生錯誤:", err);
-    }
-  };
-
-  const handleReceptionistChange = async (userId, name) => {
-    try {
-      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-receptionist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, receptionistName: name })
-      });
-      if (res.ok) {
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, receptionist_name: name } : u));
-      }
-    } catch (err) {
-      console.error("網路錯誤:", err);
     }
   };
 
@@ -105,7 +118,8 @@ const AdminList = () => {
     const headers = ["姓名", "電話", "Email", "身份", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
     const csvRows = filteredList.map(u => [
       `"${u.name || ''}"`, `"${u.phone || ''}"`, `"${u.email || ''}"`, `"${u.user_type || ''}"`,
-      `"${u.discovery_source || ''}"`, `"${u.is_blessed ? '是' : '否'}"`, 
+      `"${sourceMap[u.discovery_source] || u.discovery_source || ''}"`, // CSV 匯出也要轉義
+      `"${u.is_blessed ? '是' : '否'}"`, 
       `"${u.created_at || ''}"`, `"${u.last_checkin_time || ''}"`,
       `"${u.receptionist_name || ''}"`, `"${u.notes || ''}"`
     ].join(","));
@@ -160,6 +174,7 @@ const AdminList = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1600px', margin: 'auto' }}>
+      {/* ... 標題與搜尋區塊保持不變 ... */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
         <h2 style={{ margin: 0 }}>📋 名單管理控制台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -182,7 +197,7 @@ const AdminList = () => {
         <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px' }} />
         <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all');}}>重置</button>
       </div>
-      
+
       {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
@@ -209,17 +224,41 @@ const AdminList = () => {
                     <div>{user.phone || '-'}</div>
                     <div style={{ color: '#7f8c8d', fontSize: '0.75rem' }}>{user.email || ''}</div>
                   </td>
-                  <td style={tableCellStyle}>{user.discovery_source}</td>
+                  {/* 修正點：數字 1 轉文字 */}
+                  <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+                  
                   <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+                  
+                  {/* 修正點：優化簽到時間顯示 */}
                   <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
                     {formatTime(user.last_checkin_time)}
                   </td>
+                  
+                  {/* 修正點：使用 value + onChange 讓資料顯示更穩定 */}
                   <td style={tableCellStyle}>
-                    <input defaultValue={user.receptionist_name} onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} style={{ width: '70px', padding: '4px' }} />
+                    <input 
+                      value={user.receptionist_name || ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+                      }}
+                      onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
+                      style={{ width: '70px', padding: '4px' }} 
+                    />
                   </td>
+                  
                   <td style={tableCellStyle}>
-                    <textarea defaultValue={user.notes} onBlur={(e) => handleNoteChange(user.id, e.target.value)} style={{ width: '120px', height: '35px', padding: '4px' }} />
+                    <textarea 
+                      value={user.notes || ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+                      }}
+                      onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
+                      style={{ width: '120px', height: '35px', padding: '4px' }} 
+                    />
                   </td>
+
                   <td style={tableCellStyle}>
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <button onClick={() => setSelectedQrId(user.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer' }}>QR</button>
@@ -241,7 +280,7 @@ const AdminList = () => {
           </table>
         </div>
       )}
-
+      {/* ... QR Code Modal 保持不變 ... */}
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
