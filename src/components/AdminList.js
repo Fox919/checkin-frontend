@@ -21,18 +21,24 @@ const AdminList = () => {
   const [tempPassword, setTempPassword] = useState('');
 
   // 1. 強化的格式化時間函數：防止顯示 "undefined"
-  const formatTime = (timeStr) => {
-    if (!timeStr || timeStr === 'undefined' || timeStr === 'null') return '-';
-    const date = new Date(timeStr);
-    if (isNaN(date.getTime())) return '-'; // 防止無效日期
-    return date.toLocaleString('zh-TW', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
+ const formatTime = (timeStr) => {
+  if (!timeStr || timeStr === 'undefined' || timeStr === 'null') return '-';
+  
+  // 嘗試將字串轉為日期物件
+  const date = new Date(timeStr);
+  if (isNaN(date.getTime())) return '-';
+
+  // 加上時區補償 (如果是因為後端漏了時區標記 Z，瀏覽器可能誤判)
+  // 如果是少了 4 小時，請確認伺服器時區。通常建議直接強制使用 zh-TW 並確保語法正確：
+  return date.toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', // 👈 強制指定時區，避免隨伺服器漂移
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -229,35 +235,37 @@ const AdminList = () => {
                   
                   <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
                   
-                  {/* 修正點：優化簽到時間顯示 */}
-                  <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-                    {formatTime(user.last_checkin_time)}
-                  </td>
-                  
-                  {/* 修正點：使用 value + onChange 讓資料顯示更穩定 */}
-                  <td style={tableCellStyle}>
-                    <input 
-                      value={user.receptionist_name || ''} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
-                      }}
-                      onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
-                      style={{ width: '70px', padding: '4px' }} 
-                    />
-                  </td>
-                  
-                  <td style={tableCellStyle}>
-                    <textarea 
-                      value={user.notes || ''} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
-                      }}
-                      onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
-                      style={{ width: '120px', height: '35px', padding: '4px' }} 
-                    />
-                  </td>
+                  // 在 <tbody> 渲染處修正
+<td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+  {/* 如果 user.last_checkin_time 是 undefined，這行會顯示 '-' 而不是字串 "undefined" */}
+  {formatTime(user.last_checkin_time || user.last_checkin)} 
+</td>
+
+<td style={tableCellStyle}>
+  <input 
+    // 加上 || '' 確保值為空時是空字串而非 undefined
+    value={user.receptionist_name || user.receptionist || ''} 
+    onChange={(e) => {
+      const val = e.target.value;
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+    }}
+    onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
+    style={{ width: '70px', padding: '4px' }} 
+  />
+</td>
+
+<td style={tableCellStyle}>
+  <textarea 
+    // 同理，檢查後端到底是 note 還是 notes
+    value={user.notes || user.note || ''} 
+    onChange={(e) => {
+      const val = e.target.value;
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+    }}
+    onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
+    style={{ width: '120px', height: '35px', padding: '4px' }} 
+  />
+</td>
 
                   <td style={tableCellStyle}>
                     <div style={{ display: 'flex', gap: '5px' }}>
