@@ -38,9 +38,10 @@ const AdminList = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
-      const data = await res.json();
-      setUsers(data);
+     const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
+    const data = await res.json();
+    console.log("後端原始資料第一筆：", data[0]); // 👈 這裡非常重要，請看 F12 console
+    setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗:", err);
     } finally {
@@ -192,57 +193,68 @@ const AdminList = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredList.map(user => (
-                <tr key={user.id}>
-                  <td style={tableCellStyle}>
-                    <strong>{user.name || '無姓名'}</strong>
-                    {user.is_blessed === 1 && <span style={{ color: '#f39c12', marginLeft: '4px' }}>✨</span>}
-                  </td>
-                  <td style={tableCellStyle}>{user.phone || '-'}</td>
-                  <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
-                  <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-                  <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-                    {(() => {
-                      const checkVal = user.last_checkin_time || user.last_checkin;
-                      return (checkVal && String(checkVal) !== 'undefined') ? formatTime(checkVal) : '-';
-                    })()}
-                  </td>
-                  <td style={tableCellStyle}>
-                    <input 
-                      value={(user.receptionist_name || user.receptionist || '').toString().replace('undefined', '')} 
-                      onChange={(e) => setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: e.target.value } : u))}
-                      onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
-                      onFocus={(e) => e.target.select()}
-                      style={{ width: '70px', padding: '4px' }} 
-                    />
-                  </td>
-                  <td style={tableCellStyle}>
-                    <textarea 
-                      value={(user.notes || user.note || '').toString().replace('undefined', '')} 
-                      onChange={(e) => setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: e.target.value } : u))}
-                      onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
-                      onFocus={(e) => e.target.select()}
-                      style={{ width: '120px', height: '35px', padding: '4px', fontSize: '0.8rem' }} 
-                    />
-                  </td>
-                  <td style={tableCellStyle}>
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      <button onClick={() => setSelectedQrId(user.id)}>QR</button>
-                      <select 
-                        value={String(user.user_type || 'visitor').toLowerCase()} 
-                        onChange={(e) => handleUserTypeChange(user.id, e.target.value)}
-                        style={{ fontSize: '0.75rem' }}
-                      >
-                        <option value="visitor">訪客</option>
-                        <option value="student">學員</option>
-                        <option value="volunteer">義工</option>
-                        <option value="guest">來賓</option>
-                      </select>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+  {filteredList.map(user => (
+    <tr key={user.id}>
+      <td style={tableCellStyle}>
+        <strong>{user.name || '無姓名'}</strong>
+        {user.is_blessed === 1 && <span style={{ color: '#f39c12', marginLeft: '4px' }}>✨</span>}
+      </td>
+      <td style={tableCellStyle}>{user.phone || '-'}</td>
+      <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+      <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+      <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+        {(() => {
+          const checkVal = user.last_checkin_time || user.last_checkin;
+          return (checkVal && String(checkVal) !== 'undefined') ? formatTime(checkVal) : '-';
+        })()}
+      </td>
+
+      {/* 接待人員欄位 - 修正對應 */}
+      <td style={tableCellStyle}>
+        <input 
+          value={(user.receptionist_name || user.receptionist || '').toString().replace('undefined', '')} 
+          onChange={(e) => {
+            const val = e.target.value;
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+          }}
+          onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
+          onFocus={(e) => e.target.select()}
+          style={{ width: '70px', padding: '4px', fontSize: '0.8rem' }} 
+        />
+      </td>
+
+      {/* 備註欄位 - 修正對應 */}
+      <td style={tableCellStyle}>
+        <textarea 
+          value={(user.notes || user.note || '').toString().replace('undefined', '')} 
+          onChange={(e) => {
+            const val = e.target.value;
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+          }}
+          onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
+          onFocus={(e) => e.target.select()}
+          style={{ width: '120px', height: '35px', padding: '4px', fontSize: '0.8rem' }} 
+        />
+      </td>
+
+      <td style={tableCellStyle}>
+        <div style={{ display: 'flex', gap: '5px' }}>
+          <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+          <select 
+            value={String(user.user_type || 'visitor').toLowerCase()} 
+            onChange={(e) => handleUserTypeChange(user.id, e.target.value)}
+            style={{ fontSize: '0.75rem' }}
+          >
+            <option value="visitor">訪客</option>
+            <option value="student">學員</option>
+            <option value="volunteer">義工</option>
+            <option value="guest">來賓</option>
+          </select>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
         </div>
       )}
