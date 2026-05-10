@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
+// 定義來源對照表
 const sourceMap = {
   'expo': '外展活動',
   '2': '社區推廣',
@@ -18,14 +19,12 @@ const AdminList = () => {
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
 
+  // 1. 強化的格式化時間函數：解決 4 小時時差與 undefined
   const formatTime = (timeStr) => {
-    // 解決顯示 undefined 的問題
-    if (!timeStr || timeStr === 'undefined' || timeStr === 'null') return '-';
-    
+    if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
-    // 解決 4 小時時差問題：強制指定時區
     return date.toLocaleString('zh-TW', {
       timeZone: 'Asia/Taipei', 
       month: '2-digit',
@@ -88,7 +87,7 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-  const handleUserTypeChange = async (userId, userName, newType) => {
+  const handleUserTypeChange = async (userId, newType) => {
     try {
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
         method: 'POST', 
@@ -107,8 +106,8 @@ const AdminList = () => {
       `"${u.name || ''}"`, `"${u.phone || ''}"`, `"${u.email || ''}"`, `"${u.user_type || ''}"`,
       `"${sourceMap[u.discovery_source] || u.discovery_source || ''}"`,
       `"${u.is_blessed ? '是' : '否'}"`, 
-      `"${u.created_at || ''}"`, `"${u.last_checkin_time || ''}"`,
-      `"${u.receptionist_name || ''}"`, `"${u.notes || ''}"`
+      `"${formatTime(u.created_at)}"`, `"${formatTime(u.last_checkin_time || u.last_checkin)}"`,
+      `"${u.receptionist_name || u.receptionist || ''}"`, `"${u.notes || u.note || ''}"`
     ].join(","));
     const csvContent = [headers.join(","), ...csvRows].join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -124,10 +123,13 @@ const AdminList = () => {
     const matchesSearch = 
       user.name?.toLowerCase().includes(searchStr) || 
       user.phone?.includes(searchTerm) ||
-      user.receptionist_name?.toLowerCase().includes(searchStr);
+      (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
+    
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
-    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
-    return matchesSearch && matchesStatus && (!selectedDate || (rawDate && String(rawDate).startsWith(selectedDate)));
+    const rawDate = viewMode === 'checked-in' ? (user.last_checkin_time || user.last_checkin) : user.created_at;
+    const matchesDate = !selectedDate || (rawDate && String(rawDate).startsWith(selectedDate));
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const tableHeaderStyle = { padding: '12px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem' };
@@ -142,7 +144,7 @@ const AdminList = () => {
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 4000 }}>
             <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center' }}>
               <h3>管理權限驗證</h3>
-              <input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} autoFocus style={{ padding: '10px', marginBottom: '15px' }} />
+              <input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} autoFocus style={{ padding: '10px', marginBottom: '15px' }} onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()} />
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                 <button onClick={() => setIsModalOpen(false)}>取消</button>
                 <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white' }}>確認</button>
@@ -159,89 +161,114 @@ const AdminList = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
         <h2>📋 名單管理控制台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={fetchUsers}>🔄 刷新</button>
+          <button onClick={fetchUsers} style={{ padding: '8px 15px' }}>🔄 刷新</button>
           <button onClick={() => { setActionType('export'); setIsModalOpen(true); }} style={{ backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', padding: '8px 20px' }}>📥 匯出 CSV</button>
         </div>
       </div>
 
-      {/* 搜尋過濾區塊 */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <input type="text" placeholder="🔍 搜尋姓名、電話..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ padding: '10px', width: '250px' }} />
+        <input type="text" placeholder="🔍 搜尋姓名、電話、接待..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ padding: '10px', width: '250px' }} />
         <select value={viewMode} onChange={(e) => setViewMode(e.target.value)} style={{ padding: '10px' }}>
           <option value="all">顯示全部</option>
           <option value="checked-in">今日已簽到</option>
         </select>
         <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px' }} />
+        <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all');}}>重置</button>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={tableHeaderStyle}>Name</th>
-              <th style={tableHeaderStyle}>Contact</th>
-              <th style={tableHeaderStyle}>Source</th>
-              <th style={tableHeaderStyle}>Reg. Date</th>
-              <th style={tableHeaderStyle}>Last Check-in</th>
-              <th style={tableHeaderStyle}>Reception</th>
-              <th style={tableHeaderStyle}>Notes</th>
-              <th style={tableHeaderStyle}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredList.map(user => (
-              <tr key={user.id}>
-                <td style={tableCellStyle}>
-                  <strong>{user.name}</strong>
-                  {user.is_blessed === 1 && <span style={{ color: '#f39c12' }}>✨</span>}
-                </td>
-                <td style={tableCellStyle}>{user.phone || '-'}</td>
-                <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
-                <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-                <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-                  {formatTime(user.last_checkin_time || user.last_checkin)}
-                </td>
-                <td style={tableCellStyle}>
-                  <input 
-                    value={user.receptionist_name || user.receptionist || ''} 
-                    onChange={(e) => setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: e.target.value } : u))}
-                    onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
-                    style={{ width: '70px' }} 
-                  />
-                </td>
-                <td style={tableCellStyle}>
-                  <textarea 
-                    value={user.notes || user.note || ''} 
-                    onChange={(e) => setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: e.target.value } : u))}
-                    onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
-                    style={{ width: '120px', height: '35px' }} 
-                  />
-                </td>
-                <td style={tableCellStyle}>
-                  <button onClick={() => setSelectedQrId(user.id)}>QR</button>
-                  <select 
-                    value={String(user.user_type || 'visitor').toLowerCase()} 
-                    onChange={(e) => handleUserTypeChange(user.id, user.name, e.target.value)}
-                  >
-                    <option value="visitor">訪客</option>
-                    <option value="student">學員</option>
-                    <option value="volunteer">義工</option>
-                  </select>
-                </td>
+      {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+            <thead>
+              <tr>
+                <th style={tableHeaderStyle}>Name</th>
+                <th style={tableHeaderStyle}>Contact</th>
+                <th style={tableHeaderStyle}>Source</th>
+                <th style={tableHeaderStyle}>Reg. Date</th>
+                <th style={tableHeaderStyle}>Last Check-in</th>
+                <th style={tableHeaderStyle}>Reception</th>
+                <th style={tableHeaderStyle}>Notes</th>
+                <th style={tableHeaderStyle}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filteredList.map(user => (
+                <tr key={user.id}>
+                  <td style={tableCellStyle}>
+                    <strong>{user.name || '無姓名'}</strong>
+                    {user.is_blessed === 1 && <span style={{ color: '#f39c12', marginLeft: '4px' }}>✨</span>}
+                  </td>
+                  <td style={tableCellStyle}>{user.phone || '-'}</td>
+                  <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+                  <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+                  <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+                    {(() => {
+                      const checkVal = user.last_checkin_time || user.last_checkin;
+                      return (checkVal && String(checkVal) !== 'undefined') ? formatTime(checkVal) : '-';
+                    })()}
+                  </td>
+                  <td style={tableCellStyle}>
+                    <input 
+                      value={(user.receptionist_name || user.receptionist || '').toString().replace('undefined', '')} 
+                      onChange={(e) => setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: e.target.value } : u))}
+                      onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
+                      onFocus={(e) => e.target.select()}
+                      style={{ width: '70px', padding: '4px' }} 
+                    />
+                  </td>
+                  <td style={tableCellStyle}>
+                    <textarea 
+                      value={(user.notes || user.note || '').toString().replace('undefined', '')} 
+                      onChange={(e) => setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: e.target.value } : u))}
+                      onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
+                      onFocus={(e) => e.target.select()}
+                      style={{ width: '120px', height: '35px', padding: '4px', fontSize: '0.8rem' }} 
+                    />
+                  </td>
+                  <td style={tableCellStyle}>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+                      <select 
+                        value={String(user.user_type || 'visitor').toLowerCase()} 
+                        onChange={(e) => handleUserTypeChange(user.id, e.target.value)}
+                        style={{ fontSize: '0.75rem' }}
+                      >
+                        <option value="visitor">訪客</option>
+                        <option value="student">學員</option>
+                        <option value="volunteer">義工</option>
+                        <option value="guest">來賓</option>
+                      </select>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
-          <div style={{ background: 'white', padding: '30px', borderRadius: '15px' }} onClick={e => e.stopPropagation()}>
-            <h3>{users.find(u => u.id === selectedQrId)?.name} QR Code</h3>
+          <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>{users.find(u => u.id === selectedQrId)?.name} 的 QR Code</h3>
             <QRCodeCanvas value={String(selectedQrId)} size={200} />
-            <button onClick={() => setSelectedQrId(null)} style={{ marginTop: '10px', display: 'block', width: '100%' }}>關閉</button>
+            <button onClick={() => setSelectedQrId(null)} style={{ marginTop: '20px', display: 'block', width: '100%', padding: '10px' }}>關閉</button>
           </div>
         </div>
+      )}
+      
+      {/* 僅在需要匯出且權限未確認時彈出 (此處邏輯已整合在authorized判斷中) */}
+      {isModalOpen && !authorized && (
+         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 4000 }}>
+            <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center' }}>
+              <h3>管理權限驗證</h3>
+              <input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} autoFocus style={{ padding: '10px', marginBottom: '15px' }} />
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button onClick={() => setIsModalOpen(false)}>取消</button>
+                <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white' }}>確認</button>
+              </div>
+            </div>
+         </div>
       )}
     </div>
   );
