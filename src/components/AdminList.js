@@ -202,9 +202,16 @@ const AdminList = () => {
         <td style={tableCellStyle}>{user.phone || '-'}</td>
         <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
         <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-        <td style={{ ...tableCellStyle, color: '#27ae60' }}>
-          {formatTime(user.last_checkin_time || user.last_checkin)}
-        </td>
+        <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+  {(() => {
+    const val = user.last_checkin_time;
+    // 只要是 null, undefined, 或字串 "undefined", "null" 一律顯示 "-"
+    if (!val || String(val).toLowerCase() === 'undefined' || String(val).toLowerCase() === 'null') {
+      return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
+    }
+    return formatTime(val);
+  })()}
+</td>
 
         {/* 接待人員：強制轉字串並過濾 */}
         <td style={tableCellStyle}>
