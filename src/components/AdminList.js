@@ -3,7 +3,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 
 // 定義來源對照表，將數字轉回文字
 const sourceMap = {
-  '1': '外展活動',
+  'expo': '外展活動',
   '2': '社區推廣',
   // 如果未來有 3, 4 可以繼續增加
 };
