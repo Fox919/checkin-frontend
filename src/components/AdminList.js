@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 // 定義來源對照表
 const sourceMap = {
   'expo': '外展活動',
-  '2': '社區推廣',
+  'Hall-Newcomer': '禪堂新人',
 };
 
 const AdminList = () => {
@@ -101,22 +101,54 @@ const AdminList = () => {
     } catch (err) { console.error("API 連線錯誤:", err); }
   };
 
-  const exportToCSV = () => {
-    const headers = ["姓名", "電話", "Email", "身份", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
-    const csvRows = filteredList.map(u => [
-      `"${u.name || ''}"`, `"${u.phone || ''}"`, `"${u.email || ''}"`, `"${u.user_type || ''}"`,
-      `"${sourceMap[u.discovery_source] || u.discovery_source || ''}"`,
-      `"${u.is_blessed ? '是' : '否'}"`, 
-      `"${formatTime(u.created_at)}"`, `"${formatTime(u.last_checkin_time || u.last_checkin)}"`,
-      `"${u.receptionist_name || u.receptionist || ''}"`, `"${u.notes || u.note || ''}"`
-    ].join(","));
-    const csvContent = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Bodhi_List_${new Date().toISOString().slice(0,10)}.csv`);
-    link.click();
+ const exportToCSV = () => {
+    try {
+      console.log("開始執行匯出..."); // 檢查按鈕有沒有點到
+      
+      if (!filteredList || filteredList.length === 0) {
+        alert("目前沒有資料可供匯出");
+        return;
+      }
+
+      const headers = ["姓名", "電話", "Email", "身份", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
+      
+      const csvRows = filteredList.map(u => [
+        `"${(u.name || '').replace(/"/g, '""')}"`, 
+        `"${u.phone || ''}"`, 
+        `"${u.email || ''}"`, 
+        `"${u.user_type || ''}"`,
+        `"${sourceMap[u.discovery_source] || u.discovery_source || ''}"`,
+        `"${u.is_blessed ? '是' : '否'}"`, 
+        `"${formatTime(u.created_at)}"`, 
+        `"${formatTime(u.last_checkin_time)}"`, 
+        `"${(u.receptionist_name || '').replace(/"/g, '""')}"`, 
+        `"${(u.notes || '').replace(/"/g, '""')}"`
+      ].join(","));
+
+      const csvContent = [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      // 建立下載連結
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Bodhi_List_${new Date().toISOString().slice(0,10)}.csv`);
+      
+      // 必須將連結加入 DOM，否則部分瀏覽器不允許觸發 click
+      document.body.appendChild(link);
+      link.click();
+      
+      // 延遲移除，確保下載已觸發
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      console.log("匯出指令已送出");
+    } catch (err) {
+      console.error("匯出過程出錯:", err);
+      alert("匯出失敗，錯誤訊息: " + err.message);
+    }
   };
 
   const filteredList = users.filter(user => {
@@ -163,7 +195,12 @@ const AdminList = () => {
         <h2>📋 名單管理控制台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={fetchUsers} style={{ padding: '8px 15px' }}>🔄 刷新</button>
-          <button onClick={() => { setActionType('export'); setIsModalOpen(true); }} style={{ backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', padding: '8px 20px' }}>📥 匯出 CSV</button>
+          <button 
+  onClick={exportToCSV} 
+  style={{ backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', padding: '8px 20px', cursor: 'pointer' }}
+>
+  📥 匯出 CSV
+</button>
         </div>
       </div>
 
