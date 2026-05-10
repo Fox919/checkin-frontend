@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { enUS } from 'date-fns/locale';
-
 import { format, parseISO } from 'date-fns';
-  const AdminBatchManager = ({ onSave }) => {
+
+const AdminBatchManager = ({ onSave }) => {
+  // --- 權限控管狀態 ---
+  const [authorized, setAuthorized] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
+
+  // --- 原有的開班狀態 ---
   const [batchName, setBatchName] = useState('');
   const [startDate, setStartDate] = useState(new Date());
   const [totalDays, setTotalDays] = useState(8);
@@ -14,15 +19,27 @@ import { format, parseISO } from 'date-fns';
   const [selectedOfferingId, setSelectedOfferingId] = useState('');
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
-//ggg
+
   useEffect(() => {
-    fetch(`${API_BASE}/api/offerings`)
-      .then(res => res.json())
-      .then(data => {
-        setOfferingList(data.filter(i => i.type === 'course'));
-      })
-      .catch(err => console.error("Fetch error:", err));
-  }, []);
+    if (authorized) { // 只有通過驗證才抓資料
+      fetch(`${API_BASE}/api/offerings`)
+        .then(res => res.json())
+        .then(data => {
+          setOfferingList(data.filter(i => i.type === 'course'));
+        })
+        .catch(err => console.error("Fetch error:", err));
+    }
+  }, [authorized]);
+
+  // 密碼驗證邏輯
+  const handlePasswordSubmit = () => {
+    if (tempPassword === "my789") { // 這裡設定你的開班管理密碼
+      setAuthorized(true);
+      setTempPassword('');
+    } else {
+      alert("密碼錯誤！");
+    }
+  };
 
   const handleAutoGenerate = () => {
     if (!batchName || !startDate || !selectedOfferingId) {
@@ -44,6 +61,30 @@ import { format, parseISO } from 'date-fns';
     setSessions(newSessions);
   };
 
+  // --- 1. 如果尚未授權，顯示密碼鎖定畫面 ---
+  if (!authorized) {
+    return (
+      <div style={{ padding: '60px 20px', textAlign: 'center', background: '#f9f9f9', borderRadius: '10px' }}>
+        <h3 style={{ marginBottom: '20px' }}>🔐 開班管理權限驗證</h3>
+        <input 
+          type="password" 
+          placeholder="請輸入管理密碼" 
+          value={tempPassword} 
+          onChange={(e) => setTempPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+          style={{ padding: '10px', borderRadius: '5px', border: '1px solid #ccc', marginRight: '10px' }}
+        />
+        <button 
+          onClick={handlePasswordSubmit}
+          style={{ padding: '10px 20px', background: '#e67e22', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+        >
+          解鎖
+        </button>
+      </div>
+    );
+  }
+
+  // --- 2. 授權通過後顯示原本的管理介面 ---
   return (
     <div style={{ padding: '20px', background: '#fff', borderRadius: '10px' }}>
       <h3>Course Batch Manager</h3>
@@ -74,7 +115,7 @@ import { format, parseISO } from 'date-fns';
           <option value="PM Session">PM Session</option>
         </select>
 
-        <button onClick={handleAutoGenerate} style={{ background: '#3498db', color: '#fff', padding: '10px', cursor: 'pointer' }}>
+        <button onClick={handleAutoGenerate} style={{ background: '#3498db', color: '#fff', padding: '10px', cursor: 'pointer', border: 'none', borderRadius: '5px' }}>
           Generate Schedule
         </button>
       </div>
@@ -82,14 +123,14 @@ import { format, parseISO } from 'date-fns';
       {sessions.length > 0 && (
         <div>
           {sessions.map((s, idx) => (
-            <div key={s.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-              <span>Day {idx + 1}:</span>
+            <div key={s.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+              <span style={{ minWidth: '60px' }}>Day {idx + 1}:</span>
               <input 
                 type="date" 
                 value={s.date} 
                 onChange={(e) => {
                   const updated = [...sessions];
-                  updated[idx].date = format(parseISO(e.target.value), 'yyyy-MM-dd');
+                  updated[idx].date = e.target.value;
                   setSessions(updated);
                 }} 
               />
@@ -100,10 +141,14 @@ import { format, parseISO } from 'date-fns';
                   updated[idx].label = e.target.value;
                   setSessions(updated);
                 }} 
+                style={{ flex: 1, padding: '5px' }}
               />
             </div>
           ))}
-          <button onClick={() => onSave(selectedOfferingId, sessions)} style={{ background: '#2ecc71', color: '#fff', padding: '15px', width: '100%', border: 'none' }}>
+          <button 
+            onClick={() => onSave(selectedOfferingId, sessions)} 
+            style={{ background: '#2ecc71', color: '#fff', padding: '15px', width: '100%', border: 'none', borderRadius: '5px', marginTop: '10px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
+          >
             Publish Batch
           </button>
         </div>
