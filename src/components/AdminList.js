@@ -180,92 +180,65 @@ const AdminList = () => {
       {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
-            <thead>
-              <tr>
-                <th style={tableHeaderStyle}>Name</th>
-                <th style={tableHeaderStyle}>Contact</th>
-                <th style={tableHeaderStyle}>Source</th>
-                <th style={tableHeaderStyle}>Reg. Date</th>
-                <th style={tableHeaderStyle}>Last Check-in</th>
-                <th style={tableHeaderStyle}>Reception</th>
-                <th style={tableHeaderStyle}>Notes</th>
-                <th style={tableHeaderStyle}>Actions</th>
-              </tr>
-            </thead>
-           <tbody>
-  {filteredList.map(user => (
-    <tr key={user.id}>
-      {/* 1. Name */}
-      <td style={tableCellStyle}>
-        <strong>{user.name || '無姓名'}</strong>
-        {user.is_blessed === 1 && <span style={{ color: '#f39c12', marginLeft: '4px' }}>✨</span>}
-      </td>
-
-      {/* 2. Contact */}
-      <td style={tableCellStyle}>{user.phone || '-'}</td>
-
-      {/* 3. Source */}
-      <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
-
-      {/* 4. Reg. Date */}
-      <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-
-      {/* 5. Last Check-in */}
-      <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-        {(() => {
-          const checkVal = user.last_checkin_time || user.last_checkin;
-          return (checkVal && String(checkVal) !== 'undefined') ? formatTime(checkVal) : '-';
-        })()}
-      </td>
-
-      {/* 6. Reception (接待人員) - 這裡之前被寫錯成 notes 了 */}
-      <td style={tableCellStyle}>
-        <input 
-          value={(user.receptionist_name || user.receptionist || '').toString().replace('undefined', '')} 
-          onChange={(e) => {
-            const val = e.target.value;
-            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
-          }}
-          onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
-          onFocus={(e) => e.target.select()}
-          style={{ width: '80px', padding: '4px', fontSize: '0.8rem' }} 
-        />
-      </td>
-
-      {/* 7. Notes (備註) */}
-      <td style={tableCellStyle}>
-        <textarea 
-          value={(user.notes || user.note || '').toString().replace('undefined', '')} 
-          onChange={(e) => {
-            const val = e.target.value;
-            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
-          }}
-          onBlur={(e) => handleNoteChange(user.id, e.target.value)} 
-          onFocus={(e) => e.target.select()}
-          style={{ width: '120px', height: '35px', padding: '4px', fontSize: '0.8rem' }} 
-        />
-      </td>
-
-      {/* 8. Actions */}
-      <td style={tableCellStyle}>
-        <div style={{ display: 'flex', gap: '5px' }}>
-          <button onClick={() => setSelectedQrId(user.id)}>QR</button>
-          <select 
-            value={String(user.user_type || 'visitor').toLowerCase()} 
-            onChange={(e) => handleUserTypeChange(user.id, e.target.value)}
-            style={{ fontSize: '0.75rem' }}
-          >
-            <option value="visitor">訪客</option>
-            <option value="student">學員</option>
-            <option value="volunteer">義工</option>
-            <option value="guest">來賓</option>
-          </select>
-        </div>
-      </td>
+  <thead>
+    <tr>
+      <th style={tableHeaderStyle}>姓名</th>
+      <th style={tableHeaderStyle}>電話</th>
+      <th style={tableHeaderStyle}>來源</th>
+      <th style={tableHeaderStyle}>登記時間</th>
+      <th style={tableHeaderStyle}>最後簽到</th>
+      <th style={tableHeaderStyle}>接待人員</th> {/* 第 6 格 */}
+      <th style={tableHeaderStyle}>備註</th>     {/* 第 7 格 */}
+      <th style={tableHeaderStyle}>操作</th>     {/* 第 8 格 */}
     </tr>
-  ))}
-</tbody>
-          </table>
+  </thead>
+  <tbody>
+    {filteredList.map(user => (
+      <tr key={user.id}>
+        <td style={tableCellStyle}>
+          <strong>{user.name || '無'}</strong>
+          {user.is_blessed === 1 && '✨'}
+        </td>
+        <td style={tableCellStyle}>{user.phone || '-'}</td>
+        <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+        <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+        <td style={{ ...tableCellStyle, color: '#27ae60' }}>
+          {formatTime(user.last_checkin_time || user.last_checkin)}
+        </td>
+
+        {/* 接待人員：強制轉字串並過濾 */}
+        <td style={tableCellStyle}>
+          <input 
+            value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
+            onChange={(e) => {
+              const val = e.target.value;
+              setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+            }}
+            onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
+            style={{ width: '70px' }} 
+          />
+        </td>
+
+        {/* 備註：強制轉字串並過濾 */}
+        <td style={tableCellStyle}>
+          <textarea 
+            value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
+            onChange={(e) => {
+              const val = e.target.value;
+              setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+            }}
+            onBlur={(e) => handleNoteChange(user.id, e.target.value)}
+            style={{ width: '120px', height: '35px' }} 
+          />
+        </td>
+
+        <td style={tableCellStyle}>
+          <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
         </div>
       )}
 
