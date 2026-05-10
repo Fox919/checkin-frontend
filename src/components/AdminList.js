@@ -192,16 +192,25 @@ const AdminList = () => {
                 <th style={tableHeaderStyle}>Actions</th>
               </tr>
             </thead>
-            <tbody>
+           <tbody>
   {filteredList.map(user => (
     <tr key={user.id}>
+      {/* 1. Name */}
       <td style={tableCellStyle}>
         <strong>{user.name || '無姓名'}</strong>
         {user.is_blessed === 1 && <span style={{ color: '#f39c12', marginLeft: '4px' }}>✨</span>}
       </td>
+
+      {/* 2. Contact */}
       <td style={tableCellStyle}>{user.phone || '-'}</td>
+
+      {/* 3. Source */}
       <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+
+      {/* 4. Reg. Date */}
       <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+
+      {/* 5. Last Check-in */}
       <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
         {(() => {
           const checkVal = user.last_checkin_time || user.last_checkin;
@@ -209,7 +218,7 @@ const AdminList = () => {
         })()}
       </td>
 
-      {/* 接待人員欄位 - 修正對應 */}
+      {/* 6. Reception (接待人員) - 這裡之前被寫錯成 notes 了 */}
       <td style={tableCellStyle}>
         <input 
           value={(user.receptionist_name || user.receptionist || '').toString().replace('undefined', '')} 
@@ -219,11 +228,11 @@ const AdminList = () => {
           }}
           onBlur={(e) => handleReceptionistChange(user.id, e.target.value)} 
           onFocus={(e) => e.target.select()}
-          style={{ width: '70px', padding: '4px', fontSize: '0.8rem' }} 
+          style={{ width: '80px', padding: '4px', fontSize: '0.8rem' }} 
         />
       </td>
 
-      {/* 備註欄位 - 修正對應 */}
+      {/* 7. Notes (備註) */}
       <td style={tableCellStyle}>
         <textarea 
           value={(user.notes || user.note || '').toString().replace('undefined', '')} 
@@ -237,6 +246,7 @@ const AdminList = () => {
         />
       </td>
 
+      {/* 8. Actions */}
       <td style={tableCellStyle}>
         <div style={{ display: 'flex', gap: '5px' }}>
           <button onClick={() => setSelectedQrId(user.id)}>QR</button>
