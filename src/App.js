@@ -17,71 +17,78 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const navStyle = {
-    padding: '10px 20px',
-    borderBottom: '2px solid #eee',
-    backgroundColor: '#2c3e50', // 改用深色調，看起來更專業
+    padding: '8px 12px', // 縮小內距
+    borderBottom: '1px solid #34495e',
+    backgroundColor: '#2c3e50',
     display: 'flex',
-    justifyContent: 'space-between',
+    flexDirection: 'column', // 預設改為垂直排列（適合手機）
     alignItems: 'center',
     color: 'white',
     position: 'sticky',
     top: 0,
-    zIndex: 1000
+    zIndex: 1000,
+    gap: '8px' // 元素間的間距
+  };
+
+  const menuContainerStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '10px',
+    width: '100%', // 讓選單容器撐滿寬度
   };
 
   const selectStyle = {
-    padding: '8px',
+    flex: 1, // 讓兩個選單平均分配寬度，不會一大一小
+    padding: '8px 4px',
     borderRadius: '5px',
     border: 'none',
     backgroundColor: '#fff',
     cursor: 'pointer',
-    fontSize: '0.9rem'
+    fontSize: '0.85rem', // 稍微縮小字體以適應寬度
+    maxWidth: '150px' // 限制最大寬度防止在平板上太寬
   };
 
   const homeButtonStyle = {
     background: 'none',
     border: 'none',
     color: 'white',
-    fontSize: '1.2rem',
+    fontSize: '1.1rem',
     fontWeight: 'bold',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    padding: '4px 0'
   };
 
   return (
     <nav style={navStyle}>
-      {/* 區塊三：快速切換 (回首頁) */}
+      {/* 第一行：標題 */}
       <button onClick={() => navigate('/')} style={homeButtonStyle}>
         🏠 菩提簽到系統
       </button>
 
-      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-        
-        {/* 區塊一：登記入口 (下拉選單) */}
+      {/* 第二行：兩個下拉選單並排 */}
+      <div style={menuContainerStyle}>
         <select 
           style={selectStyle} 
           onChange={(e) => navigate(e.target.value)}
           defaultValue=""
         >
-          <option value="" disabled>📝 登記/簽到</option>
-          <option value="/on-site?type=Visitor">一般訪客登記</option>
-          <option value="/on-site?source=expo&type=Expo-Newcomer">外展新人登記</option>
-          <option value="/on-site?source=Hall-Newcomer&type=Hall-Newcomer">✨ 禪堂新人登記</option>
-          <option value="/kiosk">⚡ 快速簽到 (手機末四碼)</option>
+          <option value="" disabled>📝 登記入口</option>
+          <option value="/on-site?type=Visitor">一般訪客</option>
+          <option value="/on-site?source=expo&type=Expo-Newcomer">外展新人</option>
+          <option value="/on-site?source=Hall-Newcomer&type=Hall-Newcomer">禪堂新人</option>
+          <option value="/kiosk">⚡ 快速簽到</option>
           <option value="/book">🗓️ 課程預約</option>
         </select>
 
-        {/* 區塊二：管理工具 (下拉選單 + 密碼鎖邏輯已在組件內) */}
         <select 
           style={{ ...selectStyle, backgroundColor: '#e67e22', color: 'white' }} 
           onChange={(e) => navigate(e.target.value)}
           defaultValue=""
         >
           <option value="" disabled>🔐 管理工具</option>
-          <option value="/admin">👥 簽到/名單管理</option>
+          <option value="/admin">👥 名單管理</option>
           <option value="/admin-batches">📅 開班管理</option>
-          <option value="/admin-config">⚙️ 系統設定</option>
-          {/* 未來可增加數據統計頁面 */}
-          <option value="/stats" disabled>📊 數據統計 (開發中)</option>
+          <option value="/admin-config">⚙️ 設定</option>
         </select>
       </div>
     </nav>
