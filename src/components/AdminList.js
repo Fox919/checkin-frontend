@@ -87,18 +87,24 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-  const exportToCSV = () => {
+ const exportToCSV = () => {
     try {
       if (!filteredList || filteredList.length === 0) {
         alert("目前沒有資料可供匯出");
         return;
       }
-      const headers = ["姓名", "電話", "Email", "身份", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
+
+      // 1. 增加 "語言" 和 "介紹人" 到標頭中
+      const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
+      
       const csvRows = filteredList.map(u => [
         `"${(u.name || '').replace(/"/g, '""')}"`, 
         `"${u.phone || ''}"`, 
         `"${u.email || ''}"`, 
         `"${u.user_type || ''}"`,
+        // 2. 增加對應的資料欄位
+        `"${u.lang || ''}"`,
+        `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
         `"${sourceMap[u.discovery_source] || u.discovery_source || ''}"`,
         `"${u.is_blessed ? '是' : '否'}"`, 
         `"${formatTime(u.created_at)}"`, 
@@ -110,16 +116,21 @@ const AdminList = () => {
       const csvContent = [headers.join(","), ...csvRows].join("\n");
       const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
+      
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `Bodhi_List_${new Date().toISOString().slice(0,10)}.csv`);
+      
       document.body.appendChild(link);
       link.click();
+      
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       }, 100);
+
     } catch (err) {
+      console.error("匯出過程出錯:", err);
       alert("匯出失敗");
     }
   };
