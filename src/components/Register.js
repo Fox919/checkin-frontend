@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const t = {
   'zh-TW': {
+    expoSource: "外展活動",
     title: "活動人員登記",
     checkinTitle: "現場登記與簽到",
     lastName: "姓", firstName: "名",
@@ -31,6 +32,7 @@ const t = {
     contactPref: "您愿意以何种形式收到信息？(可多选)",
     call: "电话", text: "短信", emailPref: "电邮",
     source: "您如何得知菩提禅修？",
+    expoSource: "外展活动",
     google: "谷歌 / YouTube", facebook: "脸书 / Instagram",
     friend: "朋友 / 亲戚", magazine: "杂志", website: "官方网站", other: "其他",
     referrer: "介绍人姓名",
@@ -50,6 +52,7 @@ const t = {
     contactPref: "How would you like to receive updates? (Multiple)",
     call: "Call", text: "Text", emailPref: "E-mail",
     source: "How did you hear about Bodhi Meditation?",
+    expoSource: "Community outreach activities",
     google: "Google / YouTube", facebook: "Facebook / Instagram",
     friend: "Friend / Relative", magazine: "Magazine", website: "Official Website", other: "Other",
     referrer: "Referrer Name",
@@ -88,9 +91,12 @@ const Register = ({ autoCheckin }) => {
 
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
-    if (typeFromUrl) {
-      setFormData(prev => ({ ...prev, user_type: typeFromUrl }));
-    }
+    const sourceFromUrl = searchParams.get('source');
+    setFormData(prev => ({ 
+        ...prev, 
+        user_type: typeFromUrl || 'Visitor',
+        discovery_source: sourceFromUrl || '' 
+    }));
   }, [searchParams]);
 
   const handleLangChange = (newLang) => {
@@ -131,10 +137,9 @@ const Register = ({ autoCheckin }) => {
     e.preventDefault();
     const hasName = formData.lastName.trim() || formData.firstName.trim();
     const hasPhone = formData.phone.trim().length > 0;
-    const hasEmail = formData.email.trim().length > 0;
 
     if (!hasName) { alert("Please enter your name."); return; }
-    if (!hasPhone && !hasEmail) { alert("Please provide Phone or Email."); return; }
+    if (!hasPhone && formData.user_type !== 'Volunteer') { alert("Please provide Phone."); return; }
 
     setIsSubmitting(true);
     try {
@@ -197,8 +202,6 @@ const Register = ({ autoCheckin }) => {
           <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
-          
-
           {/* 聯繫偏好 */}
           <div style={{ padding: '10px', border: '1px solid #eee', borderRadius: '6px', backgroundColor: '#fdfdfd' }}>
             <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '8px' }}>{translations.contactPref}</label>
@@ -209,35 +212,30 @@ const Register = ({ autoCheckin }) => {
             </div>
           </div>
 
-         {/* ✨ 條件渲染：僅外展活動顯示加持選項 ✨ */}
+          {/* ✨ 條件渲染：僅「外展活動」顯示加持選項 ✨ */}
           {eventSource === 'expo' && (
-  <div style={{ 
-    marginTop: '5px', 
-    padding: '12px', 
-    border: '2px solid #ffe082', 
-    borderRadius: '8px', 
-    backgroundColor: '#fff8e1', 
-    textAlign: 'left' 
-  }}>
-    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
-      <input 
-        type="checkbox" 
-        checked={formData.is_blessed} 
-        onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
-        style={{ width: '20px', height: '20px', marginRight: '10px' }}
-      />
-      {translations.blessed}
-    </label>
-  </div>
-)}
+            <div style={{ padding: '12px', border: '2px solid #ffe082', borderRadius: '8px', backgroundColor: '#fff8e1' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.is_blessed} 
+                  onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
+                  style={{ width: '20px', height: '20px', marginRight: '10px' }}
+                />
+                {translations.blessed}
+              </label>
+            </div>
+          )}
 
-
-          {/* 🚀 條件渲染：若無 eventSource 才顯示來源下拉選單 🚀 */}
-          {!eventSource && (
-            <>
-              <label style={{ fontSize: '0.9rem', color: '#666' }}>{translations.source}</label>
+          {/* 🚀 核心邏輯：僅「禪堂新人」顯示來源調查 🚀 */}
+          {eventSource === 'Hall-Newcomer' && (
+            <div style={{ textAlign: 'left', marginBottom: '5px' }}>
+              <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '5px' }}>
+                {translations.source}
+              </label>
               <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
-                <option value="">-- Select --</option>
+                <option value="">-- 請選擇 --</option>
+                <option value="expo" style={{ color: '#e67e22', fontWeight: 'bold' }}>📍 {translations.expoSource}</option>
                 <option value="Google/YouTube">{translations.google}</option>
                 <option value="Facebook/IG">{translations.facebook}</option>
                 <option value="Friend">{translations.friend}</option>
@@ -247,12 +245,12 @@ const Register = ({ autoCheckin }) => {
               </select>
 
               {formData.discovery_source === 'Friend' && (
-                <input name="referrer_name" placeholder={translations.referrer} value={formData.referrer_name} onChange={handleChange} required style={inputStyle} />
+                <input name="referrer_name" placeholder={translations.referrer} value={formData.referrer_name} onChange={handleChange} required style={{ ...inputStyle, marginTop: '10px' }} />
               )}
               {formData.discovery_source === 'Other' && (
-                <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={inputStyle} />
+                <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={{ ...inputStyle, marginTop: '10px' }} />
               )}
-            </>
+            </div>
           )}
 
           <button type="submit" disabled={isSubmitting} style={{ padding: '15px', background: getHeaderColor(), color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}>
