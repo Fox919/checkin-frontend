@@ -224,7 +224,7 @@ const AdminList = () => {
 
                   <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
 
-                 <td style={tableCellStyle}>{user.referrer_name}</td>
+                 <td style={tableCellStyle}>{user.referrer_name || '-'}</td>
 
 
 
