@@ -87,33 +87,38 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
- const exportToCSV = () => {
+// ... (前面的代碼保持不變)
+
+  const exportToCSV = () => {
     try {
       if (!filteredList || filteredList.length === 0) {
         alert("目前沒有資料可供匯出");
         return;
       }
 
-      // 1. 增加 "語言" 和 "介紹人" 到標頭中
       const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
       
-      const csvRows = filteredList.map(u => [
-        `"${(u.name || '').replace(/"/g, '""')}"`, 
-        `"${u.phone || ''}"`, 
-        `"${u.email || ''}"`, 
-        `"${u.user_type || ''}"`,
-        // 2. 增加對應的資料欄位
-        `"${u.lang || ''}"`,
-        `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
-       // 在 exportToCSV 函數內修改這一行
-// exportToCSV 內的寫法
-`"${ (u.discovery_source || '').toString().toLowerCase().includes('outreach') || u.discovery_source?.toLowerCase().includes('expo') || !u.discovery_source ) ? '-' : (sourceMap[u.discovery_source] || u.discovery_source) }"`,
-        `"${u.is_blessed ? '是' : '否'}"`, 
-        `"${formatTime(u.created_at)}"`, 
-        `"${formatTime(u.last_checkin_time)}"`, 
-        `"${(u.receptionist_name || '').replace(/"/g, '""')}"`, 
-        `"${(u.notes || '').replace(/"/g, '""')}"`
-      ].join(","));
+      const csvRows = filteredList.map(u => {
+        // 同步表格的過濾邏輯
+        const rawSource = (u.discovery_source || '').toString().trim().toLowerCase();
+        const isHiddenSource = !rawSource || rawSource === 'null' || rawSource === 'undefined' || rawSource.includes('outreach') || rawSource.includes('expo');
+        const displaySource = isHiddenSource ? '-' : (sourceMap[u.discovery_source] || u.discovery_source);
+
+        return [
+          `"${(u.name || '').replace(/"/g, '""')}"`, 
+          `"${u.phone || ''}"`, 
+          `"${u.email || ''}"`, 
+          `"${u.user_type || ''}"`,
+          `"${u.lang || ''}"`,
+          `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
+          `"${displaySource}"`, // 使用處理過的來源
+          `"${u.is_blessed ? '是' : '否'}"`, 
+          `"${formatTime(u.created_at)}"`, 
+          `"${formatTime(u.last_checkin_time)}"`, 
+          `"${(u.receptionist_name || '').replace(/"/g, '""')}"`, 
+          `"${(u.notes || '').replace(/"/g, '""')}"`
+        ].join(",");
+      });
 
       const csvContent = [headers.join(","), ...csvRows].join("\n");
       const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -122,7 +127,6 @@ const AdminList = () => {
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `Bodhi_List_${new Date().toISOString().slice(0,10)}.csv`);
-      
       document.body.appendChild(link);
       link.click();
       
@@ -136,6 +140,8 @@ const AdminList = () => {
       alert("匯出失敗");
     }
   };
+
+// ... (後面的表格渲染代碼保持不變，你的 IIFE 寫法很棒)
 
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
