@@ -192,6 +192,7 @@ const AdminList = () => {
                 <th style={tableHeaderStyle}>身份</th>
                 <th style={tableHeaderStyle}>語言</th>
                 <th style={tableHeaderStyle}>來源</th>
+                 <th style={tableHeaderStyle}>介紹人</th>
                 <th style={tableHeaderStyle}>登記時間</th>
                 <th style={tableHeaderStyle}>最後簽到</th>
                 <th style={tableHeaderStyle}>接待人員</th>
@@ -222,6 +223,11 @@ const AdminList = () => {
                   </td>
 
                   <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+
+                 <td style={tableCellStyle}>{user.referrer_name}</td>
+
+
+
                   <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
                   <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
                     {(() => {
