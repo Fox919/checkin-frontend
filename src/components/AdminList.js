@@ -25,8 +25,8 @@ const AdminList = () => {
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('en-US', { // 建議改用 en-US 或 zh-TW
-      timeZone: 'America/Los_Angeles', // ✨ 這裡改為加州時區 ✨
+    return date.toLocaleString('zh-TW', {
+      timeZone: 'UTC', // ✨ 強制顯示 UTC 時間，這樣 23:04 就會是 23:04
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
