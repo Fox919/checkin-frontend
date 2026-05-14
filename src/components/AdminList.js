@@ -243,17 +243,20 @@ const AdminList = () => {
 
                  <td style={tableCellStyle}>
   {(() => {
-    // 1. 先去前後空格，轉小寫，處理 null/undefined
-    const val = (user.discovery_source || '').toString().trim().toLowerCase();
+    // 將所有內容轉為字串並讀取
+    const rawValue = String(user.discovery_source || '');
     
-    // 2. 只要字串是空的，或是包含 'outreach' 或 'expo'，一律顯示 '-'
-    if (!val || val === 'null' || val === 'undefined' || val.includes('outreach') || val.includes('expo')) {
+    // 使用正則表達式：i 代表不分大小寫
+    // /outreach|expo|null|undefined/ 只要包含其中一個就符合
+    const isSecret = /outreach|expo|null|undefined/i.test(rawValue);
+
+    // 如果符合上述關鍵字，或者是空字串，就顯示 "-"
+    if (isSecret || rawValue.trim() === '') {
       return '-';
     }
-    
-    // 3. 否則嘗試對照 sourceMap (用原始值對照)，若無對照則顯示原始值
-    const originalVal = user.discovery_source;
-    return sourceMap[originalVal] || originalVal;
+
+    // 否則先查對照表，查不到就顯示原始值
+    return sourceMap[user.discovery_source] || user.discovery_source;
   })()}
 </td>
 
