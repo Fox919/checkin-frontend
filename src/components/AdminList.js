@@ -3,7 +3,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 
 // 定義來源對照表
 const sourceMap = {
-  'expo': '外展活動',
+  'expo': '-',
   'Hall-Newcomer': '禪堂新人',
 };
 
