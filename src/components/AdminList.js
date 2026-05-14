@@ -105,7 +105,8 @@ const AdminList = () => {
         // 2. 增加對應的資料欄位
         `"${u.lang || ''}"`,
         `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
-        `"${sourceMap[u.discovery_source] || u.discovery_source || ''}"`,
+       // 在 exportToCSV 函數內修改這一行
+`"${(u.discovery_source?.toLowerCase() === 'expo' || u.discovery_source?.toLowerCase() === 'outreach') ? '-' : (sourceMap[u.discovery_source] || u.discovery_source || '-')}"`,
         `"${u.is_blessed ? '是' : '否'}"`, 
         `"${formatTime(u.created_at)}"`, 
         `"${formatTime(u.last_checkin_time)}"`, 
@@ -233,9 +234,24 @@ const AdminList = () => {
                      user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
                   </td>
 
-                  <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+                 <td style={tableCellStyle}>
+  {(() => {
+    const val = user.discovery_source;
+    
+    // 1. 如果值是空的、undefined 或字串 "null"，顯示 "-"
+    if (!val || val === 'null' || val === 'undefined') return '-';
+    
+    // 2. 如果值是 "expo" 或 "Outreach" (不論大小寫)，強制顯示 "-"
+    if (val.toLowerCase() === 'expo' || val.toLowerCase() === 'outreach') return '-';
+    
+    // 3. 否則嘗試對照 sourceMap，若無對照則顯示原始值
+    return sourceMap[val] || val;
+  })()}
+</td>
 
-                 <td style={tableCellStyle}>{user.referrer_name || '-'}</td>
+                <td style={tableCellStyle}>
+  {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
+</td>
 
 
 
