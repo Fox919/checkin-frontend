@@ -220,92 +220,92 @@ const AdminList = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredList.map(user => (
-                <tr key={user.id}>
-                  {/* ✨ 修正後的樣式合併語法 */}
-                  <td style={{ ...tableCellStyle, minWidth: '80px' }}>
-                    <strong>{user.name || '無'}</strong>
-                    {user.is_blessed === 1 && '✨'}
-                  </td>
-                  <td style={tableCellStyle}>{user.phone || '-'}</td>
-
-                  <td style={tableCellStyle}>
-                    <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
-                      {user.user_type || '-'}
-                    </span>
-                  </td>
-
-                  <td style={tableCellStyle}>
-                    {user.lang === 'en-US' ? '🇺🇸 EN' : 
-                     user.lang === 'zh-CN' ? '🇨🇳 簡' : 
-                     user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
-                  </td>
-
-                 <td style={tableCellStyle}>
-  {(() => {
-    // 將所有內容轉為字串並讀取
-    const rawValue = String(user.discovery_source || '');
-    
-    // 使用正則表達式：i 代表不分大小寫
-    // /outreach|expo|null|undefined/ 只要包含其中一個就符合
-    const isSecret = /outreach|expo|null|undefined/i.test(rawValue);
-
-    // 如果符合上述關鍵字，或者是空字串，就顯示 "-"
-    if (isSecret || rawValue.trim() === '') {
-      return '-';
-    }
-
-    // 否則先查對照表，查不到就顯示原始值
-    return sourceMap[user.discovery_source] || user.discovery_source;
-  })()}
-</td>
-
-                <td style={tableCellStyle}>
-  {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
-</td>
 
 
 
-                  <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-                  <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-                    {(() => {
-                      const val = user.last_checkin_time;
-                      if (!val || String(val).toLowerCase() === 'undefined' || String(val).toLowerCase() === 'null') {
-                        return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
-                      }
-                      return formatTime(val);
-                    })()}
-                  </td>
+              {/* 找到這一段進行替換 */}
+{filteredList.map(user => {
+  // 1. 正確的偵錯位置
+  console.log("ID:", user.id, "原始內容:", user.discovery_source);
 
-                  <td style={tableCellStyle}>
-                    <input 
-                      value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
-                      }}
-                      onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
-                      style={{ width: '70px' }} 
-                    />
-                  </td>
+  // 2. 使用大括號後，必須手動回傳 (return) JSX
+  return (
+    <tr key={user.id}>
+      <td style={{ ...tableCellStyle, minWidth: '80px' }}>
+        <strong>{user.name || '無'}</strong>
+        {user.is_blessed === 1 && '✨'}
+      </td>
+      <td style={tableCellStyle}>{user.phone || '-'}</td>
 
-                  <td style={tableCellStyle}>
-                    <textarea 
-                      value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
-                      }}
-                      onBlur={(e) => handleNoteChange(user.id, e.target.value)}
-                      style={{ width: '120px', height: '35px' }} 
-                    />
-                  </td>
+      <td style={tableCellStyle}>
+        <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
+          {user.user_type || '-'}
+        </span>
+      </td>
 
-                  <td style={tableCellStyle}>
-                    <button onClick={() => setSelectedQrId(user.id)}>QR</button>
-                  </td>
-                </tr>
-              ))}
+      <td style={tableCellStyle}>
+        {user.lang === 'en-US' ? '🇺🇸 EN' : 
+         user.lang === 'zh-CN' ? '🇨🇳 簡' : 
+         user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
+      </td>
+
+      {/* 來源過濾邏輯 */}
+      <td style={tableCellStyle}>
+        {(() => {
+          const rawValue = String(user.discovery_source || '');
+          // 最霸道的過濾：只要包含 outreach 或 expo (不分大小寫) 就顯示 -
+          const isHidden = /outreach|expo|null|undefined/i.test(rawValue);
+          if (isHidden || rawValue.trim() === '') return '-';
+          
+          return sourceMap[user.discovery_source] || user.discovery_source;
+        })()}
+      </td>
+
+      <td style={tableCellStyle}>
+        {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
+      </td>
+
+      <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+      <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+        {(() => {
+          const val = user.last_checkin_time;
+          if (!val || String(val).toLowerCase() === 'undefined' || String(val).toLowerCase() === 'null') {
+            return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
+          }
+          return formatTime(val);
+        })()}
+      </td>
+
+      <td style={tableCellStyle}>
+        <input 
+          value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
+          onChange={(e) => {
+            const val = e.target.value;
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+          }}
+          onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
+          style={{ width: '70px' }} 
+        />
+      </td>
+
+      <td style={tableCellStyle}>
+        <textarea 
+          value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
+          onChange={(e) => {
+            const val = e.target.value;
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+          }}
+          onBlur={(e) => handleNoteChange(user.id, e.target.value)}
+          style={{ width: '120px', height: '35px' }} 
+        />
+      </td>
+
+      <td style={tableCellStyle}>
+        <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+      </td>
+    </tr>
+  );
+})}
             </tbody>
           </table>
         </div>
