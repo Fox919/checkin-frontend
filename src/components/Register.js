@@ -237,7 +237,7 @@ const Register = ({ autoCheckin }) => {
                 {translations.source}
               </label>
               <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
-                <option value="">-- 請選擇 --</option>
+                <option value="">{translations.selectPlaceholder}</option>
                 <option value="expo" style={{ color: '#e67e22', fontWeight: 'bold' }}>📍 {translations.expoSource}</option>
                 <option value="Google/YouTube">{translations.google}</option>
                 <option value="Facebook/IG">{translations.facebook}</option>
