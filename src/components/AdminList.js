@@ -25,8 +25,8 @@ const AdminList = () => {
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('zh-TW', {
-      timeZone: 'Asia/Taipei', 
+    return date.toLocaleString('en-US', { // 建議改用 en-US 或 zh-TW
+      timeZone: 'America/Los_Angeles', // ✨ 這裡改為加州時區 ✨
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
