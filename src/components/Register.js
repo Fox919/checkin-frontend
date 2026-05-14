@@ -146,21 +146,39 @@ const Register = ({ autoCheckin }) => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', {
+      // 請確保這裡的 API URL 是正確的
+      const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, lang, autoCheckin }),
       });
       const data = await response.json();
+
       if (response.ok) {
         setQrValue(String(data.id));
         setMessage(translations.success);
+        
+        // ✨ 提交成功後立即清空表單數據 ✨
+        setFormData({
+          lastName: '', 
+          firstName: '', 
+          phone: '', 
+          email: '', 
+          contact_method: [], 
+          discovery_source: eventSource || '', 
+          is_blessed: false, 
+          user_type: searchParams.get('type') || 'Visitor'
+        });
+
         window.scrollTo(0, 0);
       } else {
         setMessage(data.error || 'Failed');
       }
-    } catch (error) { setMessage('Connection Error'); }
-    finally { setIsSubmitting(false); }
+    } catch (error) { 
+      setMessage('Connection Error'); 
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   const getHeaderColor = () => {
