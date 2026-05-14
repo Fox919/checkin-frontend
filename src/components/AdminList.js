@@ -221,6 +221,8 @@ const AdminList = () => {
     <tr>
       <th style={tableHeaderStyle}>姓名</th>
       <th style={tableHeaderStyle}>電話</th>
+      <th style={tableHeaderStyle}>身份</th> {/* ✨ 新增 */}
+      <th style={tableHeaderStyle}>語言</th> {/* ✨ 新增 */}
       <th style={tableHeaderStyle}>來源</th>
       <th style={tableHeaderStyle}>登記時間</th>
       <th style={tableHeaderStyle}>最後簽到</th>
@@ -231,12 +233,33 @@ const AdminList = () => {
   </thead>
   <tbody>
     {filteredList.map(user => (
-      <tr key={user.id}>
-        <td style={tableCellStyle}>
+      <tr key={user.id，}>
+        <td style={tableCellStyle, minWidth: '80px'}>
           <strong>{user.name || '無'}</strong>
           {user.is_blessed === 1 && '✨'}
         </td>
         <td style={tableCellStyle}>{user.phone || '-'}</td>
+
+        {/* ✨ 新增：顯示身份 (user_type) */}
+      <td style={tableCellStyle}>
+        <span style={{ 
+          fontSize: '0.75rem', 
+          padding: '2px 6px', 
+          borderRadius: '4px', 
+          backgroundColor: '#eee',
+          color: '#666' 
+        }}>
+          {user.user_type || '-'}
+        </span>
+      </td>
+
+      {/* ✨ 新增：顯示語言 (lang) */}
+      <td style={tableCellStyle}>
+        {user.lang === 'en-US' ? '🇺🇸 EN' : 
+         user.lang === 'zh-CN' ? '🇨🇳 簡' : 
+         user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
+      </td>
+
         <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
         <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
         <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
