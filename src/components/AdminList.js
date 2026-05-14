@@ -19,14 +19,14 @@ const AdminList = () => {
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
 
-  // 1. 強化的格式化時間函數：解決 4 小時時差與 undefined
+  // 1. 強化的格式化時間函數：UTC 顯示解決時差
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
     return date.toLocaleString('zh-TW', {
-      timeZone: 'UTC', // ✨ 強制顯示 UTC 時間，這樣 23:04 就會是 23:04
+      timeZone: 'UTC', 
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -38,10 +38,9 @@ const AdminList = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-     const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
-    const data = await res.json();
-    console.log("後端原始資料第一筆：", data[0]); // 👈 這裡非常重要，請看 F12 console
-    setUsers(data);
+      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
+      const data = await res.json();
+      setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗:", err);
     } finally {
@@ -88,30 +87,13 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-  const handleUserTypeChange = async (userId, newType) => {
+  const exportToCSV = () => {
     try {
-      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_type: newType })
-      });
-      if (res.ok) {
-        setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, user_type: newType } : u));
-      }
-    } catch (err) { console.error("API 連線錯誤:", err); }
-  };
-
- const exportToCSV = () => {
-    try {
-      console.log("開始執行匯出..."); // 檢查按鈕有沒有點到
-      
       if (!filteredList || filteredList.length === 0) {
         alert("目前沒有資料可供匯出");
         return;
       }
-
       const headers = ["姓名", "電話", "Email", "身份", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
-      
       const csvRows = filteredList.map(u => [
         `"${(u.name || '').replace(/"/g, '""')}"`, 
         `"${u.phone || ''}"`, 
@@ -128,26 +110,17 @@ const AdminList = () => {
       const csvContent = [headers.join(","), ...csvRows].join("\n");
       const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      
-      // 建立下載連結
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `Bodhi_List_${new Date().toISOString().slice(0,10)}.csv`);
-      
-      // 必須將連結加入 DOM，否則部分瀏覽器不允許觸發 click
       document.body.appendChild(link);
       link.click();
-      
-      // 延遲移除，確保下載已觸發
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       }, 100);
-
-      console.log("匯出指令已送出");
     } catch (err) {
-      console.error("匯出過程出錯:", err);
-      alert("匯出失敗，錯誤訊息: " + err.message);
+      alert("匯出失敗");
     }
   };
 
@@ -195,12 +168,7 @@ const AdminList = () => {
         <h2>📋 名單管理控制台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={fetchUsers} style={{ padding: '8px 15px' }}>🔄 刷新</button>
-          <button 
-  onClick={exportToCSV} 
-  style={{ backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', padding: '8px 20px', cursor: 'pointer' }}
->
-  📥 匯出 CSV
-</button>
+          <button onClick={exportToCSV} style={{ backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', padding: '8px 20px', cursor: 'pointer' }}>📥 匯出 CSV</button>
         </div>
       </div>
 
@@ -217,95 +185,85 @@ const AdminList = () => {
       {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
-  <thead>
-    <tr>
-      <th style={tableHeaderStyle}>姓名</th>
-      <th style={tableHeaderStyle}>電話</th>
-      <th style={tableHeaderStyle}>身份</th> {/* ✨ 新增 */}
-      <th style={tableHeaderStyle}>語言</th> {/* ✨ 新增 */}
-      <th style={tableHeaderStyle}>來源</th>
-      <th style={tableHeaderStyle}>登記時間</th>
-      <th style={tableHeaderStyle}>最後簽到</th>
-      <th style={tableHeaderStyle}>接待人員</th> {/* 第 6 格 */}
-      <th style={tableHeaderStyle}>備註</th>     {/* 第 7 格 */}
-      <th style={tableHeaderStyle}>操作</th>     {/* 第 8 格 */}
-    </tr>
-  </thead>
-  <tbody>
-    {filteredList.map(user => (
-      <tr key={user.id，}>
-        <td style={tableCellStyle, minWidth: '80px'}>
-          <strong>{user.name || '無'}</strong>
-          {user.is_blessed === 1 && '✨'}
-        </td>
-        <td style={tableCellStyle}>{user.phone || '-'}</td>
+            <thead>
+              <tr>
+                <th style={tableHeaderStyle}>姓名</th>
+                <th style={tableHeaderStyle}>電話</th>
+                <th style={tableHeaderStyle}>身份</th>
+                <th style={tableHeaderStyle}>語言</th>
+                <th style={tableHeaderStyle}>來源</th>
+                <th style={tableHeaderStyle}>登記時間</th>
+                <th style={tableHeaderStyle}>最後簽到</th>
+                <th style={tableHeaderStyle}>接待人員</th>
+                <th style={tableHeaderStyle}>備註</th>
+                <th style={tableHeaderStyle}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredList.map(user => (
+                <tr key={user.id}>
+                  {/* ✨ 修正後的樣式合併語法 */}
+                  <td style={{ ...tableCellStyle, minWidth: '80px' }}>
+                    <strong>{user.name || '無'}</strong>
+                    {user.is_blessed === 1 && '✨'}
+                  </td>
+                  <td style={tableCellStyle}>{user.phone || '-'}</td>
 
-        {/* ✨ 新增：顯示身份 (user_type) */}
-      <td style={tableCellStyle}>
-        <span style={{ 
-          fontSize: '0.75rem', 
-          padding: '2px 6px', 
-          borderRadius: '4px', 
-          backgroundColor: '#eee',
-          color: '#666' 
-        }}>
-          {user.user_type || '-'}
-        </span>
-      </td>
+                  <td style={tableCellStyle}>
+                    <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
+                      {user.user_type || '-'}
+                    </span>
+                  </td>
 
-      {/* ✨ 新增：顯示語言 (lang) */}
-      <td style={tableCellStyle}>
-        {user.lang === 'en-US' ? '🇺🇸 EN' : 
-         user.lang === 'zh-CN' ? '🇨🇳 簡' : 
-         user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
-      </td>
+                  <td style={tableCellStyle}>
+                    {user.lang === 'en-US' ? '🇺🇸 EN' : 
+                     user.lang === 'zh-CN' ? '🇨🇳 簡' : 
+                     user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
+                  </td>
 
-        <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
-        <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-        <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-  {(() => {
-    const val = user.last_checkin_time;
-    // 只要是 null, undefined, 或字串 "undefined", "null" 一律顯示 "-"
-    if (!val || String(val).toLowerCase() === 'undefined' || String(val).toLowerCase() === 'null') {
-      return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
-    }
-    return formatTime(val);
-  })()}
-</td>
+                  <td style={tableCellStyle}>{sourceMap[user.discovery_source] || user.discovery_source || '-'}</td>
+                  <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+                  <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+                    {(() => {
+                      const val = user.last_checkin_time;
+                      if (!val || String(val).toLowerCase() === 'undefined' || String(val).toLowerCase() === 'null') {
+                        return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
+                      }
+                      return formatTime(val);
+                    })()}
+                  </td>
 
-        {/* 接待人員：強制轉字串並過濾 */}
-        <td style={tableCellStyle}>
-          <input 
-            value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
-            onChange={(e) => {
-              const val = e.target.value;
-              setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
-            }}
-            onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
-            style={{ width: '70px' }} 
-          />
-        </td>
+                  <td style={tableCellStyle}>
+                    <input 
+                      value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+                      }}
+                      onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
+                      style={{ width: '70px' }} 
+                    />
+                  </td>
 
-        {/* 備註：強制轉字串並過濾 */}
-        <td style={tableCellStyle}>
-          <textarea 
-            value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
-            onChange={(e) => {
-              const val = e.target.value;
-              setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
-            }}
-            onBlur={(e) => handleNoteChange(user.id, e.target.value)}
-            style={{ width: '120px', height: '35px' }} 
-          />
-        </td>
+                  <td style={tableCellStyle}>
+                    <textarea 
+                      value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+                      }}
+                      onBlur={(e) => handleNoteChange(user.id, e.target.value)}
+                      style={{ width: '120px', height: '35px' }} 
+                    />
+                  </td>
 
-        <td style={tableCellStyle}>
-          <button onClick={() => setSelectedQrId(user.id)}>QR</button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+                  <td style={tableCellStyle}>
+                    <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -317,20 +275,6 @@ const AdminList = () => {
             <button onClick={() => setSelectedQrId(null)} style={{ marginTop: '20px', display: 'block', width: '100%', padding: '10px' }}>關閉</button>
           </div>
         </div>
-      )}
-      
-      {/* 僅在需要匯出且權限未確認時彈出 (此處邏輯已整合在authorized判斷中) */}
-      {isModalOpen && !authorized && (
-         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 4000 }}>
-            <div style={{ background: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center' }}>
-              <h3>管理權限驗證</h3>
-              <input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} autoFocus style={{ padding: '10px', marginBottom: '15px' }} />
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                <button onClick={() => setIsModalOpen(false)}>取消</button>
-                <button onClick={handlePasswordSubmit} style={{ backgroundColor: '#007bff', color: 'white' }}>確認</button>
-              </div>
-            </div>
-         </div>
       )}
     </div>
   );
