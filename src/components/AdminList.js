@@ -106,7 +106,8 @@ const AdminList = () => {
         `"${u.lang || ''}"`,
         `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
        // 在 exportToCSV 函數內修改這一行
-`"${(u.discovery_source?.toLowerCase() === 'expo' || u.discovery_source?.toLowerCase() === 'outreach') ? '-' : (sourceMap[u.discovery_source] || u.discovery_source || '-')}"`,
+// exportToCSV 內的寫法
+`"${ (u.discovery_source || '').toString().toLowerCase().includes('outreach') || u.discovery_source?.toLowerCase().includes('expo') || !u.discovery_source ) ? '-' : (sourceMap[u.discovery_source] || u.discovery_source) }"`,
         `"${u.is_blessed ? '是' : '否'}"`, 
         `"${formatTime(u.created_at)}"`, 
         `"${formatTime(u.last_checkin_time)}"`, 
@@ -236,16 +237,17 @@ const AdminList = () => {
 
                  <td style={tableCellStyle}>
   {(() => {
-    const val = user.discovery_source;
+    // 1. 先去前後空格，轉小寫，處理 null/undefined
+    const val = (user.discovery_source || '').toString().trim().toLowerCase();
     
-    // 1. 如果值是空的、undefined 或字串 "null"，顯示 "-"
-    if (!val || val === 'null' || val === 'undefined') return '-';
+    // 2. 只要字串是空的，或是包含 'outreach' 或 'expo'，一律顯示 '-'
+    if (!val || val === 'null' || val === 'undefined' || val.includes('outreach') || val.includes('expo')) {
+      return '-';
+    }
     
-    // 2. 如果值是 "expo" 或 "Outreach" (不論大小寫)，強制顯示 "-"
-    if (val.toLowerCase() === 'expo' || val.toLowerCase() === 'outreach') return '-';
-    
-    // 3. 否則嘗試對照 sourceMap，若無對照則顯示原始值
-    return sourceMap[val] || val;
+    // 3. 否則嘗試對照 sourceMap (用原始值對照)，若無對照則顯示原始值
+    const originalVal = user.discovery_source;
+    return sourceMap[originalVal] || originalVal;
   })()}
 </td>
 
