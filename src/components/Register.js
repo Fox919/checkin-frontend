@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 const t = {
   'zh-TW': {
     expoSource: "外展活動",
+    selectPlaceholder: "-- 請選擇 --",
     title: "活動人員登記",
     checkinTitle: "現場登記與簽到",
     lastName: "姓", firstName: "名",
@@ -32,6 +33,7 @@ const t = {
     contactPref: "您愿意以何种形式收到信息？(可多选)",
     call: "电话", text: "短信", emailPref: "电邮",
     source: "您如何得知菩提禅修？",
+    selectPlaceholder: "-- 请选择 --",
     expoSource: "外展活动",
     google: "谷歌 / YouTube", facebook: "脸书 / Instagram",
     friend: "朋友 / 亲戚", magazine: "杂志", website: "官方网站", other: "其他",
@@ -52,6 +54,7 @@ const t = {
     contactPref: "How would you like to receive updates? (Multiple)",
     call: "Call", text: "Text", emailPref: "E-mail",
     source: "How did you hear about Bodhi Meditation?",
+    selectPlaceholder: "-- Please Select --",
     expoSource: "Community outreach activities",
     google: "Google / YouTube", facebook: "Facebook / Instagram",
     friend: "Friend / Relative", magazine: "Magazine", website: "Official Website", other: "Other",
