@@ -224,11 +224,17 @@ const AdminList = () => {
 
 
               {/* 找到這一段進行替換 */}
-{filteredList.map(user => {
-  // 1. 正確的偵錯位置
-  console.log("ID:", user.id, "原始內容:", user.discovery_source);
 
-  // 2. 使用大括號後，必須手動回傳 (return) JSX
+
+{/* 修正後的渲染區塊 - 移除導致 Hydration 錯誤的潛在因子 */}
+{filteredList.map(user => {
+  // 將邏輯寫在 return 之前，不要在 return 裡面寫 console.log
+  const rawSource = String(user.discovery_source || '');
+  const isHidden = /outreach|expo|null|undefined/i.test(rawSource);
+  const displaySource = isHidden || rawSource.trim() === '' 
+    ? '-' 
+    : (sourceMap[user.discovery_source] || user.discovery_source);
+
   return (
     <tr key={user.id}>
       <td style={{ ...tableCellStyle, minWidth: '80px' }}>
@@ -249,23 +255,15 @@ const AdminList = () => {
          user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
       </td>
 
-      {/* 來源過濾邏輯 */}
-      <td style={tableCellStyle}>
-        {(() => {
-          const rawValue = String(user.discovery_source || '');
-          // 最霸道的過濾：只要包含 outreach 或 expo (不分大小寫) 就顯示 -
-          const isHidden = /outreach|expo|null|undefined/i.test(rawValue);
-          if (isHidden || rawValue.trim() === '') return '-';
-          
-          return sourceMap[user.discovery_source] || user.discovery_source;
-        })()}
-      </td>
+      {/* 來源欄位：現在邏輯很乾淨 */}
+      <td style={tableCellStyle}>{displaySource}</td>
 
       <td style={tableCellStyle}>
         {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
       </td>
 
       <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+      
       <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
         {(() => {
           const val = user.last_checkin_time;
@@ -305,8 +303,7 @@ const AdminList = () => {
       </td>
     </tr>
   );
-})}
-            </tbody>
+})}            </tbody>
           </table>
         </div>
       )}
