@@ -210,26 +210,26 @@ const Register = ({ autoCheckin }) => {
           </div>
 
          {/* ✨ 條件渲染：僅外展活動顯示加持選項 ✨ */}
-          {eventSource && (
-            <div style={{ 
-              marginTop: '5px', 
-              padding: '12px', 
-              border: '2px solid #ffe082', 
-              borderRadius: '8px', 
-              backgroundColor: '#fff8e1', 
-              textAlign: 'left' 
-            }}>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
-                <input 
-                  type="checkbox" 
-                  checked={formData.is_blessed} 
-                  onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
-                  style={{ width: '20px', height: '20px', marginRight: '10px' }}
-                />
-                {translations.blessed}
-              </label>
-            </div>
-          )}
+          {eventSource === 'expo' && (
+  <div style={{ 
+    marginTop: '5px', 
+    padding: '12px', 
+    border: '2px solid #ffe082', 
+    borderRadius: '8px', 
+    backgroundColor: '#fff8e1', 
+    textAlign: 'left' 
+  }}>
+    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
+      <input 
+        type="checkbox" 
+        checked={formData.is_blessed} 
+        onChange={(e) => setFormData({...formData, is_blessed: e.target.checked})}
+        style={{ width: '20px', height: '20px', marginRight: '10px' }}
+      />
+      {translations.blessed}
+    </label>
+  </div>
+)}
 
 
           {/* 🚀 條件渲染：若無 eventSource 才顯示來源下拉選單 🚀 */}
