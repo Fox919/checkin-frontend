@@ -228,12 +228,21 @@ const AdminList = () => {
 
 {/* 修正後的渲染區塊 - 移除導致 Hydration 錯誤的潛在因子 */}
 {filteredList.map(user => {
-  // 將邏輯寫在 return 之前，不要在 return 裡面寫 console.log
-  const rawSource = String(user.discovery_source || '');
-  const isHidden = /outreach|expo|null|undefined/i.test(rawSource);
-  const displaySource = isHidden || rawSource.trim() === '' 
-    ? '-' 
-    : (sourceMap[user.discovery_source] || user.discovery_source);
+  // 1. 預先處理來源顯示邏輯 (放在 return 之前最安全)
+  const getDisplaySource = () => {
+    const raw = String(user.discovery_source || '').trim();
+    
+    // 如果是空的、或者是 null/undefined 字串
+    if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
+    
+    // 如果包含 outreach 或 expo (不分大小寫)
+    if (/outreach|expo/i.test(raw)) return '-';
+    
+    // 否則查表，查不到就顯示原始值
+    return sourceMap[user.discovery_source] || user.discovery_source;
+  };
+
+  const displaySource = getDisplaySource();
 
   return (
     <tr key={user.id}>
@@ -255,7 +264,7 @@ const AdminList = () => {
          user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
       </td>
 
-      {/* 來源欄位：現在邏輯很乾淨 */}
+      {/* 來源顯示：直接使用預處理好的變數 */}
       <td style={tableCellStyle}>{displaySource}</td>
 
       <td style={tableCellStyle}>
@@ -267,7 +276,7 @@ const AdminList = () => {
       <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
         {(() => {
           const val = user.last_checkin_time;
-          if (!val || String(val).toLowerCase() === 'undefined' || String(val).toLowerCase() === 'null') {
+          if (!val || /^(null|undefined)$/i.test(String(val))) {
             return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
           }
           return formatTime(val);
@@ -303,7 +312,7 @@ const AdminList = () => {
       </td>
     </tr>
   );
-})}            </tbody>
+})}          </tbody>
           </table>
         </div>
       )}
@@ -312,7 +321,11 @@ const AdminList = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{users.find(u => u.id === selectedQrId)?.name} 的 QR Code</h3>
-            <QRCodeCanvas value={String(selectedQrId)} size={200} />
+            <QRCodeCanvas 
+  value={String(selectedQrId || '')} 
+  size={200} 
+  includeMargin={true}
+/>
             <button onClick={() => setSelectedQrId(null)} style={{ marginTop: '20px', display: 'block', width: '100%', padding: '10px' }}>關閉</button>
           </div>
         </div>
