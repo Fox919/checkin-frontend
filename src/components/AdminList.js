@@ -4,6 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 // 定義來源對照表
 const sourceMap = {
   'expo': '-',
+  'Outreach': '-',  // <--- 直接把這個加進去對照表
   'Hall-Newcomer': '禪堂新人',
 };
 
