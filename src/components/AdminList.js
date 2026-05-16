@@ -8,7 +8,7 @@ const sourceMap = {
   'outreach': '-',
   'Hall-Newcomer': '禪堂新人',
   
-  // ✨ 新增以下三項
+  // 新增來源項目
   'Outreach-Flyer': '外出發票',
   'Poster': '通過海報來的',
   'Performance': '來禪堂參加表演的'
@@ -94,7 +94,8 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-const exportToCSV = () => {
+  // 匯出 CSV 函數（已同步最新過濾邏輯）
+  const exportToCSV = () => {
     try {
       if (!filteredList || filteredList.length === 0) {
         alert("目前沒有資料可供匯出");
@@ -104,7 +105,6 @@ const exportToCSV = () => {
       const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
-        // ✨ 同步前端表格的最新精準過濾邏輯
         const getCsvSource = () => {
           const raw = (u.discovery_source || '').toString().trim();
           if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
@@ -120,7 +120,7 @@ const exportToCSV = () => {
           `"${u.user_type || ''}"`,
           `"${u.lang || ''}"`,
           `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
-          `"${getCsvSource()}"`, // ✨ 使用完美的同步來源
+          `"${getCsvSource()}"`, 
           `"${u.is_blessed ? '是' : '否'}"`, 
           `"${formatTime(u.created_at)}"`, 
           `"${formatTime(u.last_checkin_time)}"`, 
@@ -149,8 +149,6 @@ const exportToCSV = () => {
       alert("匯出失敗");
     }
   };
-
-// ... (後面的表格渲染代碼保持不變，你的 IIFE 寫法很棒)
 
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
@@ -220,7 +218,7 @@ const exportToCSV = () => {
                 <th style={tableHeaderStyle}>身份</th>
                 <th style={tableHeaderStyle}>語言</th>
                 <th style={tableHeaderStyle}>來源</th>
-                 <th style={tableHeaderStyle}>介紹人</th>
+                <th style={tableHeaderStyle}>介紹人</th>
                 <th style={tableHeaderStyle}>登記時間</th>
                 <th style={tableHeaderStyle}>最後簽到</th>
                 <th style={tableHeaderStyle}>接待人員</th>
@@ -229,99 +227,80 @@ const exportToCSV = () => {
               </tr>
             </thead>
             <tbody>
+              {filteredList.map(user => {
+                const getDisplaySource = () => {
+                  const raw = (user.discovery_source || '').toString().trim();
+                  if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
+                  if (sourceMap[raw]) return sourceMap[raw];
+                  if (/expo/i.test(raw)) return '-';
+                  return raw;
+                };
 
+                const displaySource = getDisplaySource();
 
+                return (
+                  <tr key={user.id}>
+                    <td style={{ ...tableCellStyle, minWidth: '80px' }}>
+                      <strong>{user.name || '無'}</strong>
+                      {user.is_blessed === 1 && '✨'}
+                    </td>
+                    <td style={tableCellStyle}>{user.phone || '-'}</td>
+                    <td style={tableCellStyle}>
+                      <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
+                        {user.user_type || '-'}
+                      </span>
+                    </td>
+                    <td style={tableCellStyle}>
+                      {user.lang === 'en-US' ? '🇺🇸 EN' : 
+                       user.lang === 'zh-CN' ? '🇨🇳 簡' : 
+                       user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
+                    </td>
 
-              {/* 找到這一段進行替換 */}
+                    <td style={tableCellStyle}>{displaySource}</td>
 
-
-{/* 修正後的渲染區塊 - 移除導致 Hydration 錯誤的潛在因子 */}
-{filteredList.map(user => {
-  // 1. 預先計算顯示來源（精準排序邏輯，防止新來源被誤殺）
-  const getDisplaySource = () => {
-    const raw = (user.discovery_source || '').toString().trim();
-    
-    // 如果是空的、或是 null/undefined 字串，顯示 -
-    if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
-    
-    // 【第一優先】直接查對照表
-    // 如果是 'Outreach-Flyer'，會在這裡直接比對成功，回傳 '外出發票'
-    // 如果是 'Outreach'，會在這裡比對成功，回傳 '-'
-    if (sourceMap[raw]) return sourceMap[raw];
-    
-    // 【第二優先】如果對照表沒有，但包含 expo，則隱藏為 -
-    if (/expo/i.test(raw)) return '-';
-    
-    // 真的都沒對中，才顯示原始值
-    return raw;
-  };
-
-  const displaySource = getDisplaySource();
-
-  return (
-    <tr key={user.id}>
-      {/* ... 這裡保持你原本的 td 欄位（姓名、電話、身份、語言等） ... */}
-      <td style={{ ...tableCellStyle, minWidth: '80px' }}>
-        <strong>{user.name || '無'}</strong>
-        {user.is_blessed === 1 && '✨'}
-      </td>
-      <td style={tableCellStyle}>{user.phone || '-'}</td>
-      <td style={tableCellStyle}>
-        <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
-          {user.user_type || '-'}
-        </span>
-      </td>
-      <td style={tableCellStyle}>
-        {user.lang === 'en-US' ? '🇺🇸 EN' : 
-         user.lang === 'zh-CN' ? '🇨🇳 簡' : 
-         user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
-      </td>
-
-      {/* 來源欄位：直接使用處理好的安全變數 */}
-      <td style={tableCellStyle}>{displaySource}</td>
-
-      <td style={tableCellStyle}>
-        {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
-      </td>
-      <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
-      <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
-        {(() => {
-          const val = user.last_checkin_time;
-          if (!val || /^(null|undefined)$/i.test(String(val))) {
-            return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
-          }
-          return formatTime(val);
-        })()}
-      </td>
-      <td style={tableCellStyle}>
-        <input 
-          value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
-          onChange={(e) => {
-            const val = e.target.value;
-            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
-          }}
-          onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
-          style={{ width: '70px' }} 
-        />
-      </td>
-      <td style={tableCellStyle}>
-        <textarea 
-          value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
-          onChange={(e) => {
-            const val = e.target.value;
-            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
-          }}
-          onBlur={(e) => handleNoteChange(user.id, e.target.value)}
-          style={{ width: '120px', height: '35px' }} 
-        />
-      </td>
-      <td style={tableCellStyle}>
-        <button onClick={() => setSelectedQrId(user.id)}>QR</button>
-      </td>
-    </tr>
-  );
-})}    
-  </table>
+                    <td style={tableCellStyle}>
+                      {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
+                    </td>
+                    <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+                    <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+                      {(() => {
+                        const val = user.last_checkin_time;
+                        if (!val || /^(null|undefined)$/i.test(String(val))) {
+                          return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
+                        }
+                        return formatTime(val);
+                      })()}
+                    </td>
+                    <td style={tableCellStyle}>
+                      <input 
+                        value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+                        }}
+                        onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
+                        style={{ width: '70px' }} 
+                      />
+                    </td>
+                    <td style={tableCellStyle}>
+                      <textarea 
+                        value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+                        }}
+                        onBlur={(e) => handleNoteChange(user.id, e.target.value)}
+                        style={{ width: '120px', height: '35px' }} 
+                      />
+                    </td>
+                    <td style={tableCellStyle}>
+                      <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+                    </td>
+                  </tr>
+                );
+              })}   
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -330,10 +309,10 @@ const exportToCSV = () => {
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{users.find(u => u.id === selectedQrId)?.name} 的 QR Code</h3>
             <QRCodeCanvas 
-  value={String(selectedQrId || '')} 
-  size={200} 
-  includeMargin={true}
-/>
+              value={String(selectedQrId || '')} 
+              size={200} 
+              includeMargin={true}
+            />
             <button onClick={() => setSelectedQrId(null)} style={{ marginTop: '20px', display: 'block', width: '100%', padding: '10px' }}>關閉</button>
           </div>
         </div>
