@@ -4,10 +4,16 @@ import { QRCodeCanvas } from 'qrcode.react';
 // 定義來源對照表
 const sourceMap = {
   'expo': '-',
-  'Outreach': '-',        // 新增這一行，解決一般訪客的問題
-  'outreach': '-',        // 保險起見，小寫也加
+  'Outreach': '-',
+  'outreach': '-',
   'Hall-Newcomer': '禪堂新人',
+  
+  // ✨ 新增以下三項
+  'Outreach-Flyer': '外出發票',
+  'Poster': '通過海報來的',
+  'Performance': '來禪堂參加表演的'
 };
+
 const AdminList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,9 +94,7 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-// ... (前面的代碼保持不變)
-
-  const exportToCSV = () => {
+const exportToCSV = () => {
     try {
       if (!filteredList || filteredList.length === 0) {
         alert("目前沒有資料可供匯出");
@@ -100,10 +104,14 @@ const AdminList = () => {
       const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
-        // 同步表格的過濾邏輯
-        const rawSource = (u.discovery_source || '').toString().trim().toLowerCase();
-        const isHiddenSource = !rawSource || rawSource === 'null' || rawSource === 'undefined' || rawSource.includes('outreach') || rawSource.includes('expo');
-        const displaySource = isHiddenSource ? '-' : (sourceMap[u.discovery_source] || u.discovery_source);
+        // ✨ 同步前端表格的最新精準過濾邏輯
+        const getCsvSource = () => {
+          const raw = (u.discovery_source || '').toString().trim();
+          if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
+          if (sourceMap[raw]) return sourceMap[raw];
+          if (/expo/i.test(raw)) return '-';
+          return raw;
+        };
 
         return [
           `"${(u.name || '').replace(/"/g, '""')}"`, 
@@ -112,7 +120,7 @@ const AdminList = () => {
           `"${u.user_type || ''}"`,
           `"${u.lang || ''}"`,
           `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
-          `"${displaySource}"`, // 使用處理過的來源
+          `"${getCsvSource()}"`, // ✨ 使用完美的同步來源
           `"${u.is_blessed ? '是' : '否'}"`, 
           `"${formatTime(u.created_at)}"`, 
           `"${formatTime(u.last_checkin_time)}"`, 
@@ -229,50 +237,91 @@ const AdminList = () => {
 
 {/* 修正後的渲染區塊 - 移除導致 Hydration 錯誤的潛在因子 */}
 {filteredList.map(user => {
-  // 1. 預先計算顯示來源
+  // 1. 預先計算顯示來源（精準排序邏輯，防止新來源被誤殺）
   const getDisplaySource = () => {
     const raw = (user.discovery_source || '').toString().trim();
     
-    // 如果是空的、或是 null/undefined 字串
+    // 如果是空的、或是 null/undefined 字串，顯示 -
     if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
     
-    // 先查對照表 (這會處理 Outreach, expo, Hall-Newcomer)
+    // 【第一優先】直接查對照表
+    // 如果是 'Outreach-Flyer'，會在這裡直接比對成功，回傳 '外出發票'
+    // 如果是 'Outreach'，會在這裡比對成功，回傳 '-'
     if (sourceMap[raw]) return sourceMap[raw];
     
-    // 如果對照表查不到，再用正則表達式做最後保險
-    if (/outreach|expo/i.test(raw)) return '-';
+    // 【第二優先】如果對照表沒有，但包含 expo，則隱藏為 -
+    if (/expo/i.test(raw)) return '-';
     
-    return raw; // 真的都沒對中才顯示原始值
+    // 真的都沒對中，才顯示原始值
+    return raw;
   };
 
   const displaySource = getDisplaySource();
 
   return (
     <tr key={user.id}>
-      {/* ... 其他 td 保持不變 ... */}
-      <td style={tableCellStyle}>
+      {/* ... 這裡保持你原本的 td 欄位（姓名、電話、身份、語言等） ... */}
+      <td style={{ ...tableCellStyle, minWidth: '80px' }}>
         <strong>{user.name || '無'}</strong>
         {user.is_blessed === 1 && '✨'}
       </td>
       <td style={tableCellStyle}>{user.phone || '-'}</td>
-      <td style={tableCellStyle}>{user.user_type || '-'}</td>
-      <td style={tableCellStyle}>{user.lang || '-'}</td>
+      <td style={tableCellStyle}>
+        <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
+          {user.user_type || '-'}
+        </span>
+      </td>
+      <td style={tableCellStyle}>
+        {user.lang === 'en-US' ? '🇺🇸 EN' : 
+         user.lang === 'zh-CN' ? '🇨🇳 簡' : 
+         user.lang === 'zh-TW' ? '🇭🇰 繁' : user.lang || '-'}
+      </td>
 
-      {/* 來源欄位 */}
+      {/* 來源欄位：直接使用處理好的安全變數 */}
       <td style={tableCellStyle}>{displaySource}</td>
 
       <td style={tableCellStyle}>
         {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
       </td>
-      {/* ... 後續代碼保持不變 ... */}
-      
-      {/* 注意：確保 QRCodeCanvas 的部分如下，避免 SVG 報錯 */}
+      <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+      <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
+        {(() => {
+          const val = user.last_checkin_time;
+          if (!val || /^(null|undefined)$/i.test(String(val))) {
+            return <span style={{ color: '#ccc', fontWeight: 'normal' }}>-</span>;
+          }
+          return formatTime(val);
+        })()}
+      </td>
+      <td style={tableCellStyle}>
+        <input 
+          value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
+          onChange={(e) => {
+            const val = e.target.value;
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
+          }}
+          onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
+          style={{ width: '70px' }} 
+        />
+      </td>
+      <td style={tableCellStyle}>
+        <textarea 
+          value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
+          onChange={(e) => {
+            const val = e.target.value;
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
+          }}
+          onBlur={(e) => handleNoteChange(user.id, e.target.value)}
+          style={{ width: '120px', height: '35px' }} 
+        />
+      </td>
       <td style={tableCellStyle}>
         <button onClick={() => setSelectedQrId(user.id)}>QR</button>
       </td>
     </tr>
   );
-})}      </table>
+})}    
+  </table>
         </div>
       )}
 
