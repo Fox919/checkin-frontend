@@ -23,7 +23,13 @@ const t = {
     duplicatePrompt: "提醒：此成員已登記過。可以直接進行快速簽到：",
     fastCheckin: "前往快速簽到",
     blessing: "是否已接受加持？",
-    blessed: "已接受加持 ✨"
+    blessed: "已接受加持 ✨",
+    
+    // ✨ 新增翻譯 (繁體)
+    hallNewcomer: "禪堂新人",
+    outreachFlyer: "外出發票",
+    poster: "通過海報來的",
+    performance: "來禪堂參加表演的"
   },
   'zh-CN': {
     title: "活动人员登记",
@@ -44,7 +50,13 @@ const t = {
     retry: "重新登记", error: "失败",
     duplicatePrompt: "提醒：此成员已登记过。可以直接进行快速签到：",
     fastCheckin: "前往快速签到",
-    blessed: "已接受加持 ✨"
+    blessed: "已接受加持 ✨",
+    
+    // ✨ 新增翻译 (简体)
+    hallNewcomer: "禅堂新人",
+    outreachFlyer: "外出发票",
+    poster: "通过海报来的",
+    performance: "来禅堂参加表演的"
   },
   'en-US': {
     title: "Registration",
@@ -65,7 +77,13 @@ const t = {
     retry: "Register Again", error: "Error",
     duplicatePrompt: "Note: Already registered. You can use Fast Check-in:",
     fastCheckin: "Go to Fast Check-in",
-    blessed: "Received Blessing ✨"
+    blessed: "Received Blessing ✨",
+    
+    // ✨ 新增翻譯 (英文)
+    hallNewcomer: "Hall Newcomer",
+    outreachFlyer: "Outreach Flyer",
+    poster: "Via Poster",
+    performance: "Performance Guest"
   }
 };
 
@@ -146,7 +164,6 @@ const Register = ({ autoCheckin }) => {
 
     setIsSubmitting(true);
     try {
-      // 請確保這裡的 API URL 是正確的
       const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,7 +175,6 @@ const Register = ({ autoCheckin }) => {
         setQrValue(String(data.id));
         setMessage(translations.success);
         
-        // ✨ 提交成功後立即清空表單數據 ✨
         setFormData({
           lastName: '', 
           firstName: '', 
@@ -233,7 +249,7 @@ const Register = ({ autoCheckin }) => {
             </div>
           </div>
 
-          {/* ✨ 條件渲染：僅「外展活動」顯示加持選項 ✨ */}
+          {/* 條件渲染：僅「外展活動」顯示加持選項 */}
           {eventSource === 'expo' && (
             <div style={{ padding: '12px', border: '2px solid #ffe082', borderRadius: '8px', backgroundColor: '#fff8e1' }}>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#f57c00' }}>
@@ -248,7 +264,7 @@ const Register = ({ autoCheckin }) => {
             </div>
           )}
 
-          {/* 🚀 核心邏輯：僅「禪堂新人」顯示來源調查 🚀 */}
+          {/* 🚀 核心邏輯：僅「禪堂新人」網址顯示來源調查 🚀 */}
           {eventSource === 'Hall-Newcomer' && (
             <div style={{ textAlign: 'left', marginBottom: '5px' }}>
               <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '5px' }}>
@@ -256,6 +272,16 @@ const Register = ({ autoCheckin }) => {
               </label>
               <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
                 <option value="">{translations.selectPlaceholder}</option>
+                
+                {/* 1. 禪堂新人主選項 */}
+                <option value="Hall-Newcomer">🏛️ {translations.hallNewcomer}</option>
+                
+                {/* 2. ✨ 新增的三項特殊來源 */}
+                <option value="Outreach-Flyer">📄 {translations.outreachFlyer}</option>
+                <option value="Poster">🖼️ {translations.poster}</option>
+                <option value="Performance">🎭 {translations.performance}</option>
+                
+                {/* 3. 既有的其他基本選項 */}
                 <option value="expo" style={{ color: '#e67e22', fontWeight: 'bold' }}>📍 {translations.expoSource}</option>
                 <option value="Google/YouTube">{translations.google}</option>
                 <option value="Facebook/IG">{translations.facebook}</option>
