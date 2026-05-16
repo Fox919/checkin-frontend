@@ -25,7 +25,7 @@ const t = {
     blessing: "是否已接受加持？",
     blessed: "已接受加持 ✨",
     
-    // ✨ 新增翻譯 (繁體)
+    // 新增翻譯 (繁體)
     hallNewcomer: "禪堂新人",
     outreachFlyer: "外出發票",
     poster: "通過海報來的",
@@ -52,7 +52,7 @@ const t = {
     fastCheckin: "前往快速签到",
     blessed: "已接受加持 ✨",
     
-    // ✨ 新增翻译 (简体)
+    // 新增翻译 (简体)
     hallNewcomer: "禅堂新人",
     outreachFlyer: "外出发票",
     poster: "通过海报来的",
@@ -79,7 +79,7 @@ const t = {
     fastCheckin: "Go to Fast Check-in",
     blessed: "Received Blessing ✨",
     
-    // ✨ 新增翻譯 (英文)
+    // 新增翻譯 (英文)
     hallNewcomer: "Hall Newcomer",
     outreachFlyer: "Outreach Flyer",
     poster: "Via Poster",
@@ -94,11 +94,14 @@ const Register = ({ autoCheckin }) => {
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const eventSource = searchParams.get('source');
 
+  // 🛠️ 修正 1：在初始 state 中明確加入 referrer_name 與 other_source_text
   const [formData, setFormData] = useState({
     lastName: '', firstName: '', 
     phone: '', email: '', 
     contact_method: [], 
     discovery_source: eventSource || '', 
+    referrer_name: '',        // ✨ 確保初始欄位存在
+    other_source_text: '',    // ✨ 確保初始欄位存在
     is_blessed: false, 
     user_type: searchParams.get('type') || 'Visitor'
   });
@@ -116,7 +119,9 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ 
         ...prev, 
         user_type: typeFromUrl || 'Visitor',
-        discovery_source: sourceFromUrl || '' 
+        discovery_source: sourceFromUrl || '',
+        referrer_name: '',    // 轉換網址來源時重置
+        other_source_text: '' // 轉換網址來源時重置
     }));
   }, [searchParams]);
 
@@ -175,6 +180,7 @@ const Register = ({ autoCheckin }) => {
         setQrValue(String(data.id));
         setMessage(translations.success);
         
+        // 🛠️ 修正 2：提交成功清除數據時，同步清除並重置這兩個自訂欄位
         setFormData({
           lastName: '', 
           firstName: '', 
@@ -182,6 +188,8 @@ const Register = ({ autoCheckin }) => {
           email: '', 
           contact_method: [], 
           discovery_source: eventSource || '', 
+          referrer_name: '',
+          other_source_text: '',
           is_blessed: false, 
           user_type: searchParams.get('type') || 'Visitor'
         });
@@ -276,7 +284,7 @@ const Register = ({ autoCheckin }) => {
                 {/* 1. 禪堂新人主選項 */}
                 <option value="Hall-Newcomer">🏛️ {translations.hallNewcomer}</option>
                 
-                {/* 2. ✨ 新增的三項特殊來源 */}
+                {/* 2. 新增的三項特殊來源 */}
                 <option value="Outreach-Flyer">📄 {translations.outreachFlyer}</option>
                 <option value="Poster">🖼️ {translations.poster}</option>
                 <option value="Performance">🎭 {translations.performance}</option>
@@ -291,11 +299,26 @@ const Register = ({ autoCheckin }) => {
                 <option value="Other">{translations.other}</option>
               </select>
 
+              {/* 🛠️ 修正 3：加入對應的名稱（原本寫 input 卻沒指明 value 與 onChange，導致受控組件失效） */}
               {formData.discovery_source === 'Friend' && (
-                <input name="referrer_name" placeholder={translations.referrer} value={formData.referrer_name} onChange={handleChange} required style={{ ...inputStyle, marginTop: '10px' }} />
+                <input 
+                  name="referrer_name" 
+                  placeholder={translations.referrer} 
+                  value={formData.referrer_name} 
+                  onChange={handleChange} 
+                  required 
+                  style={{ ...inputStyle, marginTop: '10px' }} 
+                />
               )}
               {formData.discovery_source === 'Other' && (
-                <input name="other_source_text" placeholder={translations.otherSource} value={formData.other_source_text} onChange={handleChange} required style={{ ...inputStyle, marginTop: '10px' }} />
+                <input 
+                  name="other_source_text" 
+                  placeholder={translations.otherSource} 
+                  value={formData.other_source_text} 
+                  onChange={handleChange} 
+                  required 
+                  style={{ ...inputStyle, marginTop: '10px' }} 
+                />
               )}
             </div>
           )}
