@@ -156,7 +156,7 @@ const AdminList = () => {
     }
   };
 
-  // 🛠️ 修正 3：徹底重寫過濾邏輯（修復時區導致的日期篩選失效）
+  // 🛠️ 完美修復：切換「今日已簽到」時，若沒選日期，自動過濾當天
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
     const matchesSearch = 
@@ -164,18 +164,34 @@ const AdminList = () => {
       user.phone?.includes(searchTerm) ||
       (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
     
-    // 處理檢視模式
+    // 1. 狀態比對
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
 
-    // 精準處理時間戳字串比對 (解決「.startsWith」抓不到 ISO 格式的問題)
-    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
+    // 2. 日期比對核心邏輯
     let matchesDate = true;
-    if (selectedDate && rawDate) {
-      // 將資料庫的 UTC 時間字串轉成 YYYY-MM-DD 本地/UTC 格式來比對
-      const targetIsoDate = new Date(rawDate).toISOString().slice(0, 10);
-      matchesDate = targetIsoDate === selectedDate;
-    } else if (selectedDate && !rawDate) {
-      matchesDate = false;
+    
+    // 取得當前瀏覽器所在時區的「今天」日期 (格式為 YYYY-MM-DD，例如 "2026-05-17")
+    const todayStr = new Date().toLocaleDateString('en-CA'); // en-CA 格式剛好是 YYYY-MM-DD
+
+    // 決定要用哪一個時間欄位來比對日期
+    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
+
+    if (rawDate) {
+      // 將資料庫的 UTC 時間字串轉成 YYYY-MM-DD 本地格式
+      const targetIsoDate = new Date(rawDate).toLocaleDateString('en-CA');
+
+      if (selectedDate) {
+        // 情況 A：管理員有主動選擇特定日期 -> 比對該特定日期
+        matchesDate = targetIsoDate === selectedDate;
+      } else if (viewMode === 'checked-in') {
+        // 情況 B：管理員選了「今日已簽到」但「沒選特定日期」 -> 強制只比對「今天」
+        matchesDate = targetIsoDate === todayStr;
+      }
+    } else {
+      // 如果根本沒有時間紀錄，但管理員卻選了要看特定日期或今日簽到，就判定不符合
+      if (selectedDate || viewMode === 'checked-in') {
+        matchesDate = false;
+      }
     }
 
     return matchesSearch && matchesStatus && matchesDate;
