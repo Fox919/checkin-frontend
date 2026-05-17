@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
-// 定義來源對照表
+// ✨ 修正 1：完美補齊來源對照表，與前端登記頁面完全對齊
 const sourceMap = {
-  'expo': '-',
-  'Outreach': '-',
-  'outreach': '-',
+  'expo': '外展活動',
+  'Outreach': '外展活動',
+  'outreach': '外展活動',
   'Hall-Newcomer': '禪堂新人',
-  
-  // 新增來源項目
   'Outreach-Flyer': '外出發票',
   'Poster': '通過海報來的',
-  'Performance': '來禪堂參加表演的'
+  'Performance': '來禪堂參加表演的',
+  'Friend': '朋友 / 親戚', // 👈 補上朋友介紹的中文顯示
+  'Google/YouTube': '谷歌 / YouTube',
+  'Facebook/IG': '臉書 / Instagram',
+  'Magazine': '雜誌',
+  'Website': '官方網站',
+  'Other': '其他'
 };
 
 const AdminList = () => {
@@ -26,7 +30,7 @@ const AdminList = () => {
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
 
-  // 1. 強化的格式化時間函數：UTC 顯示解決時差
+  // 強化的格式化時間函數
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
@@ -94,7 +98,17 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-  // 匯出 CSV 函數（已同步最新過濾邏輯）
+  // 🛠️ 修正 2：共用邏輯提取，優化來源解析，處理外展顯示問題
+  const getDisplaySourceText = (rawSource) => {
+    const raw = (rawSource || '').toString().trim();
+    if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
+    if (sourceMap[raw]) return sourceMap[raw];
+    // 這裡保留你的特殊正則判斷，但如果上面對照表有了，就會優先跑對照表
+    if (/expo/i.test(raw)) return '外展活動'; 
+    return raw;
+  };
+
+  // 匯出 CSV 函數
   const exportToCSV = () => {
     try {
       if (!filteredList || filteredList.length === 0) {
@@ -105,14 +119,6 @@ const AdminList = () => {
       const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
-        const getCsvSource = () => {
-          const raw = (u.discovery_source || '').toString().trim();
-          if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
-          if (sourceMap[raw]) return sourceMap[raw];
-          if (/expo/i.test(raw)) return '-';
-          return raw;
-        };
-
         return [
           `"${(u.name || '').replace(/"/g, '""')}"`, 
           `"${u.phone || ''}"`, 
@@ -120,7 +126,7 @@ const AdminList = () => {
           `"${u.user_type || ''}"`,
           `"${u.lang || ''}"`,
           `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
-          `"${getCsvSource()}"`, 
+          `"${getDisplaySourceText(u.discovery_source)}"`, 
           `"${u.is_blessed ? '是' : '否'}"`, 
           `"${formatTime(u.created_at)}"`, 
           `"${formatTime(u.last_checkin_time)}"`, 
@@ -150,6 +156,7 @@ const AdminList = () => {
     }
   };
 
+  // 🛠️ 修正 3：徹底重寫過濾邏輯（修復時區導致的日期篩選失效）
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
     const matchesSearch = 
@@ -157,9 +164,19 @@ const AdminList = () => {
       user.phone?.includes(searchTerm) ||
       (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
     
+    // 處理檢視模式
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
-    const rawDate = viewMode === 'checked-in' ? (user.last_checkin_time || user.last_checkin) : user.created_at;
-    const matchesDate = !selectedDate || (rawDate && String(rawDate).startsWith(selectedDate));
+
+    // 精準處理時間戳字串比對 (解決「.startsWith」抓不到 ISO 格式的問題)
+    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
+    let matchesDate = true;
+    if (selectedDate && rawDate) {
+      // 將資料庫的 UTC 時間字串轉成 YYYY-MM-DD 本地/UTC 格式來比對
+      const targetIsoDate = new Date(rawDate).toISOString().slice(0, 10);
+      matchesDate = targetIsoDate === selectedDate;
+    } else if (selectedDate && !rawDate) {
+      matchesDate = false;
+    }
 
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -228,21 +245,13 @@ const AdminList = () => {
             </thead>
             <tbody>
               {filteredList.map(user => {
-                const getDisplaySource = () => {
-                  const raw = (user.discovery_source || '').toString().trim();
-                  if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
-                  if (sourceMap[raw]) return sourceMap[raw];
-                  if (/expo/i.test(raw)) return '-';
-                  return raw;
-                };
-
-                const displaySource = getDisplaySource();
+                const displaySource = getDisplaySourceText(user.discovery_source);
 
                 return (
                   <tr key={user.id}>
                     <td style={{ ...tableCellStyle, minWidth: '80px' }}>
                       <strong>{user.name || '無'}</strong>
-                      {user.is_blessed === 1 && '✨'}
+                      {user.is_blessed === 1 && ' ✨'}
                     </td>
                     <td style={tableCellStyle}>{user.phone || '-'}</td>
                     <td style={tableCellStyle}>
