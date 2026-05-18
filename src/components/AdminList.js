@@ -33,13 +33,14 @@ const AdminList = () => {
   // 🌟 新增：記錄目前點選的來源索引（null 代表顯示全部）
   const [selectedSourceFilter, setSelectedSourceFilter] = useState(null);
 
-  // 強化的格式化時間函數 — 統一為本地時區
+ // 強化的格式化時間函數 — 強制使用 UTC 顯示資料庫原始時間
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
     return date.toLocaleString('zh-TW', {
+      timeZone: 'UTC', // 🌟 加回這行，後台就會變回 16:02
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
