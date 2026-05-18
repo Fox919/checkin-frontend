@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
-// ✨ 修正 1：完美補齊來源對照表，與前端登記頁面完全對齊
+// ✨ 完美補齊來源對照表，與前端登記頁面完全對齊
 const sourceMap = {
   'expo': '外展活動',
   'Outreach': '外展活動',
@@ -10,7 +10,7 @@ const sourceMap = {
   'Outreach-Flyer': '外出發票',
   'Poster': '通過海報來的',
   'Performance': '來禪堂參加表演的',
-  'Friend': '朋友 / 親戚', // 👈 補上朋友介紹的中文顯示
+  'Friend': '朋友 / 親戚', 
   'Google/YouTube': '谷歌 / YouTube',
   'Facebook/IG': '臉書 / Instagram',
   'Magazine': '雜誌',
@@ -29,15 +29,17 @@ const AdminList = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
+  
+  // 🌟 新增：記錄目前點選的來源索引（null 代表顯示全部）
+  const [selectedSourceFilter, setSelectedSourceFilter] = useState(null);
 
- // 強化的格式化時間函數 — 統一為本地時區
+  // 強化的格式化時間函數 — 統一為本地時區
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
     return date.toLocaleString('zh-TW', {
-      // 🌟 移除 timeZone: 'UTC'，讓顯示的時間跟隨管理員電腦的本地時間
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -98,15 +100,119 @@ const AdminList = () => {
     } else { alert("密碼錯誤！"); }
   };
 
-  // 🛠️ 修正 2：共用邏輯提取，優化來源解析，處理外展顯示問題
+  // 共用邏輯提取，優化來源解析
   const getDisplaySourceText = (rawSource) => {
     const raw = (rawSource || '').toString().trim();
     if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
     if (sourceMap[raw]) return sourceMap[raw];
-    // 這裡保留你的特殊正則判斷，但如果上面對照表有了，就會優先跑對照表
     if (/expo/i.test(raw)) return '外展活動'; 
     return raw;
   };
+
+  // === 保留並優化：7 大核心來源管道統計 ===
+  const getSourceStats = () => {
+    const targetDate = selectedDate || new Date().toLocaleDateString('en-CA');
+    
+    const dayNewcomers = users.filter(user => {
+      if (!user.created_at || !user.user_type?.toLowerCase().includes('newcomer')) return false;
+      const userDate = new Date(user.created_at).toLocaleDateString('en-CA');
+      return userDate === targetDate;
+    });
+
+    const totalCount = dayNewcomers.length;
+
+    const statsMap = {
+      '外展活動': 0,
+      '禪堂新人': 0,
+      '外出發票': 0,
+      '通過海報來的': 0,
+      '來禪堂參加表演的': 0,
+      '朋友 / 親戚': 0,
+      '網路平台 (Google/FB/IG)': 0,
+      '其他 / 未知': 0
+    };
+
+    dayNewcomers.forEach(user => {
+      const src = user.discovery_source;
+      
+      if (!src || /^(null|undefined)$/i.test(src)) {
+        if (user.user_type === 'Hall-Newcomer') statsMap['禪堂新人']++;
+        else statsMap['其他 / 未知']++;
+        return;
+      }
+
+      if (/expo|outreach/i.test(src) && !/flyer/i.test(src)) {
+        statsMap['外展活動']++;
+      } else if (src === 'Hall-Newcomer') {
+        statsMap['禪堂新人']++;
+      } else if (src === 'Outreach-Flyer') {
+        statsMap['外出發票']++;
+      } else if (src === 'Poster') {
+        statsMap['通過海報來的']++;
+      } else if (src === 'Performance') {
+        statsMap['來禪堂參加表演的']++;
+      } else if (src === 'Friend') {
+        statsMap['朋友 / 親戚']++;
+      } else if (/google|youtube|facebook|ig/i.test(src)) {
+        statsMap['網路平台 (Google/FB/IG)']++;
+      } else {
+        const chineseName = sourceMap[src] || '其他 / 未知';
+        statsMap[chineseName] = (statsMap[chineseName] || 0) + 1;
+      }
+    });
+
+    return { totalCount, statsMap };
+  };
+
+  const { totalCount: statTotal, statsMap: statData } = getSourceStats();
+
+  // 🛠️ 核心篩選邏輯
+  const filteredList = users.filter(user => {
+    const searchStr = searchTerm.toLowerCase();
+    const matchesSearch = 
+      user.name?.toLowerCase().includes(searchStr) || 
+      user.phone?.includes(searchTerm) ||
+      (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
+    
+    // 1. 狀態比對
+    const matchesStatus = viewMode === 'all' || user.status === viewMode;
+
+    // 2. 日期比對邏輯（本地時區同步）
+    let matchesDate = true;
+    const todayStr = new Date().toLocaleDateString('en-CA'); 
+    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
+
+    if (rawDate) {
+      const targetIsoDate = new Date(rawDate).toLocaleDateString('en-CA');
+      if (selectedDate) {
+        matchesDate = targetIsoDate === selectedDate;
+      } else if (viewMode === 'checked-in') {
+        matchesDate = targetIsoDate === todayStr;
+      }
+    } else {
+      if (selectedDate || viewMode === 'checked-in') {
+        matchesDate = false;
+      }
+    }
+
+    // 🌟 3. 完美對齊 7 大管道的來源索引點擊比對
+    let matchesSourceFilter = true;
+    if (selectedSourceFilter) {
+      const currentSrcText = getDisplaySourceText(user.discovery_source);
+      
+      if (selectedSourceFilter === '禪堂新人') {
+        matchesSourceFilter = currentSrcText === '禪堂新人' || (!user.discovery_source && user.user_type === 'Hall-Newcomer');
+      } else if (selectedSourceFilter === '網路平台 (Google/FB/IG)') {
+        matchesSourceFilter = /谷歌|YouTube|臉書|Instagram/i.test(currentSrcText);
+      } else if (selectedSourceFilter === '其他 / 未知') {
+        matchesSourceFilter = currentSrcText === '-' || currentSrcText === '其他' || !statData[currentSrcText];
+      } else {
+        matchesSourceFilter = currentSrcText === selectedSourceFilter;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDate && matchesSourceFilter;
+  });
 
   // 匯出 CSV 函數
   const exportToCSV = () => {
@@ -156,95 +262,6 @@ const AdminList = () => {
     }
   };
 
-// === 新增：計算所選日期的客製化來源統計 ===
-  const getSourceStats = () => {
-    // 1. 篩選出屬於所選日期（或今天）的「新人」
-    // 這裡的邏輯只抓 Hall-Newcomer 或 Expo-Newcomer 等含 Newcomer 的身份
-    const targetDate = selectedDate || new Date().toLocaleDateString('en-CA');
-    
-    const dayNewcomers = users.filter(user => {
-      if (!user.created_at || !user.user_type?.toLowerCase().includes('newcomer')) return false;
-      const userDate = new Date(user.created_at).toLocaleDateString('en-CA');
-      return userDate === targetDate;
-    });
-
-    const totalCount = dayNewcomers.length;
-
-    // 2. 初始化所有可能來源的計數器
-    const statsMap = {
-      '禪堂新人 (Hall-Newcomer)': 0,
-      '外展活動 (Expo)': 0,
-      '朋友 / 親戚': 0,
-      '其他 / 未知': 0
-    };
-
-    // 3. 開始歸類計數
-    dayNewcomers.forEach(user => {
-      const src = user.discovery_source;
-      if (!src || /^(null|undefined)$/i.test(src)) {
-        // 如果來源是空的，但身份是 Hall-Newcomer，歸類為禪堂新人
-        if (user.user_type === 'Hall-Newcomer') statsMap['禪堂新人 (Hall-Newcomer)']++;
-        else statsMap['其他 / 未知']++;
-      } else if (/expo|outreach/i.test(src)) {
-        statsMap['外展活動 (Expo)']++;
-      } else if (src === 'Friend') {
-        statsMap['朋友 / 親戚']++;
-      } else if (sourceMap[src]) {
-        // 其他在 sourceMap 有定義的（例如海報、表演），如果想細分可以另外加，這裡先統一塞到其他或動態新增
-        const chineseName = sourceMap[src];
-        statsMap[chineseName] = (statsMap[chineseName] || 0) + 1;
-      } else {
-        statsMap['其他 / 未知']++;
-      }
-    });
-
-    return { totalCount, statsMap };
-  };
-
-  const { totalCount: statTotal, statsMap: statData } = getSourceStats();
-
-
-  // 🛠️ 完美修復：切換「今日已簽到」時，若沒選日期，自動過濾當天
-  const filteredList = users.filter(user => {
-    const searchStr = searchTerm.toLowerCase();
-    const matchesSearch = 
-      user.name?.toLowerCase().includes(searchStr) || 
-      user.phone?.includes(searchTerm) ||
-      (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
-    
-    // 1. 狀態比對
-    const matchesStatus = viewMode === 'all' || user.status === viewMode;
-
-    // 2. 日期比對核心邏輯
-    let matchesDate = true;
-    
-    // 取得當前瀏覽器所在時區的「今天」日期 (格式為 YYYY-MM-DD，例如 "2026-05-17")
-    const todayStr = new Date().toLocaleDateString('en-CA'); // en-CA 格式剛好是 YYYY-MM-DD
-
-    // 決定要用哪一個時間欄位來比對日期
-    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
-
-    if (rawDate) {
-      // 將資料庫的 UTC 時間字串轉成 YYYY-MM-DD 本地格式
-      const targetIsoDate = new Date(rawDate).toLocaleDateString('en-CA');
-
-      if (selectedDate) {
-        // 情況 A：管理員有主動選擇特定日期 -> 比對該特定日期
-        matchesDate = targetIsoDate === selectedDate;
-      } else if (viewMode === 'checked-in') {
-        // 情況 B：管理員選了「今日已簽到」但「沒選特定日期」 -> 強制只比對「今天」
-        matchesDate = targetIsoDate === todayStr;
-      }
-    } else {
-      // 如果根本沒有時間紀錄，但管理員卻選了要看特定日期或今日簽到，就判定不符合
-      if (selectedDate || viewMode === 'checked-in') {
-        matchesDate = false;
-      }
-    }
-
-    return matchesSearch && matchesStatus && matchesDate;
-  });
-
   const tableHeaderStyle = { padding: '12px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem' };
   const tableCellStyle = { padding: '10px', border: '1px solid #ddd', fontSize: '0.85rem' };
 
@@ -286,9 +303,10 @@ const AdminList = () => {
           <option value="checked-in">今日已簽到</option>
         </select>
         <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px' }} />
-        <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all');}}>重置</button>
+        <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all'); setSelectedSourceFilter(null);}}>重置</button>
       </div>
-{/* ✨ 新增：當日新人來源統計看板 */}
+
+      {/* ✨ 完美保留 7 大管道統計並結合「點擊索引表格」功能 */}
       <div style={{ 
         backgroundColor: '#fff', 
         padding: '20px', 
@@ -297,48 +315,80 @@ const AdminList = () => {
         marginBottom: '25px',
         borderLeft: '5px solid #007bff'
       }}>
-        <h4 style={{ margin: '0 0 15px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          📊 {selectedDate ? `${selectedDate}` : '今日'} 新人來源管道統計 
-          <span style={{ fontSize: '0.9rem', backgroundColor: '#007bff', color: '#fff', padding: '2px 10px', borderRadius: '12px' }}>
-            共 {statTotal} 位新人登記
-          </span>
-        </h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+          <h4 style={{ margin: 0, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📊 {selectedDate ? `${selectedDate}` : '今日'} 新人來源管道統計 
+            <span style={{ fontSize: '0.9rem', backgroundColor: '#007bff', color: '#fff', padding: '2px 10px', borderRadius: '12px' }}>
+              共 {statTotal} 位新人登記
+            </span>
+          </h4>
+          
+          {selectedSourceFilter && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '0.85rem', color: '#007bff', fontWeight: 'bold' }}>
+                🔍 正在過濾：{selectedSourceFilter}
+              </span>
+              <button 
+                onClick={() => setSelectedSourceFilter(null)}
+                style={{ padding: '3px 8px', fontSize: '0.8rem', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                顯示全部
+              </button>
+            </div>
+          )}
+        </div>
 
         {statTotal === 0 ? (
           <p style={{ color: '#999', margin: 0, fontSize: '0.9rem' }}>📅 該日期沒有新註冊的新人資料。</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
-            {Object.entries(statData).map(([sourceName, count]) => {
-              // 計算百分比
-              const percentage = statTotal > 0 ? ((count / statTotal) * 100).toFixed(0) : 0;
-              
-              // 決定能量條顏色
-              let barColor = '#6c757d'; // 預設灰色
-              if (sourceName.includes('禪堂')) barColor = '#007bff'; // 藍
-              if (sourceName.includes('外展')) barColor = '#28a745'; // 綠
-              if (sourceName.includes('朋友')) barColor = '#e83e8c'; // 粉紅
+          <div>
+            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: 0, marginBottom: '10px' }}>💡 提示：點擊下方任何一個來源卡片，下方表格會立刻過濾出該管道的新人。</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
+              {Object.entries(statData).map(([sourceName, count]) => {
+                const percentage = statTotal > 0 ? ((count / statTotal) * 100).toFixed(0) : 0;
+                
+                // 🎨 7 大管道專屬色彩
+                let barColor = '#6c757d'; 
+                if (sourceName === '外展活動') barColor = '#28a745'; 
+                if (sourceName === '禪堂新人') barColor = '#007bff'; 
+                if (sourceName === '外出發票') barColor = '#fd7e14'; 
+                if (sourceName === '通過海報來的') barColor = '#20c997'; 
+                if (sourceName === '來禪堂參加表演的') barColor = '#17a2b8'; 
+                if (sourceName === '朋友 / 親戚') barColor = '#e83e8c'; 
+                if (sourceName.includes('網路平台')) barColor = '#6f42c1'; 
 
-              if (count === 0) return null; // 隱藏沒有數據的項目，讓畫面乾淨
+                if (count === 0) return null; 
 
-              return (
-                <div key={sourceName} style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '6px', border: '1px solid #eee' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                    <span style={{ color: '#555' }}>{sourceName}</span>
-                    <span style={{ color: barColor }}>{count} 人 ({percentage}%)</span>
+                const isCurrentFilter = selectedSourceFilter === sourceName;
+
+                return (
+                  <div 
+                    key={sourceName} 
+                    onClick={() => setSelectedSourceFilter(isCurrentFilter ? null : sourceName)}
+                    style={{ 
+                      backgroundColor: isCurrentFilter ? '#f1f7ff' : '#f8f9fa', 
+                      padding: '12px', 
+                      borderRadius: '6px', 
+                      border: isCurrentFilter ? `2px solid ${barColor}` : '1px solid #eee',
+                      cursor: 'pointer',
+                      boxShadow: isCurrentFilter ? '0 2px 6px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                      <span style={{ color: '#555' }}>{sourceName}</span>
+                      <span style={{ color: barColor }}>{count} 人 ({percentage}%)</span>
+                    </div>
+                    <div style={{ width: '100%', backgroundColor: '#e9ecef', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${percentage}%`, backgroundColor: barColor, height: '100%', transition: 'width 0.3s ease' }} />
+                    </div>
                   </div>
-                  {/* 進度條外框 */}
-                  <div style={{ width: '100%', backgroundColor: '#e9ecef', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                    {/* 進度條填滿部分 */}
-                    <div style={{ width: `${percentage}%`, backgroundColor: barColor, height: '100%', transition: 'width 0.3s ease' }} />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
-
-
 
       {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
         <div style={{ overflowX: 'auto' }}>
