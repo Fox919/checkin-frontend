@@ -20,7 +20,7 @@ const t = {
     submit: "提交登記並生成碼",
     success: "登記成功！請截圖保存下方的二維碼。",
     retry: "重新登記", error: "失敗",
-    duplicatePrompt: "提醒：此成員已登記過。可以直接進行快速簽到：",
+    duplicatePrompt: "提醒：此成員（相同姓名與電話）已登記過。可以直接進行快速簽到：",
     fastCheckin: "前往快速簽到",
     blessing: "是否已接受加持？",
     blessed: "已接受加持 ✨",
@@ -48,7 +48,7 @@ const t = {
     submit: "提交登记并生成码",
     success: "登记成功！请截图保存下方的二维码。",
     retry: "重新登记", error: "失败",
-    duplicatePrompt: "提醒：此成员已登记过。可以直接进行快速签到：",
+    duplicatePrompt: "提醒：此成员（相同姓名与电话）已登记过。可以直接进行快速签到：",
     fastCheckin: "前往快速签到",
     blessed: "已接受加持 ✨",
     
@@ -75,7 +75,7 @@ const t = {
     submit: "Submit & Generate QR",
     success: "Successful! Please screenshot your QR code.",
     retry: "Register Again", error: "Error",
-    duplicatePrompt: "Note: Already registered. You can use Fast Check-in:",
+    duplicatePrompt: "Note: This member (same name and phone) is already registered. You can use Fast Check-in:",
     fastCheckin: "Go to Fast Check-in",
     blessed: "Received Blessing ✨",
     
@@ -94,14 +94,13 @@ const Register = ({ autoCheckin }) => {
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const eventSource = searchParams.get('source');
 
-  // 🛠️ 修正 1：在初始 state 中明確加入 referrer_name 與 other_source_text
   const [formData, setFormData] = useState({
     lastName: '', firstName: '', 
     phone: '', email: '', 
     contact_method: [], 
     discovery_source: eventSource || '', 
-    referrer_name: '',        // ✨ 確保初始欄位存在
-    other_source_text: '',    // ✨ 確保初始欄位存在
+    referrer_name: '',        
+    other_source_text: '',    
     is_blessed: false, 
     user_type: searchParams.get('type') || 'Visitor'
   });
@@ -120,8 +119,8 @@ const Register = ({ autoCheckin }) => {
         ...prev, 
         user_type: typeFromUrl || 'Visitor',
         discovery_source: sourceFromUrl || '',
-        referrer_name: '',    // 轉換網址來源時重置
-        other_source_text: '' // 轉換網址來源時重置
+        referrer_name: '',    
+        other_source_text: '' 
     }));
   }, [searchParams]);
 
@@ -144,31 +143,35 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
   };
 
+  // 🌟 ✨ 優化核心判斷 1：輸入攔截改為傳送 姓名 + 電話，只有完全一樣才跳重複提醒
   const checkUserExists = async () => {
     const { lastName, firstName, phone } = formData;
+    // 確保 姓、名、電話（長度大於等於8）都有填寫，才發送後端驗證
     if (lastName.trim() && firstName.trim() && phone.trim().length >= 8) {
       try {
         const response = await fetch('https://checkin-system-production-2a74.up.railway.app/check-duplicate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lastName, firstName, phone }),
+          body: JSON.stringify({ lastName: lastName.trim(), firstName: firstName.trim(), phone: phone.trim() }),
         });
         const data = await response.json();
+        // 只有在資料庫內存在「同名同姓且同號碼」的人，才展開黃色提示卡
         if (data.isDuplicate) setShowDuplicateCard(true);
-      } catch (error) { console.error(error); }
+      } catch (error) { console.error("驗證重複資料失敗:", error); }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const hasName = formData.lastName.trim() || formData.firstName.trim();
+    const hasName = formData.lastName.trim() && formData.firstName.trim();
     const hasPhone = formData.phone.trim().length > 0;
 
-    if (!hasName) { alert("Please enter your name."); return; }
+    if (!hasName) { alert("Please enter both Last Name and First Name."); return; }
     if (!hasPhone && formData.user_type !== 'Volunteer') { alert("Please provide Phone."); return; }
 
     setIsSubmitting(true);
     try {
+      // 🌟 ✨ 優化核心判斷 2：直接發送完整的 formData 建立新會員（後端也必須支援取消電話的 UNIQUE 限制）
       const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -180,7 +183,7 @@ const Register = ({ autoCheckin }) => {
         setQrValue(String(data.id));
         setMessage(translations.success);
         
-        // 🛠️ 修正 2：提交成功清除數據時，同步清除並重置這兩個自訂欄位
+        // 提交成功，安全清空填寫內容並初始化
         setFormData({
           lastName: '', 
           firstName: '', 
@@ -280,16 +283,10 @@ const Register = ({ autoCheckin }) => {
               </label>
               <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
                 <option value="">{translations.selectPlaceholder}</option>
-                
-                {/* 1. 禪堂新人主選項 */}
                 <option value="Hall-Newcomer">🏛️ {translations.hallNewcomer}</option>
-                
-                {/* 2. 新增的三項特殊來源 */}
                 <option value="Outreach-Flyer">📄 {translations.outreachFlyer}</option>
                 <option value="Poster">🖼️ {translations.poster}</option>
                 <option value="Performance">🎭 {translations.performance}</option>
-                
-                {/* 3. 既有的其他基本選項 */}
                 <option value="expo" style={{ color: '#e67e22', fontWeight: 'bold' }}>📍 {translations.expoSource}</option>
                 <option value="Google/YouTube">{translations.google}</option>
                 <option value="Facebook/IG">{translations.facebook}</option>
@@ -299,7 +296,6 @@ const Register = ({ autoCheckin }) => {
                 <option value="Other">{translations.other}</option>
               </select>
 
-              {/* 🛠️ 修正 3：加入對應的名稱（原本寫 input 卻沒指明 value 與 onChange，導致受控組件失效） */}
               {formData.discovery_source === 'Friend' && (
                 <input 
                   name="referrer_name" 
