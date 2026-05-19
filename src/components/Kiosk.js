@@ -183,90 +183,100 @@ const Kiosk = () => {
 
       {/* 搜尋名單渲染區 */}
       <div style={{ marginTop: '20px' }}>
-        {filtered.map(item => {
-          const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
-          const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
+      {filtered.map(item => {
+  const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
+  const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
 
-          let styleKey = 'default';
-          if (finalType.includes('volunteer') || finalType.includes('guest')) styleKey = 'volunteer';
-          else if (finalType.includes('student')) styleKey = 'student';
-          else if (finalType.includes('hall')) styleKey = 'hall-newcomer';
-          else if (finalType.includes('expo')) styleKey = 'expo-newcomer';
-          else if (finalType.includes('visitor')) styleKey = 'visitor';
+  let styleKey = 'default';
+  if (finalType.includes('volunteer') || finalType.includes('guest')) styleKey = 'volunteer';
+  else if (finalType.includes('student')) styleKey = 'student';
+  else if (finalType.includes('hall')) styleKey = 'hall-newcomer';
+  else if (finalType.includes('expo')) styleKey = 'expo-newcomer';
+  else if (finalType.includes('visitor')) styleKey = 'visitor';
 
-          const style = typeStyles[styleKey] || typeStyles['default'];
-          const darker = getDarkerColor(style.bg);
-          const isChecked = selectedUserIds.includes(item.id);
+  const style = typeStyles[styleKey] || typeStyles['default'];
+  const darker = getDarkerColor(style.bg);
+  const isChecked = selectedUserIds.includes(item.id);
 
-          return (
-            <div
-              key={item.id}
-              onClick={() => handleToggleSelect(item.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                width: '90%',
-                maxWidth: '400px',
-                margin: '15px auto',
-                padding: '20px',
-                backgroundColor: isChecked ? style.bg : '#a0a0a0',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                cursor: 'pointer',
-                position: 'relative',
-                boxShadow: isChecked ? `0 8px 0 ${darker}` : '0 8px 0 #787878',
-                transform: 'translateY(-4px)',
-                transition: 'all 0.1s ease',
-                WebkitTapHighlightColor: 'transparent'
-              }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.transform = 'translateY(2px)';
-                e.currentTarget.style.boxShadow = isChecked ? `0 2px 0 ${darker}` : '0 2px 0 #787878';
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = isChecked ? `0 8px 0 ${darker}` : '0 8px 0 #787878';
-              }}
-              onTouchStart={(e) => {
-                e.currentTarget.style.transform = 'translateY(2px)';
-                e.currentTarget.style.boxShadow = isChecked ? `0 2px 0 ${darker}` : '0 2px 0 #787878';
-              }}
-              onTouchEnd={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = isChecked ? `0 8px 0 ${darker}` : '0 8px 0 #787878';
-              }}
-            >
-              {/* 左側複選框 */}
-              <div style={{ marginRight: '20px', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() => {}} // 點擊整塊 Div 觸發，此處防止 React 報錯
-                  style={{ width: '28px', height: '28px', cursor: 'pointer', accentColor: '#ffffff' }}
-                />
-              </div>
+  return (
+    <div
+      key={item.id}
+      onClick={() => handleToggleSelect(item.id)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        width: '90%',
+        maxWidth: '400px',
+        margin: '15px auto',
+        padding: '20px',
+        backgroundColor: isChecked ? style.bg : '#a0a0a0',
+        color: 'white',
+        border: 'none',
+        borderRadius: '20px',
+        cursor: 'pointer',
+        position: 'relative',
+        boxShadow: isChecked ? `0 8px 0 ${darker}` : '0 8px 0 #787878',
+        transform: 'translateY(-4px)',
+        transition: 'all 0.1s ease',
+        WebkitTapHighlightColor: 'transparent'
+      }}
+      onMouseDown={(e) => {
+        e.currentTarget.style.transform = 'translateY(2px)';
+        e.currentTarget.style.boxShadow = isChecked ? `0 2px 0 ${darker}` : '0 2px 0 #787878';
+      }}
+      onMouseUp={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = isChecked ? `0 8px 0 ${darker}` : '0 8px 0 #787878';
+      }}
+      onTouchStart={(e) => {
+        e.currentTarget.style.transform = 'translateY(2px)';
+        e.currentTarget.style.boxShadow = isChecked ? `0 2px 0 ${darker}` : '0 2px 0 #787878';
+      }}
+      onTouchEnd={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = isChecked ? `0 8px 0 ${darker}` : '0 8px 0 #787878';
+      }}
+    >
+      {/* 🌟 左側複選框：已優化為三星手機高對比度樣式 */}
+      <div style={{ marginRight: '20px', display: 'flex', alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={() => {}} // 點擊整塊 Div 觸發，此處防止 React 報錯
+          style={{ 
+            width: '32px',          // 稍微放大尺寸，更好看清
+            height: '32px', 
+            cursor: 'pointer',
+            // 🌟 核心：使用 accentColor 強化對比
+            // 已選取時變成極高對比的「黃底黑勾」或「白底黑勾」
+            accentColor: '#FFEB3B', 
+            // 針對不支援 accentColor 的舊瀏覽器與部分安卓原生渲染的強制優化
+            outline: isChecked ? '3px solid #ffffff' : '2px solid #ffffff',
+            borderRadius: '6px'
+          }}
+        />
+      </div>
 
-              {/* 右側文字資訊 */}
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                  {style.icon} {item.name}
-                </div>
-                <div style={{
-                  marginTop: '8px',
-                  fontSize: '1.1rem',
-                  display: 'inline-block',
-                  padding: '4px 15px',
-                  backgroundColor: 'rgba(0,0,0,0.15)',
-                  borderRadius: '20px'
-                }}>
-                  {style.label}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* 右側文字資訊 */}
+      <div style={{ textAlign: 'left' }}>
+        <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+          {style.icon} {item.name}
+        </div>
+        <div style={{
+          marginTop: '8px',
+          fontSize: '1.1rem',
+          display: 'inline-block',
+          padding: '4px 15px',
+          backgroundColor: 'rgba(0,0,0,0.15)',
+          borderRadius: '20px'
+        }}>
+          {style.label}
+        </div>
+      </div>
+    </div>
+  );
+})}
 
         {/* 🌟 修正：一鍵批量簽到按鈕，必須放在 map 迴圈的外面 */}
         {filtered.length > 0 && (
