@@ -24,12 +24,11 @@ const t = {
     fastCheckin: "前往快速簽到",
     blessing: "是否已接受加持？",
     blessed: "已接受加持 ✨",
-    
-    // 新增翻譯 (繁體)
     hallNewcomer: "禪堂新人",
     outreachFlyer: "外出發票",
     poster: "通過海報來的",
-    performance: "來禪堂參加表演的"
+    performance: "來禪堂參加表演的",
+    langLabel: "🌐 請選擇您的主要溝通語言 / Select Language"
   },
   'zh-CN': {
     title: "活动人员登记",
@@ -51,12 +50,11 @@ const t = {
     duplicatePrompt: "提醒：此成员（相同姓名与电话）已登记过。可以直接进行快速签到：",
     fastCheckin: "前往快速签到",
     blessed: "已接受加持 ✨",
-    
-    // 新增翻译 (简体)
     hallNewcomer: "禅堂新人",
     outreachFlyer: "外出发票",
     poster: "通过海报来的",
-    performance: "来禅堂参加表演的"
+    performance: "来禅堂参加表演的",
+    langLabel: "🌐 请选择您的主要沟通语言 / Select Language"
   },
   'en-US': {
     title: "Registration",
@@ -78,12 +76,11 @@ const t = {
     duplicatePrompt: "Note: This member (same name and phone) is already registered. You can use Fast Check-in:",
     fastCheckin: "Go to Fast Check-in",
     blessed: "Received Blessing ✨",
-    
-    // 新增翻譯 (英文)
     hallNewcomer: "Hall Newcomer",
     outreachFlyer: "Outreach Flyer",
     poster: "Via Poster",
-    performance: "Performance Guest"
+    performance: "Performance Guest",
+    langLabel: "🌐 Please select your primary language / 溝通語言"
   }
 };
 
@@ -91,6 +88,7 @@ const Register = ({ autoCheckin }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
+  // 語言預設為繁體中文 'zh-TW'
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const eventSource = searchParams.get('source');
 
@@ -110,7 +108,7 @@ const Register = ({ autoCheckin }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDuplicateCard, setShowDuplicateCard] = useState(false);
 
-  const translations = t[lang];
+  const translations = t[lang] || t['zh-TW'];
 
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
@@ -124,6 +122,7 @@ const Register = ({ autoCheckin }) => {
     }));
   }, [searchParams]);
 
+  // 抽離出統一的語系切換函數，確保 localStore 跟狀態同步
   const handleLangChange = (newLang) => {
     setLang(newLang);
     localStorage.setItem('userLang', newLang);
@@ -143,10 +142,8 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ ...prev, contact_method: updatedMethods }));
   };
 
-  // 🌟 ✨ 優化核心判斷 1：輸入攔截改為傳送 姓名 + 電話，只有完全一樣才跳重複提醒
   const checkUserExists = async () => {
     const { lastName, firstName, phone } = formData;
-    // 確保 姓、名、電話（長度大於等於8）都有填寫，才發送後端驗證
     if (lastName.trim() && firstName.trim() && phone.trim().length >= 8) {
       try {
         const response = await fetch('https://checkin-system-production-2a74.up.railway.app/check-duplicate', {
@@ -155,7 +152,6 @@ const Register = ({ autoCheckin }) => {
           body: JSON.stringify({ lastName: lastName.trim(), firstName: firstName.trim(), phone: phone.trim() }),
         });
         const data = await response.json();
-        // 只有在資料庫內存在「同名同姓且同號碼」的人，才展開黃色提示卡
         if (data.isDuplicate) setShowDuplicateCard(true);
       } catch (error) { console.error("驗證重複資料失敗:", error); }
     }
@@ -171,11 +167,13 @@ const Register = ({ autoCheckin }) => {
 
     setIsSubmitting(true);
     try {
-      // 🌟 ✨ 優化核心判斷 2：直接發送完整的 formData 建立新會員（後端也必須支援取消電話的 UNIQUE 限制）
+      // 🌟 修正傳遞給後端的 lang 格式：如果系統需要的是 'zh'/'en' 短代碼，在這裡進行轉換發送
+      const backendLang = lang.startsWith('zh') ? 'zh' : 'en';
+
       const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, lang, autoCheckin }),
+        body: JSON.stringify({ ...formData, lang: backendLang, autoCheckin }),
       });
       const data = await response.json();
 
@@ -183,7 +181,6 @@ const Register = ({ autoCheckin }) => {
         setQrValue(String(data.id));
         setMessage(translations.success);
         
-        // 提交成功，安全清空填寫內容並初始化
         setFormData({
           lastName: '', 
           firstName: '', 
@@ -196,6 +193,9 @@ const Register = ({ autoCheckin }) => {
           is_blessed: false, 
           user_type: searchParams.get('type') || 'Visitor'
         });
+
+        // 🌟 防呆彈回：成功後，畫面與語系自動切換回預設的 'zh-TW' (繁體)
+        handleLangChange('zh-TW'); 
 
         window.scrollTo(0, 0);
       } else {
@@ -220,6 +220,7 @@ const Register = ({ autoCheckin }) => {
   return (
     <div style={{ padding: '20px', maxWidth: '500px', margin: 'auto', textAlign: 'center', fontFamily: 'sans-serif', backgroundColor: '#fff', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
       
+      {/* 頂部的切換小按鈕（保留，提供管理員手動調整） */}
       <div style={{ marginBottom: '20px' }}>
         {['zh-TW', 'zh-CN', 'en-US'].map((l) => (
           <button key={l} type="button" onClick={() => handleLangChange(l)} style={{ margin: '0 5px', padding: '8px 15px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '20px', backgroundColor: lang === l ? '#007bff' : '#fff', color: lang === l ? '#fff' : '#333', fontWeight: 'bold' }}>
@@ -260,6 +261,61 @@ const Register = ({ autoCheckin }) => {
             </div>
           </div>
 
+          {/* 🌟 核心改良：放在訊息多選框下的「高對比度立體語言大按鈕」 */}
+          <div style={{ marginTop: '10px', textAlign: 'left', width: '100%' }}>
+            <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '10px' }}>
+              {translations.langLabel} <span style={{ color: 'red' }}>*</span>
+            </label>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
+              {/* 中文按鈕 */}
+              <button
+                type="button"
+                onClick={() => handleLangChange('zh-TW')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: lang.startsWith('zh') ? '#2196F3' : '#e0e0e0',
+                  color: lang.startsWith('zh') ? 'white' : '#666',
+                  boxShadow: lang.startsWith('zh') ? '0 5px 0 #1976D2' : '0 5px 0 #b5b5b5',
+                  transform: lang.startsWith('zh') ? 'translateY(2px)' : 'translateY(-2px)',
+                  transition: 'all 0.1s ease',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+              >
+                中文 (Chinese)
+              </button>
+
+              {/* 英文按鈕 */}
+              <button
+                type="button"
+                onClick={() => handleLangChange('en-US')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: lang === 'en-US' ? '#9C27B0' : '#e0e0e0',
+                  color: lang === 'en-US' ? 'white' : '#666',
+                  boxShadow: lang === 'en-US' ? '0 5px 0 #7B1FA2' : '0 5px 0 #b5b5b5',
+                  transform: lang === 'en-US' ? 'translateY(2px)' : 'translateY(-2px)',
+                  transition: 'all 0.1s ease',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+              >
+                English
+              </button>
+            </div>
+          </div>
+
           {/* 條件渲染：僅「外展活動」顯示加持選項 */}
           {eventSource === 'expo' && (
             <div style={{ padding: '12px', border: '2px solid #ffe082', borderRadius: '8px', backgroundColor: '#fff8e1' }}>
@@ -275,7 +331,7 @@ const Register = ({ autoCheckin }) => {
             </div>
           )}
 
-          {/* 🚀 核心邏輯：僅「禪堂新人」網址顯示來源調查 🚀 */}
+          {/* 核心邏輯：僅「禪堂新人」網址顯示來源調查 */}
           {eventSource === 'Hall-Newcomer' && (
             <div style={{ textAlign: 'left', marginBottom: '5px' }}>
               <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '5px' }}>
