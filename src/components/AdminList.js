@@ -33,7 +33,7 @@ const AdminList = () => {
   // 🌟 新增：記錄目前點選的來源索引（null 代表顯示全部）
   const [selectedSourceFilter, setSelectedSourceFilter] = useState(null);
 
- // 強化的格式化時間函數 — 強制使用 UTC 顯示資料庫原始時間
+  // 強化的格式化時間函數 — 強制使用 UTC 顯示資料庫原始時間
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
@@ -59,6 +59,34 @@ const AdminList = () => {
       console.error("讀取資料失敗:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🌟 處理身分轉換的後台發送邏輯（已完美對接後端 5.6 路由）
+  const handleUpdateUserType = async (userId, currentName, newType) => {
+    // 彈出防呆二次確認
+    const confirmChange = window.confirm(`確定要將「${currentName}」的身分轉換為【${newType}】嗎？`);
+    if (!confirmChange) return;
+
+    try {
+      // 🔗 這裡對接你的後端 5.6 路由：/admin/update-type/:id
+      const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
+        method: 'POST', // 配合你後端寫的 app.post
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_type: newType }) // 配合你後端解構的 { new_type }
+      });
+      
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert(`✨ ${data.message || '身分轉換成功！'}`);
+        // 重新刷新名單，確保資料即時更新
+        fetchUsers();
+      } else {
+        alert(`⚠️ 轉換失敗: ${data.error || '未知錯誤'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("網路連線失敗，請檢查網路或稍後再試");
     }
   };
 
@@ -420,11 +448,37 @@ const AdminList = () => {
                       {user.is_blessed === 1 && ' ✨'}
                     </td>
                     <td style={tableCellStyle}>{user.phone || '-'}</td>
+                    
+                    {/* 🌟 核心修改：將原本單純的文字顯示，改為可直接變更身份的下拉選單區塊 🌟 */}
                     <td style={tableCellStyle}>
-                      <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eee', color: '#666' }}>
-                        {user.user_type || '-'}
-                      </span>
+                      <select
+                        value={user.user_type || 'Visitor'} 
+                        onChange={(e) => handleUpdateUserType(user.id, user.name, e.target.value)}
+                        style={{
+                          padding: '4px 6px',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          border: '2px solid',
+                          // 根據目前人員身份，動態著色提示邊框，方便辨識
+                          borderColor: 
+                            user.user_type === 'Volunteer' ? '#FF9800' : 
+                            user.user_type === 'Student' ? '#4CAF50' : 
+                            user.user_type === 'Hall-Newcomer' ? '#2196F3' : 
+                            user.user_type === 'Expo-Newcomer' ? '#9C27B0' : '#6c757d',
+                          backgroundColor: '#fff',
+                          color: '#333'
+                        }}
+                      >
+                        <option value="Visitor">😊 訪客 (Visitor)</option>
+                        <option value="Volunteer">🧡 義工 (Volunteer)</option>
+                        <option value="Student">🌿 學員 (Student)</option>
+                        <option value="Hall-Newcomer">🏠 禪堂新人 (Hall-Newcomer)</option>
+                        <option value="Expo-Newcomer">🎪 展會新人 (Expo-Newcomer)</option>
+                      </select>
                     </td>
+
                     <td style={tableCellStyle}>
                       {user.lang === 'en-US' ? '🇺🇸 EN' : 
                        user.lang === 'zh-CN' ? '🇨🇳 簡' : 
