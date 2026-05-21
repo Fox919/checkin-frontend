@@ -34,85 +34,59 @@ const CourseListAdmin = () => {
           {courses.map(c => {
             // 1. 智慧解析 JSON
             let cfg = {};
-            let rawConfigString = '';
             try {
-              rawConfigString = typeof c.config === 'string' ? c.config : JSON.stringify(c.config || {});
-              cfg = JSON.parse(rawConfigString);
+              cfg = typeof c.config === 'string' ? JSON.parse(c.config || '{}') : (c.config || {});
             } catch (e) {
               cfg = {};
             }
 
             const actualConfig = cfg.sessions && !Array.isArray(cfg.sessions) ? cfg.sessions : cfg;
             
-            // 2. 智慧多重交叉比對班別型態
-            const style = actualConfig.course_style || '';
+            // 2. 建立全面的內文比對字串
+            const courseTitle = c.title || '';
             const allTextContext = (
-              (c.title || '') + 
+              courseTitle + 
               (c.schedule_desc || '') + 
-              (c.duration_desc || '') + 
-              rawConfigString
+              (c.duration_desc || '')
             ).toLowerCase();
 
-            let styleLabel = '☀️🌙 全天班'; 
+            // 3. 🌟 【核心主導】直接依據課程種類給予絕對設定，防止被錯誤欄位綁架
+            let totalDays = 8;
+            let styleLabel = '☀️🌙 全天班';
             let isHalfDay = false;
+            let totalCheckins = 24;
 
-            if (style === 'morning_only' || style === 'afternoon_only') {
+            // 🧘‍♂️ 減壓班特判：只要名字有「減壓」，強制修正為 7天 下午班 14次
+            if (courseTitle.includes('減壓')) {
+              totalDays = 7;
               isHalfDay = true;
-              styleLabel = style === 'morning_only' ? '🌅 上午班' : '🌆 下午/晚班';
+              styleLabel = '🌆 下午/晚班';
+              totalCheckins = 14;
             } 
-            else if (
-              allTextContext.includes('半天') || 
-              allTextContext.includes('下午') || 
-              allTextContext.includes('減壓') || 
-              allTextContext.includes('evening') || 
-              allTextContext.includes('afternoon')
-            ) {
-              isHalfDay = true;
-              styleLabel = allTextContext.includes('上午') || allTextContext.includes('morning') 
-                ? '🌅 上午班' 
-                : '🌆 下午/晚班';
-            }
-
-            // 3. 🎯 ✨ 【精準天數修正】安全拆解天數
-            let totalDays = 8; // 預設底線值
-
-            if (c.duration_desc) {
-              // 🌟 改用更嚴格的正規表達式：只抓後面接著「天」字的數字 (例如 "7天" -> 抓成 7)
-              const dayMatchWithUnit = c.duration_desc.match(/(\d+)\s*天/);
-              if (dayMatchWithUnit && dayMatchWithUnit[1]) {
-                totalDays = parseInt(dayMatchWithUnit[1], 10);
+            // 🏋️‍♂️ 健身班或其他常規班：預設 8天 全天班 24次 (或依資料庫微調)
+            else {
+              const style = actualConfig.course_style || '';
+              if (style === 'morning_only' || allTextContext.includes('上午')) {
+                isHalfDay = true;
+                styleLabel = '🌅 上午班';
+                totalCheckins = totalDays * 1; // 8次
+              } else if (style === 'afternoon_only' || allTextContext.includes('下午') || allTextContext.includes('半天')) {
+                isHalfDay = true;
+                styleLabel = '🌆 下午/晚班';
+                totalCheckins = totalDays * 2; // 16次
               } else {
-                // 如果沒對到「天」字，再嘗試直接抓第一個數字
-                const simpleMatch = c.duration_desc.match(/\d+/);
-                if (simpleMatch) totalDays = parseInt(simpleMatch[0], 10);
-              }
-            } 
-            
-            // 防呆防卡：如果算出來天數小於等於 1（不合理的前端錯誤抓取），重新看資料庫是不是寫 7 或 8
-            if (totalDays <= 1) {
-              if (allTextContext.includes('7')) totalDays = 7;
-              else if (allTextContext.includes('8')) totalDays = 8;
-            }
-
-            // 4. ✨ 智慧計算總要求次數 (防止被舊資料的 2 次或 24 次蓋掉)
-            let totalCheckins = actualConfig.total_checkins_required;
-            
-            // 如果次數沒寫、或者小於合理值(例如只有2次、或者全天班寫成24次但目前是半天班)
-            if (!totalCheckins || totalCheckins <= 2 || (totalCheckins === 24 && isHalfDay)) {
-              if (isHalfDay) {
-                totalCheckins = styleLabel === '🌅 上午班' ? totalDays * 1 : totalDays * 2;
-              } else {
-                totalCheckins = totalDays * 3; 
+                // 全天班
+                totalCheckins = actualConfig.total_checkins_required || 24;
               }
             }
 
             return (
               <tr key={c.id} style={{ borderBottom: '1px solid #ecf0f1' }}>
                 <td style={{ padding: '12px', fontWeight: 'bold', color: '#e67e22' }}>{c.id}</td>
-                <td style={{ padding: '12px', fontWeight: 'bold' }}>{c.title}</td>
-                {/* 顯示乾淨的原始描述 */}
+                <td style={{ padding: '12px', fontWeight: 'bold' }}>{courseTitle}</td>
+                {/* 顯示修正後的天數 */}
                 <td style={{ padding: '12px', color: '#34495e', fontWeight: 'bold' }}>
-                  {c.duration_desc || `${totalDays}天`}
+                  {courseTitle.includes('減壓') ? '7天' : (c.duration_desc || `${totalDays}天`)}
                 </td>
                 <td style={{ padding: '12px' }}>
                   <span style={{ 
@@ -137,7 +111,7 @@ const CourseListAdmin = () => {
                     <div>時段一 (上午簽到): {actualConfig.slot_1_start || '08:00:00'} ~ {actualConfig.slot_1_end || '11:00:00'}</div>
                   ) : (
                     <>
-                      <div>時段一 (下午簽到): {actualConfig.slot_1_start || '13:00:00'} ~ {actualConfig.slot_1_end || '15:00:00'}</div>
+                      <div>時段一 (下午簽到): {actualConfig.slot_1_start || '14:00:00'} ~ {actualConfig.slot_1_end || '16:00:00'}</div>
                       <div>時段三 (傍晚簽退): {actualConfig.slot_3_start || '17:00:00'} ~ {actualConfig.slot_3_end || '19:00:00'}</div>
                     </>
                   )}
