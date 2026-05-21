@@ -30,17 +30,18 @@ const AdminList = () => {
   const [actionType, setActionType] = useState(''); 
   const [tempPassword, setTempPassword] = useState('');
   
-  // 🌟 新增：記錄目前點選的來源索引（null 代表顯示全部）
+  // 🌟 記錄目前點選的來源索引（null 代表顯示全部）
   const [selectedSourceFilter, setSelectedSourceFilter] = useState(null);
 
-  // 強化的格式化時間函數 — 強制使用 UTC 顯示資料庫原始時間
+  // ⏰ 強化的格式化時間函數 — 完美校正為洛杉磯當地時間
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) return '-';
 
     return date.toLocaleString('zh-TW', {
-      timeZone: 'UTC', // 🌟 加回這行，後台就會變回 16:02
+      timeZone: 'America/Los_Angeles', // 🌟 核心修正：完美同步洛杉磯時區！
+      year: 'numeric',                 // 🌟 補上年份顯示，避免跨年混淆
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -62,53 +63,48 @@ const AdminList = () => {
     }
   };
 
-  // 🌟 處理身分轉換的後台發送邏輯（已完美對接後端 5.6 升級版路由）
-const handleUpdateUserType = async (userId, currentName, newType) => {
-  // 1. 彈出防呆二次確認
-  const confirmChange = window.confirm(`確定要將「${currentName}」的身分轉換為【${newType}】嗎？`);
-  if (!confirmChange) return;
+  // 🌟 處理身分轉換的後台發送邏輯
+  const handleUpdateUserType = async (userId, currentName, newType) => {
+    const confirmChange = window.confirm(`確定要將「${currentName}」的身分轉換為【${newType}】嗎？`);
+    if (!confirmChange) return;
 
-  let selectedOfferingId = null;
+    let selectedOfferingId = null;
 
-  // 2. 🔗 核心防線：如果新身分是學員或正式成員，提示輸入課程 ID 以便同步寫入考勤大表
-  if (newType === 'Student' || newType === 'Member' || newType === '學員') {
-    const courseIdInput = window.prompt(
-      `請輸入要將「${currentName}」加入的【課程期次 ID】：\n\n(提示：必須指定課程 ID，考勤看板才能看到該學員。可至『課程期次設定』頁面查看 ID，例如：1)`
-    );
-    
-    // 如果點選取消或沒輸入，則終止操作防止資料斷層
-    if (courseIdInput === null) return; 
-    if (!courseIdInput.trim()) {
-      alert("⚠️ 轉換失敗：必須輸入正確的課程 ID 才能將訪客轉為學員！");
-      return;
+    if (newType === 'Student' || newType === 'Member' || newType === '學員') {
+      const courseIdInput = window.prompt(
+        `請輸入要將「${currentName}」加入的【課程期次 ID】：\n\n(提示：必須指定課程 ID，考勤看板才能看到該學員。可至『課程期次設定』頁面查看 ID，例如：1)`
+      );
+      
+      if (courseIdInput === null) return; 
+      if (!courseIdInput.trim()) {
+        alert("⚠️ 轉換失敗：必須輸入正確的課程 ID 才能將訪客轉為學員！");
+        return;
+      }
+      selectedOfferingId = courseIdInput.trim();
     }
-    selectedOfferingId = courseIdInput.trim();
-  }
 
-  try {
-    // 3. 🔗 對接後端 5.6 路由：/admin/update-type/:id
-    const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
-      method: 'POST', // 配合你後端寫的 app.post
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        new_type: newType,        // 配合後端解構的 { new_type }
-        offeringId: selectedOfferingId // ✨ 新增：同步將課程 ID 帶給後端處理選課記錄
-      })
-    });
-    
-    const data = await response.json();
-    if (response.ok && data.success) {
-      alert(`✨ ${data.message || '身分轉換與課程綁定成功！'}`);
-      // 重新刷新名單，確保資料即時更新
-      fetchUsers();
-    } else {
-      alert(`⚠️ 轉換失敗: ${data.error || '未知錯誤'}`);
+    try {
+      const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          new_type: newType,        
+          offeringId: selectedOfferingId 
+        })
+      });
+      
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert(`✨ ${data.message || '身分轉換與課程綁定成功！'}`);
+        fetchUsers();
+      } else {
+        alert(`⚠️ 轉換失敗: ${data.error || '未知錯誤'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("網路連線失敗，請檢查網路或稍後再試");
     }
-  } catch (err) {
-    console.error(err);
-    alert("網路連線失敗，請檢查網路或稍後再試");
-  }
-};
+  };
 
   useEffect(() => {
     if (authorized) fetchUsers();
@@ -149,7 +145,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
     } else { alert("密碼錯誤！"); }
   };
 
-  // 共用邏輯提取，優化來源解析
   const getDisplaySourceText = (rawSource) => {
     const raw = (rawSource || '').toString().trim();
     if (!raw || /^(null|undefined)$/i.test(raw)) return '-';
@@ -158,7 +153,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
     return raw;
   };
 
-  // === 保留並優化：7 大核心來源管道統計 ===
   const getSourceStats = () => {
     const targetDate = selectedDate || new Date().toLocaleDateString('en-CA');
     
@@ -215,7 +209,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
 
   const { totalCount: statTotal, statsMap: statData } = getSourceStats();
 
-  // 🛠️ 核心篩選邏輯
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
     const matchesSearch = 
@@ -223,10 +216,8 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
       user.phone?.includes(searchTerm) ||
       (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
     
-    // 1. 狀態比對
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
 
-    // 2. 日期比對邏輯（本地時區同步）
     let matchesDate = true;
     const todayStr = new Date().toLocaleDateString('en-CA'); 
     const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
@@ -244,7 +235,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
       }
     }
 
-    // 🌟 3. 完美對齊 7 大管道的來源索引點擊比對
     let matchesSourceFilter = true;
     if (selectedSourceFilter) {
       const currentSrcText = getDisplaySourceText(user.discovery_source);
@@ -263,7 +253,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
     return matchesSearch && matchesStatus && matchesDate && matchesSourceFilter;
   });
 
-  // 匯出 CSV 函數
   const exportToCSV = () => {
     try {
       if (!filteredList || filteredList.length === 0) {
@@ -355,7 +344,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
         <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all'); setSelectedSourceFilter(null);}}>重置</button>
       </div>
 
-      {/* ✨ 完美保留 7 大管道統計並結合「點擊索引表格」功能 */}
       <div style={{ 
         backgroundColor: '#fff', 
         padding: '20px', 
@@ -396,7 +384,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
               {Object.entries(statData).map(([sourceName, count]) => {
                 const percentage = statTotal > 0 ? ((count / statTotal) * 100).toFixed(0) : 0;
                 
-                // 🎨 7 大管道專屬色彩
                 let barColor = '#6c757d'; 
                 if (sourceName === '外展活動') barColor = '#28a745'; 
                 if (sourceName === '禪堂新人') barColor = '#007bff'; 
@@ -469,7 +456,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
                     </td>
                     <td style={tableCellStyle}>{user.phone || '-'}</td>
                     
-                    {/* 🌟 核心修改：將原本單純的文字顯示，改為可直接變更身份的下拉選單區塊 🌟 */}
                     <td style={tableCellStyle}>
                       <select
                         value={user.user_type || 'Visitor'} 
@@ -481,7 +467,6 @@ const handleUpdateUserType = async (userId, currentName, newType) => {
                           borderRadius: '4px',
                           cursor: 'pointer',
                           border: '2px solid',
-                          // 根據目前人員身份，動態著色提示邊框，方便辨識
                           borderColor: 
                             user.user_type === 'Volunteer' ? '#FF9800' : 
                             user.user_type === 'Student' ? '#4CAF50' : 
