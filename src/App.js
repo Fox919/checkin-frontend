@@ -12,7 +12,7 @@ import Register from './components/Register';
 import AdminList from './components/AdminList';
 import Kiosk from './components/Kiosk';
 import Checkin from './Checkin'; 
-
+//....
 const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
 // 獨立出來的導航欄組件
@@ -90,11 +90,15 @@ const Navbar = () => {
 >
   <option value="" disabled>🔐 管理工具</option>
   <option value="/admin">👥 名單管理</option>
-  {/* ✨ 新增下面這行選項 */}
   <option value="/admin/courses">📅 課程期次總覽</option> 
   <option value="/admin/attendance">📊 學員考勤看板</option>
   <option value="/admin/course-offerings">➕ 建立新期次</option>
   <option value="/admin-config">⚙️ 系統常規設定</option>
+  
+  {/* 🌟 修正點：將路徑改為 /checkin，與下方的路由一致 */}
+  <option value="/checkin" style={{ backgroundColor: '#2c3e50', color: 'white', fontWeight: 'bold' }}>
+    📷 密集班行動點名
+  </option>
 </select>
       </div>
     </nav>
@@ -148,6 +152,7 @@ function App() {
           
           {/* 其他 */}
           <Route path="/checkin" element={<Checkin />} />
+          <Route path="/admin/checkin" element={<Checkin />} /> {/* 👈 新增這行防呆 */}
         </Routes>
       </div>
     </BrowserRouter>
