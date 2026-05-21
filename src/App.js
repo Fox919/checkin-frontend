@@ -3,7 +3,9 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 
 // ✨ 加入這兩行，告訴系統這兩個元件在哪裡
 import AttendanceAdmin from './AttendanceAdmin';
-import CourseOfferings from './CourseOfferings';
+//  改成直接匯入你現有的 AdminBatchManager
+import CourseOfferings from './components/AdminBatchManager';
+
 
 // 導入組件
 import BookingPage from './components/BookingPage'; 
