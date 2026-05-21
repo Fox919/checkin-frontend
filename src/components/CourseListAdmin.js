@@ -8,7 +8,6 @@ const CourseListAdmin = () => {
     fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
       .then(data => {
-        // 嚴格過濾，只留下密集班課程
         const onlyCourses = data.filter(item => item.type === 'course');
         setCourses(onlyCourses);
       })
@@ -43,10 +42,9 @@ const CourseListAdmin = () => {
               cfg = {};
             }
 
-            // 2. 提取實際的配置區塊 (相容陣列與物件格式)
             const actualConfig = cfg.sessions && !Array.isArray(cfg.sessions) ? cfg.sessions : cfg;
             
-            // 3. 智慧多重交叉比對機制
+            // 2. 智慧多重交叉比對班別型態
             const style = actualConfig.course_style || '';
             const allTextContext = (
               (c.title || '') + 
@@ -55,7 +53,7 @@ const CourseListAdmin = () => {
               rawConfigString
             ).toLowerCase();
 
-            let styleLabel = '☀️🌙 全天班'; // 預設
+            let styleLabel = '☀️🌙 全天班'; 
             let isHalfDay = false;
 
             if (style === 'morning_only' || style === 'afternoon_only') {
@@ -75,28 +73,36 @@ const CourseListAdmin = () => {
                 : '🌆 下午/晚班';
             }
 
-            // 4. ✨ ✨ ✨ 修正點：精準提取天數
-            // 優先檢查資料庫是否有傳 duration_desc，並從中提取數字（例如 "7天" -> 7）
-            let totalDays = 8; // 最終兜底
+            // 3. 🎯 ✨ 【精準天數修正】安全拆解天數
+            let totalDays = 8; // 預設底線值
+
             if (c.duration_desc) {
-              const match = c.duration_desc.match(/\d+/);
-              if (match) {
-                totalDays = parseInt(match[0], 10);
+              // 🌟 改用更嚴格的正規表達式：只抓後面接著「天」字的數字 (例如 "7天" -> 抓成 7)
+              const dayMatchWithUnit = c.duration_desc.match(/(\d+)\s*天/);
+              if (dayMatchWithUnit && dayMatchWithUnit[1]) {
+                totalDays = parseInt(dayMatchWithUnit[1], 10);
+              } else {
+                // 如果沒對到「天」字，再嘗試直接抓第一個數字
+                const simpleMatch = c.duration_desc.match(/\d+/);
+                if (simpleMatch) totalDays = parseInt(simpleMatch[0], 10);
               }
-            } else if (actualConfig.sessions && Array.isArray(actualConfig.sessions)) {
-              // 如果沒填欄位，就用產生的流水帳天數陣列長度來當作天數
-              totalDays = actualConfig.sessions.length || 8;
+            } 
+            
+            // 防呆防卡：如果算出來天數小於等於 1（不合理的前端錯誤抓取），重新看資料庫是不是寫 7 或 8
+            if (totalDays <= 1) {
+              if (allTextContext.includes('7')) totalDays = 7;
+              else if (allTextContext.includes('8')) totalDays = 8;
             }
 
-            // 5. ✨ 智慧計算總要求次數（不再讓 24 次蓋掉半天班的設定）
+            // 4. ✨ 智慧計算總要求次數 (防止被舊資料的 2 次或 24 次蓋掉)
             let totalCheckins = actualConfig.total_checkins_required;
             
-            // 如果資料庫沒提供次數，或者次數是預設的 24 且目前其實是半天班，就強制重新動態計算
-            if (!totalCheckins || (totalCheckins === 24 && isHalfDay)) {
+            // 如果次數沒寫、或者小於合理值(例如只有2次、或者全天班寫成24次但目前是半天班)
+            if (!totalCheckins || totalCheckins <= 2 || (totalCheckins === 24 && isHalfDay)) {
               if (isHalfDay) {
                 totalCheckins = styleLabel === '🌅 上午班' ? totalDays * 1 : totalDays * 2;
               } else {
-                totalCheckins = totalDays * 3; // 全天班
+                totalCheckins = totalDays * 3; 
               }
             }
 
@@ -104,7 +110,7 @@ const CourseListAdmin = () => {
               <tr key={c.id} style={{ borderBottom: '1px solid #ecf0f1' }}>
                 <td style={{ padding: '12px', fontWeight: 'bold', color: '#e67e22' }}>{c.id}</td>
                 <td style={{ padding: '12px', fontWeight: 'bold' }}>{c.title}</td>
-                {/* ✨ 畫面上直接顯示資料庫的原始精準描述（例如：7天 (每週一期)） */}
+                {/* 顯示乾淨的原始描述 */}
                 <td style={{ padding: '12px', color: '#34495e', fontWeight: 'bold' }}>
                   {c.duration_desc || `${totalDays}天`}
                 </td>
