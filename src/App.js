@@ -1,6 +1,6 @@
 import React from 'react'; 
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-
+import CourseListAdmin from './components/CourseListAdmin'; // ✨ 新增這行
 // 導入核心考勤與開班組件
 import AttendanceAdmin from './AttendanceAdmin';
 import CourseOfferings from './components/AdminBatchManager'; // 別名引用，用於設定路由
@@ -84,18 +84,18 @@ const Navbar = () => {
         </select>
 
         <select 
-          style={{ ...selectStyle, backgroundColor: '#e67e22', color: 'white' }} 
-          onChange={(e) => navigate(e.target.value)}
-          value="" // 強制每次選完重置
-        >
-          <option value="" disabled>🔐 管理工具</option>
-          <option value="/admin">👥 名單管理</option>
-          {/* ✨ 修正點 1：在選單中新增「學員考勤看板」 */}
-          <option value="/admin/attendance">📊 學員考勤看板</option>
-          {/* ✨ 修正點 2：在選單中新增「課程期次設定」 */}
-          <option value="/admin/course-offerings">📅 課程期次設定</option>
-          <option value="/admin-config">⚙️ 系統常規設定</option>
-        </select>
+  style={{ ...selectStyle, backgroundColor: '#e67e22', color: 'white' }} 
+  onChange={(e) => navigate(e.target.value)}
+  value=""
+>
+  <option value="" disabled>🔐 管理工具</option>
+  <option value="/admin">👥 名單管理</option>
+  {/* ✨ 新增下面這行選項 */}
+  <option value="/admin/courses">📅 課程期次總覽</option> 
+  <option value="/admin/attendance">📊 學員考勤看板</option>
+  <option value="/admin/course-offerings">➕ 建立新期次</option>
+  <option value="/admin-config">⚙️ 系統常規設定</option>
+</select>
       </div>
     </nav>
   );
@@ -142,7 +142,8 @@ function App() {
           
           {/* 📅 課程期次與考勤時段設定 */}
           <Route path="/admin/course-offerings" element={<CourseOfferings onSave={handleSaveBatch} />} />
-          
+          {/* ✨ 新增課程總覽看板路由 */}
+<Route path="/admin/courses" element={<CourseListAdmin />} />
           <Route path="/admin-config" element={<AdminPage />} />
           
           {/* 其他 */}
