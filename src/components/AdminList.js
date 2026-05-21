@@ -62,33 +62,53 @@ const AdminList = () => {
     }
   };
 
-  // 🌟 處理身分轉換的後台發送邏輯（已完美對接後端 5.6 路由）
-  const handleUpdateUserType = async (userId, currentName, newType) => {
-    // 彈出防呆二次確認
-    const confirmChange = window.confirm(`確定要將「${currentName}」的身分轉換為【${newType}】嗎？`);
-    if (!confirmChange) return;
+  // 🌟 處理身分轉換的後台發送邏輯（已完美對接後端 5.6 升級版路由）
+const handleUpdateUserType = async (userId, currentName, newType) => {
+  // 1. 彈出防呆二次確認
+  const confirmChange = window.confirm(`確定要將「${currentName}」的身分轉換為【${newType}】嗎？`);
+  if (!confirmChange) return;
 
-    try {
-      // 🔗 這裡對接你的後端 5.6 路由：/admin/update-type/:id
-      const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
-        method: 'POST', // 配合你後端寫的 app.post
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_type: newType }) // 配合你後端解構的 { new_type }
-      });
-      
-      const data = await response.json();
-      if (response.ok && data.success) {
-        alert(`✨ ${data.message || '身分轉換成功！'}`);
-        // 重新刷新名單，確保資料即時更新
-        fetchUsers();
-      } else {
-        alert(`⚠️ 轉換失敗: ${data.error || '未知錯誤'}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("網路連線失敗，請檢查網路或稍後再試");
+  let selectedOfferingId = null;
+
+  // 2. 🔗 核心防線：如果新身分是學員或正式成員，提示輸入課程 ID 以便同步寫入考勤大表
+  if (newType === 'Student' || newType === 'Member' || newType === '學員') {
+    const courseIdInput = window.prompt(
+      `請輸入要將「${currentName}」加入的【課程期次 ID】：\n\n(提示：必須指定課程 ID，考勤看板才能看到該學員。可至『課程期次設定』頁面查看 ID，例如：1)`
+    );
+    
+    // 如果點選取消或沒輸入，則終止操作防止資料斷層
+    if (courseIdInput === null) return; 
+    if (!courseIdInput.trim()) {
+      alert("⚠️ 轉換失敗：必須輸入正確的課程 ID 才能將訪客轉為學員！");
+      return;
     }
-  };
+    selectedOfferingId = courseIdInput.trim();
+  }
+
+  try {
+    // 3. 🔗 對接後端 5.6 路由：/admin/update-type/:id
+    const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/update-type/${userId}`, {
+      method: 'POST', // 配合你後端寫的 app.post
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        new_type: newType,        // 配合後端解構的 { new_type }
+        offeringId: selectedOfferingId // ✨ 新增：同步將課程 ID 帶給後端處理選課記錄
+      })
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.success) {
+      alert(`✨ ${data.message || '身分轉換與課程綁定成功！'}`);
+      // 重新刷新名單，確保資料即時更新
+      fetchUsers();
+    } else {
+      alert(`⚠️ 轉換失敗: ${data.error || '未知錯誤'}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("網路連線失敗，請檢查網路或稍後再試");
+  }
+};
 
   useEffect(() => {
     if (authorized) fetchUsers();
