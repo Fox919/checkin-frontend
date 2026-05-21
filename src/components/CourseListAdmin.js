@@ -46,7 +46,7 @@ const CourseListAdmin = () => {
             // 2. 提取實際的配置區塊 (相容陣列與物件格式)
             const actualConfig = cfg.sessions && !Array.isArray(cfg.sessions) ? cfg.sessions : cfg;
             
-            // 3. 🌟 終極智慧多重交叉比對機制
+            // 3. 智慧多重交叉比對機制
             const style = actualConfig.course_style || '';
             const allTextContext = (
               (c.title || '') + 
@@ -58,12 +58,10 @@ const CourseListAdmin = () => {
             let styleLabel = '☀️🌙 全天班'; // 預設
             let isHalfDay = false;
 
-            // 條件 A：資料庫有明確給出半天/上午/下午的設定
             if (style === 'morning_only' || style === 'afternoon_only') {
               isHalfDay = true;
               styleLabel = style === 'morning_only' ? '🌅 上午班' : '🌆 下午/晚班';
             } 
-            // 條件 B：模糊文字特徵掃描 (針對沒設定 course_style 的舊資料或減壓班)
             else if (
               allTextContext.includes('半天') || 
               allTextContext.includes('下午') || 
@@ -77,14 +75,24 @@ const CourseListAdmin = () => {
                 : '🌆 下午/晚班';
             }
 
-            // 4. ✨ 智慧計算/校正總打卡次數
-            // 解析天數數字（從 "8天" 或 "7天" 提取出 8 或 7）
-            const dayMatch = (c.duration_desc || '8').match(/\d+/);
-            const totalDays = dayMatch ? parseInt(dayMatch[0], 10) : 8;
+            // 4. ✨ ✨ ✨ 修正點：精準提取天數
+            // 優先檢查資料庫是否有傳 duration_desc，並從中提取數字（例如 "7天" -> 7）
+            let totalDays = 8; // 最終兜底
+            if (c.duration_desc) {
+              const match = c.duration_desc.match(/\d+/);
+              if (match) {
+                totalDays = parseInt(match[0], 10);
+              }
+            } else if (actualConfig.sessions && Array.isArray(actualConfig.sessions)) {
+              // 如果沒填欄位，就用產生的流水帳天數陣列長度來當作天數
+              totalDays = actualConfig.sessions.length || 8;
+            }
 
+            // 5. ✨ 智慧計算總要求次數（不再讓 24 次蓋掉半天班的設定）
             let totalCheckins = actualConfig.total_checkins_required;
-            if (!totalCheckins || totalCheckins === 24) {
-              // 如果是半天班，次數根據型態自動修正
+            
+            // 如果資料庫沒提供次數，或者次數是預設的 24 且目前其實是半天班，就強制重新動態計算
+            if (!totalCheckins || (totalCheckins === 24 && isHalfDay)) {
               if (isHalfDay) {
                 totalCheckins = styleLabel === '🌅 上午班' ? totalDays * 1 : totalDays * 2;
               } else {
@@ -96,7 +104,10 @@ const CourseListAdmin = () => {
               <tr key={c.id} style={{ borderBottom: '1px solid #ecf0f1' }}>
                 <td style={{ padding: '12px', fontWeight: 'bold', color: '#e67e22' }}>{c.id}</td>
                 <td style={{ padding: '12px', fontWeight: 'bold' }}>{c.title}</td>
-                <td style={{ padding: '12px', color: '#34495e' }}>{c.duration_desc || `${totalDays}天`}</td>
+                {/* ✨ 畫面上直接顯示資料庫的原始精準描述（例如：7天 (每週一期)） */}
+                <td style={{ padding: '12px', color: '#34495e', fontWeight: 'bold' }}>
+                  {c.duration_desc || `${totalDays}天`}
+                </td>
                 <td style={{ padding: '12px' }}>
                   <span style={{ 
                     padding: '3px 8px', 
