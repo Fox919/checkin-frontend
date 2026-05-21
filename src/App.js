@@ -129,6 +129,11 @@ function App() {
 
           {/* 管理後台 */}
           <Route path="/admin" element={<AdminList />} />
+          {/* ✨ 新增的考勤專屬頁面 */}
+  <Route path="/admin/attendance" element={<AttendanceAdmin />} />
+  
+  {/* ✨ 新增的課程設定頁面 */}
+  <Route path="/admin/course-offerings" element={<CourseOfferings />} />
           <Route path="/admin-batches" element={<AdminBatchManager onSave={handleSaveBatch} />} />
           <Route path="/admin-config" element={<AdminPage />} />
           
