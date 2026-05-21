@@ -1,6 +1,10 @@
 import React from 'react'; 
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 
+// ✨ 加入這兩行，告訴系統這兩個元件在哪裡
+import AttendanceAdmin from './AttendanceAdmin';
+import CourseOfferings from './CourseOfferings';
+
 // 導入組件
 import BookingPage from './components/BookingPage'; 
 import AdminPage from './pages/AdminPage'; 
