@@ -5,15 +5,17 @@ const CourseListAdmin = () => {
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
   useEffect(() => {
-  fetch(`${API_BASE}/api/offerings`)
-    .then(res => res.json())
-    .then(data => {
-      // 🌟 修改這裡：同時允許 'course' 大類 與 'offering' 實體班級通過
-      const onlyCourses = data.filter(item => item.type === 'course' || item.type === 'offering');
-      setCourses(onlyCourses);
-    })
-    .catch(err => console.error("撈取課程失敗:", err));
-}, []);
+    fetch(`${API_BASE}/api/offerings`)
+      .then(res => res.json())
+      .then(data => {
+        // 1. 🔍 在瀏覽器的主控台（Console）把後端傳來的所有原始資料印出來
+        console.log("後端回傳的所有原始資料:", data);
+
+        // 2. 🌟 暫時完全不做任何 filter 過濾，強迫所有東西都進來
+        setCourses(data);
+      })
+      .catch(err => console.error("撈取課程失敗:", err));
+  }, []);
 
   return (
     <div style={{ padding: '20px', background: '#fff', borderRadius: '10px' }}>
