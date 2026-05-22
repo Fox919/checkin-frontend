@@ -5,14 +5,15 @@ const CourseListAdmin = () => {
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/offerings`)
-      .then(res => res.json())
-      .then(data => {
-        const onlyCourses = data.filter(item => item.type === 'course');
-        setCourses(onlyCourses);
-      })
-      .catch(err => console.error("撈取課程失敗:", err));
-  }, []);
+  fetch(`${API_BASE}/api/offerings`)
+    .then(res => res.json())
+    .then(data => {
+      // 🌟 修改這裡：同時允許 'course' 大類 與 'offering' 實體班級通過
+      const onlyCourses = data.filter(item => item.type === 'course' || item.type === 'offering');
+      setCourses(onlyCourses);
+    })
+    .catch(err => console.error("撈取課程失敗:", err));
+}, []);
 
   return (
     <div style={{ padding: '20px', background: '#fff', borderRadius: '10px' }}>
