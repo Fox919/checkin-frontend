@@ -34,7 +34,8 @@ const Kiosk = () => {
     'default': { bg: '#607D8B', label: '朋友', icon: '😊' }
   };
 
-  // 載入初始名單
+  
+ // 載入初始名單
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
@@ -49,7 +50,7 @@ const Kiosk = () => {
       .then(res => res.json())
       .then(data => setList(Array.isArray(data) ? data : []))
       .catch(err => setMessage('⚠️ 系統載入失敗'));
-  }, []);
+  }, []); // 👈 這裡改成空白陣列 [] 即可完美解決 ESLint 警告！
 
   // 根據輸入動態篩選出的一家人名單
   const filtered = phoneQuery.length >= 3 
