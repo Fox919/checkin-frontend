@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// ✅ 新版專屬：導入相容 React 19 的 SVG 渲染組件
+// ✅ 新版專專屬：導入相容 React 19 的 SVG 渲染組件
 import { QRCodeSVG } from 'qrcode.react';
 
 const AttendanceAdmin = () => {
@@ -157,6 +157,61 @@ const AttendanceAdmin = () => {
     window.print();
   };
 
+  // --- 匯出 Excel (CSV) 報表功能 ---
+  const exportToCsv = () => {
+    if (enrollments.length === 0) {
+      alert("目前沒有資料可供匯出！");
+      return;
+    }
+
+    const currentCourse = offerings.find(o => String(o.id) === String(currentOfferingId));
+    const courseTitle = currentCourse ? currentCourse.title : "課程";
+    const fileName = `${courseTitle}_考勤報表_${new Date().toISOString().split('T')[0]}.csv`;
+
+    const headers = ["學員 ID", "姓名", "出勤率", "畢業證書號"];
+    
+    for (let d = 1; d <= totalDays; d++) {
+      slots.forEach(slot => {
+        headers.push(`Day ${d}-${slot.label}`);
+      });
+    }
+
+    const rows = enrollments.map(student => {
+      const finalDisplayName = formatStudentName(student.name);
+      const certNo = student.certificate_no ? student.certificate_no : "未畢業";
+      
+      const rowData = [
+        student.user_id,
+        `"${finalDisplayName.replace(/"/g, '""')}"`, 
+        `${student.attendance_rate}%`,
+        `"${certNo}"`
+      ];
+
+      for (let d = 1; d <= totalDays; d++) {
+        slots.forEach(slot => {
+          const hasAttended = student.records?.some(
+            r => r.day_number === d && r.slot_type === slot.id
+          );
+          rowData.push(hasAttended ? "✓" : "·");
+        });
+      }
+
+      return rowData.join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // --- 數據統計計算 ---
   const totalStudents = enrollments.length;
   const graduatedCount = enrollments.filter(s => s.certificate_no).length;
@@ -171,7 +226,7 @@ const AttendanceAdmin = () => {
   return (
     <div style={{ padding: '15px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
       
-      {/* 注入列印專用的 CSS 媒體查詢 */}
+      {/* 注入列印專專用的 CSS 媒體查詢 */}
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -220,8 +275,28 @@ const AttendanceAdmin = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+      {/* --- 看板標題與匯出按鈕區塊 --- */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 style={{ margin: 0 }}>📊 課程考勤動態看板</h3>
+        <button
+          onClick={exportToCsv}
+          style={{
+            backgroundColor: '#27ae60',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}
+        >
+          📥 匯出 Excel (CSV) 報表
+        </button>
       </div>
       <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>💡 提示：點擊學員名字旁的 🪪 按鈕，可自動導入名字與專屬二維碼並列印學員證。</p>
       
@@ -273,7 +348,6 @@ const AttendanceAdmin = () => {
                       const dayNum = dayIdx + 1;
                       
                       return (
-                        /* ✅ 修正處 1：移除了重複的內層 <td> 標籤 */
                         <td key={dayIdx} style={{ ...tableCellStyle, backgroundColor: '#fdfdfd' }}>
                           <div style={{ display: 'flex', flexDirection: 'row', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                             {slots.map(slot => {
@@ -283,7 +357,6 @@ const AttendanceAdmin = () => {
 
                               return (
                                 <button
-                                  /* ✅ 修正處 2：將 key 改為結合天數與時段，避免全表 id 重複 */
                                   key={`${dayNum}_${slot.id}`}
                                   title={`第 ${dayNum} 天 - ${slot.label}`}
                                   onClick={() => handleToggleAttendance(student.user_id, dayNum, slot.id, hasAttended)}
