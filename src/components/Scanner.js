@@ -4,9 +4,9 @@ import { Html5Qrcode } from 'html5-qrcode';
 const Scanner = () => {
   const [status, setStatus] = useState('準備掃描...');
   
-  // 🌟 新增：讓管理員手動選擇當前的天數與時段（或可以自己改為根據時間自動判斷）
+  // 🌟 同步管理端的動態特徵
   const [dayNumber, setDayNumber] = useState(1);
-  const [slotType, setSlotType] = useState('AM'); // 預設 AM:上午, PM:下午, LEAVE:簽退
+  const [slotType, setSlotType] = useState('slot_1'); // 預設對應管理端的 slot_1 (上午簽到)
 
   const isProcessing = useRef(false);
   const html5QrcodeRef = useRef(null); 
@@ -35,30 +35,36 @@ const Scanner = () => {
       try {
         let payload = {};
         
+        // 提取基礎學員資料
         if (decodedText.startsWith('{') && decodedText.endsWith('}')) {
           const parsed = JSON.parse(decodedText);
           payload = {
             userId: parsed.userId,
-            offeringId: parsed.offeringId,
-            // 🌟 關鍵修正：將目前選取的天數與時段一起打包送給後端
-            dayNumber: Number(dayNumber), 
-            slotType: slotType             
+            offeringId: parsed.offeringId
           };
         } else {
           payload = {
             userId: decodedText,
-            offeringId: null,
-            // 🌟 關鍵修正：舊格式同樣要補齊這兩個欄位
-            dayNumber: Number(dayNumber),
-            slotType: slotType
+            offeringId: null
           };
         }
+
+        // 🌟 核心修正：採用「雙相容命名」與「標準代碼」，確保百分之百對齊後端
+        const finalPayload = {
+          ...payload,
+          // 駝峰式命名 (手動打卡端常用)
+          dayNumber: Number(dayNumber),
+          slotType: slotType,
+          // 底線式命名 (部分後端 API 常用)
+          day_number: Number(dayNumber),
+          slot_type: slotType
+        };
 
         // 🚀 發送請求給後端
         const response = await fetch(`${API_BASE}/api/checkin`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(finalPayload)
         });
 
         const data = await response.json();
@@ -70,9 +76,9 @@ const Scanner = () => {
             setStatus('準備掃描下一個...');
           }, 3000);
         } else {
-          // 這裡通常能抓到後端傳回的具體錯誤訊息
-          setStatus(`❌ ${data.error || '簽到失敗'}`);
-          setTimeout(() => { isProcessing.current = false; }, 2000);
+          // 顯示後端回傳的具體錯誤，方便精準定位
+          setStatus(`❌ ${data.error || data.message || '簽到失敗'}`);
+          setTimeout(() => { isProcessing.current = false; }, 3000);
         }
       } catch (error) {
         console.error("連線錯誤:", error);
@@ -98,7 +104,7 @@ const Scanner = () => {
           .catch(err => console.error("停止相機失敗", err));
       }
     };
-  }, [audio, dayNumber, slotType]); // 🌟 注意：當天數或時段改變時，重新綁定掃描事件以利讀取最新變數
+  }, [audio, dayNumber, slotType]); 
 
   const getStatusStyle = () => {
     if (status.includes('✅')) return { backgroundColor: '#d4edda', color: '#155724', borderColor: '#c3e6cb' };
@@ -110,23 +116,24 @@ const Scanner = () => {
     <div style={{ maxWidth: '500px', margin: 'auto', textAlign: 'center', padding: '20px' }}>
       <h2>🔍 簽到掃描器</h2>
       
-      {/* 🌟 新增：時段設定區域 */}
-      <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#e9ecef', borderRadius: '10px', display: 'flex', justifyContent: 'space-around' }}>
-        <label>
+      {/* 時段設定區域 */}
+      <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '10px', display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '10px' }}>
+        <label style={{ fontWeight: 'bold' }}>
           天數：
-          <select value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} style={{ padding: '5px', fontSize: '1rem' }}>
+          <select value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} style={{ padding: '5px', fontSize: '1rem', borderRadius: '4px' }}>
             {[1, 2, 3, 4, 5, 6, 7, 8].map(d => (
               <option key={d} value={d}>第 {d} 天</option>
             ))}
           </select>
         </label>
 
-        <label>
+        <label style={{ fontWeight: 'bold' }}>
           時段：
-          <select value={slotType} onChange={(e) => setSlotType(e.target.value)} style={{ padding: '5px', fontSize: '1rem' }}>
-            <option value="AM">上午簽到</option>
-            <option value="PM">下午簽到</option>
-            <option value="LEAVE">簽退</option>
+          <select value={slotType} onChange={(e) => setSlotType(e.target.value)} style={{ padding: '5px', fontSize: '1rem', borderRadius: '4px' }}>
+            {/* 🌟 這裡的 value 直接與管理後台的資料庫代碼對齊 */}
+            <option value="slot_1">上午簽到</option>
+            <option value="slot_2">下午簽到</option>
+            <option value="slot_3">下課簽退</option>
           </select>
         </label>
       </div>
@@ -140,7 +147,7 @@ const Scanner = () => {
         transition: 'all 0.3s ease',
         ...getStatusStyle() 
       }}>
-        <p style={{ fontSize: '1.5rem', fontWeight: '900', margin: '0' }}>{status}</p>
+        <p style={{ fontSize: '1.3rem', fontWeight: '900', margin: '0', whiteSpace: 'pre-wrap' }}>{status}</p>
       </div>
 
       {/* 攝影機鏡頭容器 */}
