@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 const AttendanceAdmin = () => {
-  // --- 🆕 1. 多班級動態切換狀態 ---
+  // --- 多班級動態切換狀態 ---
   const [offerings, setOfferings] = useState([]);               // 所有可選的課程下拉清單
   const [currentOfferingId, setCurrentOfferingId] = useState(''); // 當前選中的課程 ID
   const [enrollments, setEnrollments] = useState([]);           // 當前選中課程的學員考勤清單
   const [loading, setLoading] = useState(true);
   const [courseLoading, setCourseLoading] = useState(true);
 
-  // --- 🆕 2. 動態班級特徵狀態 (天數與時段) ---
+  // --- 動態班級特徵狀態 ---
   const [totalDays, setTotalDays] = useState(8); 
   const [slots, setSlots] = useState([
     { id: 'slot_1', label: '上午簽到' },
@@ -16,14 +16,16 @@ const AttendanceAdmin = () => {
     { id: 'slot_3', label: '下課簽退' }
   ]);
 
+  // --- 學員證模組狀態 ---
+  const [selectedStudent, setSelectedStudent] = useState(null); // 當前選中要列印證件的學員
+  const [showBadgeModal, setShowBadgeModal] = useState(false);  // 控制學員證彈窗
+
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
-  // 🔤 智慧姓名格式化：將英文的「姓 在 前」優雅轉換為「名 在 前」
+  // 🔤 智慧姓名格式化：名在前、姓在後
   const formatStudentName = (rawName) => {
     if (!rawName) return '無';
     const trimmed = rawName.trim();
-    
-    // 檢查是否包含空格，且主要由英文字母組成
     const hasSpace = trimmed.includes(' ');
     const isEnglish = /^[A-Za-z\s,.-]+$/.test(trimmed);
 
@@ -31,15 +33,13 @@ const AttendanceAdmin = () => {
       const nameParts = trimmed.split(/\s+/);
       if (nameParts.length > 1) {
         const [lastName, ...firstNameParts] = nameParts;
-        // 重新組合：名在前 (firstNameParts)，姓在後 (lastName)
         return `${firstNameParts.join(' ')} ${lastName}`;
       }
     }
-    // 中文名或單一單字維持原樣
     return trimmed;
   };
 
-  // --- 🆕 3. 初始化：先撈取所有開班期次作為選單 ---
+  // --- 初始化：撈取所有開班期次 ---
   useEffect(() => {
     fetch(`${API_BASE}/api/offerings`)
       .then(res => res.json())
@@ -47,7 +47,6 @@ const AttendanceAdmin = () => {
         const onlyCourses = data.filter(item => item.type === 'course');
         setOfferings(onlyCourses);
         if (onlyCourses.length > 0) {
-          // 預設選中清單中的第一門課
           setCurrentOfferingId(onlyCourses[0].id);
         }
       })
@@ -55,7 +54,7 @@ const AttendanceAdmin = () => {
       .finally(() => setCourseLoading(false));
   }, []);
 
-  // --- 🆕 4. 智慧解析當前課程配置 (動態調整天數與時段按鈕) ---
+  // --- 智慧解析當前課程配置 ---
   useEffect(() => {
     if (!currentOfferingId || offerings.length === 0) return;
     
@@ -64,7 +63,6 @@ const AttendanceAdmin = () => {
 
     const courseTitle = currentCourse.title || '';
     
-    // 🧠 智慧判斷：減壓班或內文含減壓 -> 7天 下午班(時段1+時段3)
     if (courseTitle.includes('減壓')) {
       setTotalDays(7);
       setSlots([
@@ -72,7 +70,6 @@ const AttendanceAdmin = () => {
         { id: 'slot_3', label: '傍晚簽退' }
       ]);
     } else {
-      // 預設健身班或其他全天班 -> 8天 3個時段
       setTotalDays(8);
       setSlots([
         { id: 'slot_1', label: '上午簽到' },
@@ -81,11 +78,10 @@ const AttendanceAdmin = () => {
       ]);
     }
 
-    // 重新載入學員考勤名單
     fetchAttendanceData(currentOfferingId);
   }, [currentOfferingId, offerings]);
 
-  // --- 5. 核心：讀取選定班級的所有學員考勤流水帳 ---
+  // --- 核心：讀取選定班級的考勤流水帳 ---
   const fetchAttendanceData = async (offeringId) => {
     setLoading(true);
     try {
@@ -94,13 +90,13 @@ const AttendanceAdmin = () => {
       setEnrollments(data);
     } catch (err) {
       console.error("讀取考勤失敗:", err);
-      setEnrollments([]); // 出錯時清空，避免畫面殘留舊班級資料
+      setEnrollments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- 6. 管理員手動切換打卡狀態 ---
+  // --- 管理員手動切換打卡狀態 ---
   const handleToggleAttendance = async (userId, dayNumber, slotType, currentStatus) => {
     try {
       const res = await fetch(`${API_BASE}/admin/toggle-attendance`, {
@@ -108,7 +104,7 @@ const AttendanceAdmin = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          offeringId: currentOfferingId, // ✨ 動態傳入當前選中的課程 ID
+          offeringId: currentOfferingId,
           dayNumber, 
           slotType,  
           status: !currentStatus 
@@ -123,7 +119,7 @@ const AttendanceAdmin = () => {
     }
   };
 
-  // --- 7. 一鍵生成畢業證書 ---
+  // --- 一鍵生成畢業證書 ---
   const handleGraduate = async (userId, rawName) => {
     const displayName = formatStudentName(rawName);
     const confirmGrad = window.confirm(`確定要為學員「${displayName}」生成畢業證書號嗎？`);
@@ -147,16 +143,47 @@ const AttendanceAdmin = () => {
     }
   };
 
+  // --- 開啟學員證預覽 ---
+  const handleOpenBadge = (student) => {
+    setSelectedStudent(student);
+    setShowBadgeModal(true);
+  };
+
+  // --- 呼叫原生列印功能 (僅列印學員證區塊) ---
+  const handlePrintBadge = () => {
+    window.print();
+  };
+
+  // --- 數據統計計算 ---
+  const totalStudents = enrollments.length;
+  const graduatedCount = enrollments.filter(s => s.certificate_no).length;
+  const highAttendanceCount = enrollments.filter(s => parseFloat(s.attendance_rate || 0) >= 85.0).length;
+
   // 樣式
   const tableHeaderStyle = { padding: '10px', border: '1px solid #ddd', backgroundColor: '#f4f6f7', fontSize: '0.8rem', textAlign: 'center' };
   const tableCellStyle = { padding: '8px', border: '1px solid #ddd', fontSize: '0.85rem', textAlign: 'center' };
 
   if (courseLoading) return <div style={{ textAlign: 'center', padding: '50px' }}>正在初始化班級選單...</div>;
 
+  // 為 QR Code 生成乾淨的內嵌資料字串
+  const qrDataString = selectedStudent 
+    ? encodeURIComponent(JSON.stringify({ userId: selectedStudent.user_id, offeringId: currentOfferingId }))
+    : '';
+
   return (
     <div style={{ padding: '15px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
       
-      {/* --- 🆕 8. 頂部多功能班級切換條 --- */}
+      {/* 注入列印專用的 CSS 樣式控制 */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #printable-badge-area, #printable-badge-area * { visibility: visible; }
+          #printable-badge-area { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      {/* --- 頂部多功能班級切換條 --- */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
         <div>
           <label style={{ fontWeight: 'bold', marginRight: '10px', color: '#2c3e50', fontSize: '0.95rem' }}>🎯 切換考勤班級：</label>
@@ -177,8 +204,28 @@ const AttendanceAdmin = () => {
         </div>
       </div>
 
-      <h3>📊 課程考勤動態看板</h3>
-      <p style={{ fontSize: '0.8rem', color: '#666' }}>💡 提示：管理員可直接「點擊」下方任何考勤方塊，手動為學員補簽到或取消簽到。</p>
+      {/* --- 人數與狀態即時統計看板 --- */}
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1', minWidth: '150px', background: 'linear-gradient(135deg, #3498db, #2980b9)', color: '#fff', padding: '12px 15px', borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '0.8rem', opacity: '0.9' }}>👥 班級總人數</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 'bold', marginTop: '2px' }}>{totalStudents} <span style={{ fontSize: '0.9rem' }}>人</span></div>
+        </div>
+        <div style={{ flex: '1', minWidth: '150px', background: 'linear-gradient(135deg, #2ecc71, #27ae60)', color: '#fff', padding: '12px 15px', borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '0.8rem', opacity: '0.9' }}>🎓 已畢業人數</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 'bold', marginTop: '2px' }}>{graduatedCount} <span style={{ fontSize: '0.9rem' }}>人</span></div>
+        </div>
+        <div style={{ flex: '1', minWidth: '150px', background: 'linear-gradient(135deg, #e67e22, #d35400)', color: '#fff', padding: '12px 15px', borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '0.8rem', opacity: '0.9' }}>📈 出勤達標率 (≥85%)</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 'bold', marginTop: '2px' }}>
+            {highAttendanceCount} <span style={{ fontSize: '0.9rem' }}>人 ({totalStudents ? Math.round((highAttendanceCount/totalStudents)*100) : 0}%)</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+        <h3 style={{ margin: 0 }}>📊 課程考勤動態看板</h3>
+      </div>
+      <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>💡 提示：點擊學員名字旁的 🪪 按鈕，可自動導入名字與專屬二維碼並列印學員證。</p>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d', fontWeight: 'bold' }}>🔄 正在載入該班級考勤名單...</div>
@@ -191,9 +238,9 @@ const AttendanceAdmin = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
             <thead>
               <tr>
-                <th style={{ ...tableHeaderStyle, width: '120px', textAlign: 'left' }}>學員姓名</th>
+                <th style={{ ...tableHeaderStyle, width: '160px', textAlign: 'left' }}>學員姓名 / 證件</th>
                 <th style={{ ...tableHeaderStyle, width: '90px' }}>目前出勤率</th>
-                {/* 🆕 動態生成對應天數的表頭 (7天或8天) */}
+                {/* 動態生成對應天數的表頭 */}
                 {Array.from({ length: totalDays }).map((_, i) => (
                   <th key={i} style={{ ...tableHeaderStyle, minWidth: '100px' }}>Day {i + 1}</th>
                 ))}
@@ -204,14 +251,22 @@ const AttendanceAdmin = () => {
               {enrollments.map(student => {
                 const rate = parseFloat(student.attendance_rate || 0);
                 const isEligible = rate >= 85.0;
-                // 🌟 優雅呈現調整後的「名在前、姓在後」名字
                 const finalDisplayName = formatStudentName(student.name);
 
                 return (
                   <tr key={student.user_id} style={{ backgroundColor: student.certificate_no ? '#f1fcf6' : '#fff' }}>
-                    {/* 姓名 */}
-                    <td style={{ ...tableCellStyle, textAlign: 'left', fontWeight: 'bold' }}>
-                      {finalDisplayName}
+                    {/* 姓名與學員證列印快捷鍵 */}
+                    <td style={{ ...tableCellStyle, textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 'bold' }}>{finalDisplayName}</span>
+                        <button 
+                          onClick={() => handleOpenBadge(student)}
+                          title="預覽與列印學員證"
+                          style={{ padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px' }}
+                        >
+                          🪪 證照
+                        </button>
+                      </div>
                     </td>
                     
                     {/* 出勤率 */}
@@ -226,7 +281,6 @@ const AttendanceAdmin = () => {
                       return (
                         <td key={dayIdx} style={{ ...tableCellStyle, backgroundColor: '#fdfdfd' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                            {/* 🆕 根據當前班別動態渲染 2個 或 3個 按鈕 */}
                             {slots.map(slot => {
                               const hasAttended = student.records?.some(
                                 r => r.day_number === dayNum && r.slot_type === slot.id
@@ -283,6 +337,81 @@ const AttendanceAdmin = () => {
           </table>
         </div>
       )}
+
+      {/* --- 學員證優雅彈窗預覽與列印系統 --- */}
+      {showBadgeModal && selectedStudent && (
+        <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', textAlign: 'center', width: '360px' }}>
+            <h4 style={{ margin: '0 0 15px 0', color: '#333' }}>🪪 學員證預覽</h4>
+            
+            {/* 學員證樣式模板區塊 */}
+            <div id="printable-badge-area" style={{ 
+              width: '280px', 
+              height: '420px', 
+              border: '2px solid #2c3e50', 
+              borderRadius: '12px', 
+              margin: '0 auto 20px auto', 
+              padding: '20px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#fff',
+              background: 'linear-gradient(to bottom, #f8fbfd 0%, #ffffff 100%)',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
+            }}>
+              {/* 模板頭部 */}
+              <div style={{ textAlign: 'center', width: '100%' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#e67e22', letterSpacing: '2px', marginBottom: '4px' }}>OFFICIAL STUDENT ID</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2c3e50', borderBottom: '2px solid #e67e22', paddingBottom: '8px' }}>
+                  {offerings.find(o => String(o.id) === String(currentOfferingId))?.title || "大會課程"}
+                </div>
+              </div>
+
+              {/* 核心：動態帶入格式化姓名 */}
+              <div style={{ textAlign: 'center', margin: '15px 0' }}>
+                <div style={{ fontSize: '0.8rem', color: '#7f8c8d', marginBottom: '2px' }}>學員姓名</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a252f' }}>
+                  {formatStudentName(selectedStudent.name)}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#95a5a6', marginTop: '4px' }}>ID: {selectedStudent.user_id}</div>
+              </div>
+
+              {/* ⚡ 完美解決 React 19 編譯器崩潰：改用原生非同步高解析度圖像二維碼接口 */}
+              <div style={{ padding: '8px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '126px', height: '126px', boxSizing: 'border-box' }}>
+                <img 
+                  src={`https://quickchart.io/qr?text=${qrDataString}&size=110&margin=1&ecLevel=H`} 
+                  alt="Student ID QR Code" 
+                  style={{ width: '110px', height: '110px', display: 'block' }} 
+                />
+              </div>
+
+              {/* 模板尾部 */}
+              <div style={{ fontSize: '0.65rem', color: '#bdc3c7', textAlign: 'center', width: '100%' }}>
+                憑本證件至各打卡處掃描登記
+              </div>
+            </div>
+
+            {/* 操作按鈕 */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button 
+                onClick={handlePrintBadge}
+                style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                🖨️ 立即列印
+              </button>
+              <button 
+                onClick={() => { setShowBadgeModal(false); setSelectedStudent(null); }}
+                style={{ backgroundColor: '#95a5a6', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
