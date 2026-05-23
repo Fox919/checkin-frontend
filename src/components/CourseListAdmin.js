@@ -34,8 +34,6 @@ const AttendanceAdmin = () => {
     if (hasSpace && isEnglish) {
       const nameParts = trimmed.split(/\s+/);
       if (nameParts.length > 1) {
-        // 例如 "Tom Hanks" -> 名是 Tom (第一項), 姓是 Hanks (最後一項)
-        // 依照「名在前 姓在後」規則，直接回傳原樣或處理多個中間名的情況
         const lastName = nameParts[nameParts.length - 1];
         const firstNameParts = nameParts.slice(0, nameParts.length - 1);
         return `${firstNameParts.join(' ')} ${lastName}`;
@@ -275,8 +273,9 @@ const AttendanceAdmin = () => {
                       const dayNum = dayIdx + 1;
                       
                       return (
+                        /* ✅ 修正處 1：移除了重複的內層 <td> 標籤 */
                         <td key={dayIdx} style={{ ...tableCellStyle, backgroundColor: '#fdfdfd' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'row', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                             {slots.map(slot => {
                               const hasAttended = student.records?.some(
                                 r => r.day_number === dayNum && r.slot_type === slot.id
@@ -284,12 +283,13 @@ const AttendanceAdmin = () => {
 
                               return (
                                 <button
-                                  key={slot.id}
+                                  /* ✅ 修正處 2：將 key 改為結合天數與時段，避免全表 id 重複 */
+                                  key={`${dayNum}_${slot.id}`}
                                   title={`第 ${dayNum} 天 - ${slot.label}`}
                                   onClick={() => handleToggleAttendance(student.user_id, dayNum, slot.id, hasAttended)}
                                   style={{
-                                    width: '95%',
-                                    padding: '3px 4px',
+                                    width: 'fit-content',
+                                    padding: '4px 8px',
                                     fontSize: '0.7rem',
                                     borderRadius: '3px',
                                     border: '1px solid',
@@ -297,7 +297,8 @@ const AttendanceAdmin = () => {
                                     transition: 'all 0.1s ease',
                                     backgroundColor: hasAttended ? '#28a745' : '#fff',
                                     color: hasAttended ? '#fff' : '#666',
-                                    borderColor: hasAttended ? '#28a745' : '#ccc'
+                                    borderColor: hasAttended ? '#28a745' : '#ccc',
+                                    whiteSpace: 'nowrap'
                                   }}
                                 >
                                   {slot.label.slice(0, 2)} {hasAttended ? '✓' : '·'}
@@ -370,7 +371,6 @@ const AttendanceAdmin = () => {
                 <div style={{ fontSize: '0.75rem', color: '#95a5a6', marginTop: '4px' }}>ID: {selectedStudent.user_id}</div>
               </div>
 
-              {/* ✅ 核心修正：直接安心使用 QRCodeSVG 組件，移除可能引發未定義報錯的舊判斷 */}
               <div style={{ padding: '10px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <QRCodeSVG 
                   value={JSON.stringify({ userId: selectedStudent.user_id, offeringId: currentOfferingId })} 
