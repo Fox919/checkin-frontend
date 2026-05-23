@@ -1,61 +1,101 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+// 🌟 核心修改：在 React 19 建議直接引用 Html5Qrcode，手動控制生命週期最穩健
+import { Html5Qrcode } from 'html5-qrcode';
 
 const Scanner = () => {
   const [status, setStatus] = useState('準備掃描...');
   
   const isProcessing = useRef(false);
+  const html5QrcodeRef = useRef(null); // 用來暫存掃描器實例
   const audio = useMemo(() => new Audio('/beep.mp3'), []);
 
+  const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
+
   useEffect(() => {
+    // 建立掃描器實例，綁定到 id="reader" 的 div
+    const html5Qrcode = new Html5Qrcode("reader");
+    html5QrcodeRef.current = html5Qrcode;
+
     const config = {
       fps: 15,
-      qrbox: { width: 250, height: 250 },
-      rememberLastUsedCamera: true,
-      facingMode: "environment"
+      qrbox: { width: 250, height: 250 }
     };
 
-    const scanner = new Html5QrcodeScanner('reader', config, false);
-
+    // 成功解碼的回呼函數
     async function onScanSuccess(decodedText) {
       if (isProcessing.current) return;
       
       isProcessing.current = true;
       setStatus('正在驗證...');
 
+      // 播放提示音與震動
       audio.play().catch(e => console.log("需點擊頁面以播放聲音"));
       if (navigator.vibrate) navigator.vibrate(200);
 
       try {
-        const response = await fetch(`https://checkin-system-production-2a74.up.railway.app/checkin/${decodedText}`, {
+        let payload = {};
+        
+        // 🧠 智慧解析：判斷二維碼是否為學員證的 JSON 格式
+        if (decodedText.startsWith('{') && decodedText.endsWith('}')) {
+          const parsed = JSON.parse(decodedText);
+          payload = {
+            userId: parsed.userId,
+            offeringId: parsed.offeringId
+          };
+        } else {
+          // 相容舊格式：如果掃到純學員 ID 字串
+          payload = {
+            userId: decodedText,
+            offeringId: null // 或根據需求填入預設值
+          };
+        }
+
+        // 🚀 發送請求給後端：改用更安全的 POST Body 傳參，避免網址帶有特殊字元
+        const response = await fetch(`${API_BASE}/api/checkin`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
         const data = await response.json();
 
         if (response.ok) {
-          setStatus(`✅ ${data.name} 簽到成功！`);
+          setStatus(`✅ ${data.name || '學員'} 簽到成功！`);
           setTimeout(() => {
             isProcessing.current = false;
             setStatus('準備掃描下一個...');
           }, 3000);
         } else {
           setStatus(`❌ ${data.error || '簽到失敗'}`);
-          isProcessing.current = false;
+          setTimeout(() => { isProcessing.current = false; }, 2000);
         }
       } catch (error) {
-        setStatus('❌ 連線後端失敗');
-        isProcessing.current = false;
+        console.error("連線錯誤:", error);
+        setStatus('❌ 二維碼格式錯誤或連線失敗');
+        setTimeout(() => { isProcessing.current = false; }, 2000);
       }
     }
 
-    function onScanError(err) { /* 忽略 */ }
+    // 啟動相機鏡頭
+    html5Qrcode.start(
+      { facingMode: "environment" }, // 強制調用後鏡頭
+      config,
+      onScanSuccess,
+      () => { /* 忽略幀錯誤 */ }
+    ).catch(err => {
+      console.error("啟動相機失敗:", err);
+      setStatus("❌ 無法啟動相機鏡頭");
+    });
 
-    scanner.render(onScanSuccess, onScanError);
-
+    // 元件卸載時，安全關閉鏡頭與清理節點
     return () => {
-      scanner.clear().catch(e => console.error("清理鏡頭失敗", e));
+      if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
+        html5QrcodeRef.current.stop()
+          .then(() => {
+            console.log("鏡頭已安全關閉");
+          })
+          .catch(err => console.error("停止相機失敗", err));
+      }
     };
   }, [audio]);
 
@@ -69,9 +109,9 @@ const Scanner = () => {
     <div style={{ maxWidth: '500px', margin: 'auto', textAlign: 'center', padding: '20px' }}>
       <h2>🔍 簽到掃描器</h2>
       
-      {/* 關鍵修改：將狀態提示框移到這裡 (攝影機上方) */}
+      {/* 狀態提示框 */}
       <div style={{ 
-        marginBottom: '20px', // 與攝影機拉開一點距離
+        marginBottom: '20px', 
         padding: '20px', 
         borderRadius: '15px', 
         border: '3px solid',
@@ -81,8 +121,8 @@ const Scanner = () => {
         <p style={{ fontSize: '1.5rem', fontWeight: '900', margin: '0' }}>{status}</p>
       </div>
 
-      {/* 攝影機鏡頭放在下方 */}
-      <div id="reader" style={{ width: '100%' }}></div>
+      {/* 攝影機鏡頭容器 */}
+      <div id="reader" style={{ width: '100%', overflow: 'hidden', borderRadius: '10px' }}></div>
     </div>
   );
 };
