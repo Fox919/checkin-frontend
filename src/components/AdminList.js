@@ -33,6 +33,28 @@ const AdminList = () => {
   // 🌟 記錄目前點選的來源索引（null 代表顯示全部）
   const [selectedSourceFilter, setSelectedSourceFilter] = useState(null);
 
+  // 🔤 智慧姓名格式化：將英文的「姓 在 前」優雅轉換為「名 在 前」
+  const formatStudentName = (rawName) => {
+    if (!rawName) return '無';
+    const trimmed = rawName.trim();
+    
+    // 檢查是否包含空格，且主要由英文字母組成
+    const hasSpace = trimmed.includes(' ');
+    const isEnglish = /^[A-Za-z\s,.-]+$/.test(trimmed);
+
+    if (hasSpace && isEnglish) {
+      // 將字串依空格拆開
+      const nameParts = trimmed.split(/\s+/);
+      if (nameParts.length > 1) {
+        const [lastName, ...firstNameParts] = nameParts;
+        // 重新組合：名在前 (firstNameParts)，姓在後 (lastName)
+        return `${firstNameParts.join(' ')} ${lastName}`;
+      }
+    }
+    // 中文名或單一單字維持原樣
+    return trimmed;
+  };
+
   // ⏰ 強化的格式化時間函數 — 完美校正為洛杉磯當地時間
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
@@ -65,14 +87,15 @@ const AdminList = () => {
 
   // 🌟 處理身分轉換的後台發送邏輯
   const handleUpdateUserType = async (userId, currentName, newType) => {
-    const confirmChange = window.confirm(`確定要將「${currentName}」的身分轉換為【${newType}】嗎？`);
+    const displayName = formatStudentName(currentName);
+    const confirmChange = window.confirm(`確定要將「${displayName}」的身分轉換為【${newType}】嗎？`);
     if (!confirmChange) return;
 
     let selectedOfferingId = null;
 
     if (newType === 'Student' || newType === 'Member' || newType === '學員') {
       const courseIdInput = window.prompt(
-        `請輸入要將「${currentName}」加入的【課程期次 ID】：\n\n(提示：必須指定課程 ID，考勤看板才能看到該學員。可至『課程期次設定』頁面查看 ID，例如：1)`
+        `請輸入要將「${displayName}」加入的【課程期次 ID】：\n\n(提示：必須指定課程 ID，考勤看板才能看到該學員。可至『課程期次設定』頁面查看 ID，例如：1)`
       );
       
       if (courseIdInput === null) return; 
@@ -211,8 +234,12 @@ const AdminList = () => {
 
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
+    
+    // 🌟 搜尋時同時支援配對原本名字與調整後的名字
+    const adjustedName = formatStudentName(user.name);
     const matchesSearch = 
       user.name?.toLowerCase().includes(searchStr) || 
+      adjustedName.toLowerCase().includes(searchStr) ||
       user.phone?.includes(searchTerm) ||
       (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
     
@@ -263,8 +290,10 @@ const AdminList = () => {
       const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
+        // 🌟 匯出時也同步套用「名在前、姓在後」的規格
+        const formattedCSVName = formatStudentName(u.name);
         return [
-          `"${(u.name || '').replace(/"/g, '""')}"`, 
+          `"${formattedCSVName.replace(/"/g, '""')}"`, 
           `"${u.phone || ''}"`, 
           `"${u.email || ''}"`, 
           `"${u.user_type || ''}"`,
@@ -447,11 +476,13 @@ const AdminList = () => {
             <tbody>
               {filteredList.map(user => {
                 const displaySource = getDisplaySourceText(user.discovery_source);
+                // 🌟 優雅呈現調整後的「名在前、姓在後」名字
+                const finalDisplayName = formatStudentName(user.name);
 
                 return (
                   <tr key={user.id}>
                     <td style={{ ...tableCellStyle, minWidth: '80px' }}>
-                      <strong>{user.name || '無'}</strong>
+                      <strong>{finalDisplayName}</strong>
                       {user.is_blessed === 1 && ' ✨'}
                     </td>
                     <td style={tableCellStyle}>{user.phone || '-'}</td>
@@ -541,7 +572,7 @@ const AdminList = () => {
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>{users.find(u => u.id === selectedQrId)?.name} 的 QR Code</h3>
+            <h3 style={{ marginTop: 0 }}>{formatStudentName(users.find(u => u.id === selectedQrId)?.name)} 的 QR Code</h3>
             <QRCodeCanvas 
               value={String(selectedQrId || '')} 
               size={200} 

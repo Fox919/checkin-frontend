@@ -18,6 +18,27 @@ const AttendanceAdmin = () => {
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
+  // 🔤 智慧姓名格式化：將英文的「姓 在 前」優雅轉換為「名 在 前」
+  const formatStudentName = (rawName) => {
+    if (!rawName) return '無';
+    const trimmed = rawName.trim();
+    
+    // 檢查是否包含空格，且主要由英文字母組成
+    const hasSpace = trimmed.includes(' ');
+    const isEnglish = /^[A-Za-z\s,.-]+$/.test(trimmed);
+
+    if (hasSpace && isEnglish) {
+      const nameParts = trimmed.split(/\s+/);
+      if (nameParts.length > 1) {
+        const [lastName, ...firstNameParts] = nameParts;
+        // 重新組合：名在前 (firstNameParts)，姓在後 (lastName)
+        return `${firstNameParts.join(' ')} ${lastName}`;
+      }
+    }
+    // 中文名或單一單字維持原樣
+    return trimmed;
+  };
+
   // --- 🆕 3. 初始化：先撈取所有開班期次作為選單 ---
   useEffect(() => {
     fetch(`${API_BASE}/api/offerings`)
@@ -103,8 +124,9 @@ const AttendanceAdmin = () => {
   };
 
   // --- 7. 一鍵生成畢業證書 ---
-  const handleGraduate = async (userId) => {
-    const confirmGrad = window.confirm("確定為該學員生成畢業證書號嗎？");
+  const handleGraduate = async (userId, rawName) => {
+    const displayName = formatStudentName(rawName);
+    const confirmGrad = window.confirm(`確定要為學員「${displayName}」生成畢業證書號嗎？`);
     if (!confirmGrad) return;
 
     try {
@@ -135,7 +157,7 @@ const AttendanceAdmin = () => {
     <div style={{ padding: '15px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
       
       {/* --- 🆕 8. 頂部多功能班級切換條 --- */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', flexWrap: 'wrap', gap: '15px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
         <div>
           <label style={{ fontWeight: 'bold', marginRight: '10px', color: '#2c3e50', fontSize: '0.95rem' }}>🎯 切換考勤班級：</label>
           <select 
@@ -182,12 +204,14 @@ const AttendanceAdmin = () => {
               {enrollments.map(student => {
                 const rate = parseFloat(student.attendance_rate || 0);
                 const isEligible = rate >= 85.0;
+                // 🌟 優雅呈現調整後的「名在前、姓在後」名字
+                const finalDisplayName = formatStudentName(student.name);
 
                 return (
                   <tr key={student.user_id} style={{ backgroundColor: student.certificate_no ? '#f1fcf6' : '#fff' }}>
                     {/* 姓名 */}
                     <td style={{ ...tableCellStyle, textAlign: 'left', fontWeight: 'bold' }}>
-                      {student.name}
+                      {finalDisplayName}
                     </td>
                     
                     {/* 出勤率 */}
@@ -243,7 +267,7 @@ const AttendanceAdmin = () => {
                         </span>
                       ) : isEligible ? (
                         <button 
-                          onClick={() => handleGraduate(student.user_id)}
+                          onClick={() => handleGraduate(student.user_id, student.name)}
                           style={{ backgroundColor: '#007bff', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           🎓 點此畢業
