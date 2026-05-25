@@ -78,10 +78,28 @@ const AdminList = () => {
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
       const data = await res.json();
       
-      // 🌟 核心除錯：在瀏覽器控制台印出第一筆資料，看看欄位名稱到底是什麼！
-      console.log("後端回傳的第一筆原始資料樣貌：", data[0]);
-      
-      setUsers(data);
+      // 🚨 【超級核心除錯】 🚨
+      console.log("=== 檢查後端回傳的完整資料結構 ===");
+      console.log("資料型態 (Type):", typeof data);
+      console.log("是否為陣列 (IsArray):", Array.isArray(data));
+      console.log("實際回傳的內容 (Raw Data):", data);
+      if (Array.isArray(data) && data.length > 0) {
+        console.log("第一筆資料的所有欄位 Key:", Object.keys(data[0]));
+      } else if (data && typeof data === 'object') {
+        console.log("這是一個物件，物件的 Key 有:", Object.keys(data));
+      }
+      console.log("=================================");
+
+      // 如果後端回傳的不是直接的陣列，而是 { success: true, users: [...] }
+      if (data && data.users && Array.isArray(data.users)) {
+        console.log("偵測到資料藏在 data.users 裡面！");
+        setUsers(data.users);
+      } else if (Array.isArray(data)) {
+        setUsers(data);
+      } else {
+        console.error("⚠️ 後端回傳的資料格式既不是陣列，也沒有包含 users 屬性！");
+      }
+
     } catch (err) {
       console.error("讀取資料失敗:", err);
     } finally {
