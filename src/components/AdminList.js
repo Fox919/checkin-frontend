@@ -77,6 +77,10 @@ const AdminList = () => {
     try {
       const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
       const data = await res.json();
+      
+      // 🌟 核心除錯：在瀏覽器控制台印出第一筆資料，看看欄位名稱到底是什麼！
+      console.log("後端回傳的第一筆原始資料樣貌：", data[0]);
+      
       setUsers(data);
     } catch (err) {
       console.error("讀取資料失敗:", err);
