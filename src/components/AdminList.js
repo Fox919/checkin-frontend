@@ -241,8 +241,8 @@ const AdminList = () => {
       user.name?.toLowerCase().includes(searchStr) || 
       adjustedName.toLowerCase().includes(searchStr) ||
       user.phone?.includes(searchTerm) ||
-      user.email?.toLowerCase().includes(searchStr) || // 加強：支援搜尋 Email
-      (user.receptionist_name || user.requisitionist || '').toLowerCase().includes(searchStr);
+      user.email?.toLowerCase().includes(searchStr) ||
+      (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
     
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
 
@@ -288,7 +288,7 @@ const AdminList = () => {
         return;
       }
 
-      const headers = ["姓名", "性別", "電話", "Email", "身份", "狀態", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
+      const headers = ["姓名", "性別", "電話", "Email", "身份", "狀態", "語言", "來源", "介紹人", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
         const formattedCSVName = formatStudentName(u.name);
@@ -333,8 +333,8 @@ const AdminList = () => {
     }
   };
 
-  const tableHeaderStyle = { padding: '12px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem' };
-  const tableCellStyle = { padding: '10px', border: '1px solid #ddd', fontSize: '0.85rem' };
+  const tableHeaderStyle = { padding: '10px 8px', border: '1px solid #ddd', backgroundColor: '#f8f9fa', textAlign: 'left', fontSize: '0.85rem', whiteSpace: 'nowrap' };
+  const tableCellStyle = { padding: '8px', border: '1px solid #ddd', fontSize: '0.85rem', whiteSpace: 'nowrap' };
 
   if (!authorized) {
     return (
@@ -358,7 +358,7 @@ const AdminList = () => {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1600px', margin: 'auto' }}>
+    <div style={{ padding: '20px', maxWidth: '100%', margin: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
         <h2>📋 名單管理控制台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -460,16 +460,17 @@ const AdminList = () => {
       </div>
 
       {loading ? <div style={{ textAlign: 'center', padding: '50px' }}>讀取中...</div> : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+        /* 🌟 核心修正：在外層加入大容器，並強制設定過寬時自動允許水平滾動 (overflowX: 'auto') */
+        <div style={{ width: '100%', overflowX: 'auto', background: '#fff', borderRadius: '6px', border: '1px solid #ddd' }}>
+          <table style={{ width: '100%', minWidth: '1300px', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
             <thead>
               <tr>
                 <th style={tableHeaderStyle}>姓名</th>
-                <th style={tableHeaderStyle}>性別</th> {/* 🌟 新增 */}
+                <th style={tableHeaderStyle}>性別</th>
                 <th style={tableHeaderStyle}>電話</th>
-                <th style={tableHeaderStyle}>Email</th> {/* 🌟 新增 */}
+                <th style={tableHeaderStyle}>Email</th>
                 <th style={tableHeaderStyle}>身份</th>
-                <th style={tableHeaderStyle}>狀態</th> {/* 🌟 新增 */}
+                <th style={tableHeaderStyle}>狀態</th>
                 <th style={tableHeaderStyle}>語言</th>
                 <th style={tableHeaderStyle}>來源</th>
                 <th style={tableHeaderStyle}>介紹人</th>
@@ -487,20 +488,18 @@ const AdminList = () => {
 
                 return (
                   <tr key={user.id}>
-                    <td style={{ ...tableCellStyle, minWidth: '80px' }}>
-                      <strong>{finalDisplayName}</strong>
+                    <td style={{ ...tableCellStyle, fontWeight: 'bold' }}>
+                      {finalDisplayName}
                       {user.is_blessed === 1 && ' ✨'}
                     </td>
                     
-                    {/* 🌟 性別顯示 */}
-                    <td style={{ ...tableCellStyle, minWidth: '50px' }}>
+                    <td style={tableCellStyle}>
                       {user.gender === 'Male' ? '男' : user.gender === 'Female' ? '女' : user.gender === 'Other' ? '其他' : '-'}
                     </td>
 
                     <td style={tableCellStyle}>{user.phone || '-'}</td>
                     
-                    {/* 🌟 Email 顯示 */}
-                    <td style={{ ...tableCellStyle, color: '#555', wordBreak: 'break-all', minWidth: '120px' }}>
+                    <td style={{ ...tableCellStyle, color: '#555' }}>
                       {user.email || '-'}
                     </td>
                     
@@ -532,7 +531,6 @@ const AdminList = () => {
                       </select>
                     </td>
 
-                    {/* 🌟 狀態標籤顯示 */}
                     <td style={tableCellStyle}>
                       <span style={{
                         padding: '3px 8px',
@@ -557,7 +555,9 @@ const AdminList = () => {
                     <td style={tableCellStyle}>
                       {(!user.referrer_name || user.referrer_name === 'null') ? '-' : user.referrer_name}
                     </td>
+                    
                     <td style={tableCellStyle}>{formatTime(user.created_at)}</td>
+                    
                     <td style={{ ...tableCellStyle, color: '#27ae60', fontWeight: 'bold' }}>
                       {(() => {
                         const val = user.last_checkin_time;
@@ -567,6 +567,7 @@ const AdminList = () => {
                         return formatTime(val);
                       })()}
                     </td>
+                    
                     <td style={tableCellStyle}>
                       <input 
                         value={String(user.receptionist_name || user.receptionist || '').replace(/undefined|null/gi, '')} 
@@ -575,9 +576,10 @@ const AdminList = () => {
                           setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receptionist_name: val } : u));
                         }}
                         onBlur={(e) => handleReceptionistChange(user.id, e.target.value)}
-                        style={{ width: '70px' }} 
+                        style={{ width: '80px', padding: '4px' }} 
                       />
                     </td>
+                    
                     <td style={tableCellStyle}>
                       <textarea 
                         value={String(user.notes || user.note || '').replace(/undefined|null/gi, '')} 
@@ -586,11 +588,12 @@ const AdminList = () => {
                           setUsers(prev => prev.map(u => u.id === user.id ? { ...u, notes: val } : u));
                         }}
                         onBlur={(e) => handleNoteChange(user.id, e.target.value)}
-                        style={{ width: '120px', height: '35px' }} 
+                        style={{ width: '150px', height: '30px', padding: '4px', verticalAlign: 'middle' }} 
                       />
                     </td>
+                    
                     <td style={tableCellStyle}>
-                      <button onClick={() => setSelectedQrId(user.id)}>QR</button>
+                      <button onClick={() => setSelectedQrId(user.id)} style={{ padding: '2px 8px', cursor: 'pointer' }}>QR</button>
                     </td>
                   </tr>
                 );
