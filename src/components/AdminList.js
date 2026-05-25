@@ -84,10 +84,13 @@ const AdminList = () => {
       console.log("是否為陣列 (IsArray):", Array.isArray(data));
       console.log("實際回傳的內容 (Raw Data):", data);
       if (Array.isArray(data) && data.length > 0) {
-        console.log("第一筆資料的所有欄位 Key:", Object.keys(data[0]));
-      } else if (data && typeof data === 'object') {
-        console.log("這是一個物件，物件的 Key 有:", Object.keys(data));
-      }
+  console.log("第一筆資料的所有欄位 Key:", Object.keys(data[0]));
+  // 🌟 新增下面這行，直接把整筆資料的內容物件印出來
+  console.log("👉 這是第一筆資料的真實內容物件：", data[0]); 
+} else if (data && typeof data === 'object') {
+  console.log("這是一個物件，物件的 Key 有:", Object.keys(data));
+  console.log("👉 這是該物件的真實內容：", data);
+}
       console.log("=================================");
 
       // 如果後端回傳的不是直接的陣列，而是 { success: true, users: [...] }
