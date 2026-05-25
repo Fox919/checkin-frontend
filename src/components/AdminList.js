@@ -86,7 +86,7 @@ const AdminList = () => {
       if (Array.isArray(data) && data.length > 0) {
   console.log("第一筆資料的所有欄位 Key:", Object.keys(data[0]));
   // 🌟 新增下面這行，直接把整筆資料的內容物件印出來
-  console.log("👉 這是第一筆資料的真實內容物件：", data[0]); 
+  console.log("👉 這是第一筆資料的真實內容物件：", JSON.stringify(data[0], null, 2)); 
 } else if (data && typeof data === 'object') {
   console.log("這是一個物件，物件的 Key 有:", Object.keys(data));
   console.log("👉 這是該物件的真實內容：", data);
