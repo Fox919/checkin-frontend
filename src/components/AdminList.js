@@ -111,7 +111,7 @@ const AdminList = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          new_type: newType,        
+          new_type: newType,         
           offeringId: selectedOfferingId 
         })
       });
@@ -241,7 +241,8 @@ const AdminList = () => {
       user.name?.toLowerCase().includes(searchStr) || 
       adjustedName.toLowerCase().includes(searchStr) ||
       user.phone?.includes(searchTerm) ||
-      (user.receptionist_name || user.receptionist || '').toLowerCase().includes(searchStr);
+      user.email?.toLowerCase().includes(searchStr) || // 加強：支援搜尋 Email
+      (user.receptionist_name || user.requisitionist || '').toLowerCase().includes(searchStr);
     
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
 
@@ -287,16 +288,19 @@ const AdminList = () => {
         return;
       }
 
-      const headers = ["姓名", "電話", "Email", "身份", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
+      const headers = ["姓名", "性別", "電話", "Email", "身份", "狀態", "語言", "介紹人", "來源", "已加持", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
-        // 🌟 匯出時也同步套用「名在前、姓在後」的規格
         const formattedCSVName = formatStudentName(u.name);
+        const genderLabel = u.gender === 'Male' ? '男' : u.gender === 'Female' ? '女' : u.gender === 'Other' ? '其他' : '';
+        const statusLabel = u.status === 'active' ? '啟用' : u.status === 'checked-in' ? '已簽到' : u.status || '';
         return [
           `"${formattedCSVName.replace(/"/g, '""')}"`, 
+          `"${genderLabel}"`, 
           `"${u.phone || ''}"`, 
           `"${u.email || ''}"`, 
           `"${u.user_type || ''}"`,
+          `"${statusLabel}"`,
           `"${u.lang || ''}"`,
           `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
           `"${getDisplaySourceText(u.discovery_source)}"`, 
@@ -461,8 +465,11 @@ const AdminList = () => {
             <thead>
               <tr>
                 <th style={tableHeaderStyle}>姓名</th>
+                <th style={tableHeaderStyle}>性別</th> {/* 🌟 新增 */}
                 <th style={tableHeaderStyle}>電話</th>
+                <th style={tableHeaderStyle}>Email</th> {/* 🌟 新增 */}
                 <th style={tableHeaderStyle}>身份</th>
+                <th style={tableHeaderStyle}>狀態</th> {/* 🌟 新增 */}
                 <th style={tableHeaderStyle}>語言</th>
                 <th style={tableHeaderStyle}>來源</th>
                 <th style={tableHeaderStyle}>介紹人</th>
@@ -476,7 +483,6 @@ const AdminList = () => {
             <tbody>
               {filteredList.map(user => {
                 const displaySource = getDisplaySourceText(user.discovery_source);
-                // 🌟 優雅呈現調整後的「名在前、姓在後」名字
                 const finalDisplayName = formatStudentName(user.name);
 
                 return (
@@ -485,7 +491,18 @@ const AdminList = () => {
                       <strong>{finalDisplayName}</strong>
                       {user.is_blessed === 1 && ' ✨'}
                     </td>
+                    
+                    {/* 🌟 性別顯示 */}
+                    <td style={{ ...tableCellStyle, minWidth: '50px' }}>
+                      {user.gender === 'Male' ? '男' : user.gender === 'Female' ? '女' : user.gender === 'Other' ? '其他' : '-'}
+                    </td>
+
                     <td style={tableCellStyle}>{user.phone || '-'}</td>
+                    
+                    {/* 🌟 Email 顯示 */}
+                    <td style={{ ...tableCellStyle, color: '#555', wordBreak: 'break-all', minWidth: '120px' }}>
+                      {user.email || '-'}
+                    </td>
                     
                     <td style={tableCellStyle}>
                       <select
@@ -513,6 +530,20 @@ const AdminList = () => {
                         <option value="Hall-Newcomer">🏠 禪堂新人 (Hall-Newcomer)</option>
                         <option value="Expo-Newcomer">🎪 展會新人 (Expo-Newcomer)</option>
                       </select>
+                    </td>
+
+                    {/* 🌟 狀態標籤顯示 */}
+                    <td style={tableCellStyle}>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        backgroundColor: user.status === 'checked-in' ? '#2ecc71' : '#3498db'
+                      }}>
+                        {user.status === 'checked-in' ? '已簽到' : '啟用'}
+                      </span>
                     </td>
 
                     <td style={tableCellStyle}>
