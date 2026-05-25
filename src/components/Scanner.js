@@ -3,12 +3,24 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 const Scanner = () => {
   const [status, setStatus] = useState('準備掃描...');
+  const [offerings, setOfferings] = useState([]); // 🌟 儲存班級清單
+  const [selectedOffering, setSelectedOffering] = useState('1'); // 🌟 預設選中 ID 1
   
   const isProcessing = useRef(false);
   const html5QrcodeRef = useRef(null); 
   const audio = useMemo(() => new Audio('/beep.mp3'), []);
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
+
+  // 🌟 獲取最新班級列表，讓點名畫面可以選「基礎健身班」
+  useEffect(() => {
+    fetch(`${API_BASE}/api/offerings`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setOfferings(data);
+      })
+      .catch(err => console.error("載入班級失敗:", err));
+  }, []);
 
   useEffect(() => {
     const html5Qrcode = new Html5Qrcode("reader");
@@ -31,22 +43,30 @@ const Scanner = () => {
       try {
         let payload = {};
         
-        // 解析二維碼格式
         if (decodedText.startsWith('{') && decodedText.endsWith('}')) {
           const parsed = JSON.parse(decodedText);
+          const cleanUserId = String(parsed.userId).replace(/\D/g, "");
+          
           payload = {
-            userId: parsed.userId,
-            offeringId: parsed.offeringId || 1 // 若無帶入課程 ID，預設為 1
+            userId: cleanUserId ? parseInt(cleanUserId, 10) : null,
+            // 優先使用二維碼內帶的班級，若無則使用下拉選單當前選中的班級
+            offeringId: parsed.offeringId || parseInt(selectedOffering, 10) 
           };
         } else {
-          // 相容舊格式或純 ID 字串
+          const cleanUserId = decodedText.replace(/\D/g, "");
+          
           payload = {
-            userId: decodedText,
-            offeringId: 1 // 預設課程 ID 為 1
+            userId: cleanUserId ? parseInt(cleanUserId, 10) : null,
+            offeringId: parseInt(selectedOffering, 10) // 🌟 改為動態讀取下拉選單的值！
           };
         }
 
-        // 🚀 關鍵修正：對齊後端現有的自動簽到路由 /api/course-checkin
+        if (!payload.userId) {
+          setStatus('❌ 簽到失敗：無法從二維碼中辨識學員數字 ID');
+          setTimeout(() => { isProcessing.current = false; }, 3000);
+          return;
+        }
+
         const response = await fetch(`${API_BASE}/api/course-checkin`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -56,14 +76,12 @@ const Scanner = () => {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // 後端成功會回傳如：`✅ [第一節簽到] 成功！`
           setStatus(data.message || '✅ 簽到成功！');
           setTimeout(() => {
             isProcessing.current = false;
             setStatus('準備掃描下一個...');
           }, 3000);
         } else {
-          // 顯示後端拒絕的原因（例如：目前非本課程規定的打卡時間！）
           setStatus(data.message || `❌ 簽到失敗`);
           setTimeout(() => { isProcessing.current = false; }, 3000);
         }
@@ -74,6 +92,7 @@ const Scanner = () => {
       }
     }
 
+    // 🌟 注意：將 selectedOffering 加入依賴陣列，確保鏡頭回呼能拿到最新的選中班級
     html5Qrcode.start(
       { facingMode: "environment" }, 
       config,
@@ -91,7 +110,7 @@ const Scanner = () => {
           .catch(err => console.error("停止相機失敗", err));
       }
     };
-  }, [audio]); 
+  }, [audio, selectedOffering]); // 🌟 監聽選擇的班級變更
 
   const getStatusStyle = () => {
     if (status.includes('✅')) return { backgroundColor: '#d4edda', color: '#155724', borderColor: '#c3e6cb' };
@@ -102,6 +121,20 @@ const Scanner = () => {
   return (
     <div style={{ maxWidth: '500px', margin: 'auto', textAlign: 'center', padding: '20px' }}>
       <h2>🔍 簽到自動掃描器</h2>
+
+      {/* 🌟 新增：班級切換下拉選單UI */}
+      <div style={{ marginBottom: '15px' }}>
+        <label style={{ fontWeight: 'bold', marginRight: '10px' }}>當前點名班級：</label>
+        <select 
+          value={selectedOffering} 
+          onChange={(e) => setSelectedOffering(e.target.value)}
+          style={{ padding: '8px', borderRadius: '5px', fontSize: '1rem', width: '60%' }}
+        >
+          {offerings.map(o => (
+            <option key={o.id} value={o.id}>{o.title}</option>
+          ))}
+        </select>
+      </div>
       
       {/* 狀態提示框 */}
       <div style={{ 
