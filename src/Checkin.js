@@ -26,22 +26,47 @@ function Checkin() {
       .catch(err => console.error("載入點名課程失敗:", err));
   }, []);
 
-  // 核心簽到執行邏輯 (管理員端發送)
-  const executeCheckin = async (userId) => {
+  // 核心簽到執行邏輯 (智慧多格式適配版)
+  const executeCheckin = async (qrRawText) => {
     if (isProcessing) return;
-    if (!selectedOfferingId) {
-      setMessage('❌ 錯誤：請管理員先選擇當前點名的班別！');
-      return;
-    }
+    
+    // 安全防呆：修剪前後空白
+    const rawData = String(qrRawText).trim();
+    if (!rawData) return;
 
     try {
       setIsProcessing(true);
-      setMessage(`⌛ 正在驗證學員 [ID: ${userId}]...`);
+      setMessage(`⌛ 正在智慧解析二維碼並驗證中...`);
 
-      // 🔗 帶上管理員選定的課程 ID 送往後端
-      const response = await fetch(`${API_BASE}/checkin/${userId}?offeringId=${selectedOfferingId}`, {
+      // 🌟 核心修正一：在前端就先智慧判定並解析 JSON 格式
+      let payload = {};
+      
+      if (rawData.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(rawData);
+          payload = {
+            userId: parsed.userId || parsed.user_id,
+            offeringId: parsed.offeringId || parsed.offering_id || selectedOfferingId
+          };
+        } catch (e) {
+          // 如果明明是 { 開頭卻解析 JSON 失敗，當作純文字降級處理
+          payload = { userId: rawData, offeringId: selectedOfferingId };
+        }
+      } else {
+        // 代表是舊版文字二維碼 (例如 "QR_39" 或 "39")
+        payload = {
+          userId: rawData,
+          offeringId: selectedOfferingId
+        };
+      }
+
+      // 🌟 核心修正二：必須改打 /api/course-checkin 新路由，並且用 Body 把 JSON 發過去
+      const response = await fetch(`${API_BASE}/api/course-checkin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(payload) // 正確封裝發送
       });
       
       const text = await response.text();
@@ -51,28 +76,29 @@ function Checkin() {
         data = JSON.parse(text);
       } catch (e) {
         setMessage(`❌ 伺服器錯誤：回傳格式異常`);
-        // 1.5秒後解除鎖定，讓管理員可以繼續掃下一個，不卡關
         setTimeout(() => setIsProcessing(false), 1500);
         return;
       }
 
-      if (data.success === true) {
-        // ✨ 點名成功：清楚顯示學員姓名，方便管理員口頭確認（例：王小明，好，請進！）
-        setMessage(`✅ 點名成功：${data.name || "已完成"}`);
+      if (response.ok && data.success === true) {
+        // ✨ 點名成功
+        setMessage(data.message || `✅ 點名成功！`);
         
-        // ⏱️ 縮短等待時間至 1.5 秒，提升管理員連續點名效率
+        // ⏱️ 1.5 秒後解除鎖定，準備掃下一個學員
         setTimeout(() => {
           setMessage('請對準學員的二維碼進行掃描點名');
-          setIsProcessing(false); // 解除鎖定，準備掃下一個學員
+          setIsProcessing(false); 
         }, 1500);
       } else {
+        // ❌ 點名失敗 (重複簽到、非本班學員、時間不對等)
         const errorDetail = data.message || data.error || "簽到失敗";
-        setMessage(`❌ 失敗：${errorDetail}`);
-        // 失敗時停頓 2 秒，讓管理員看清錯誤原因（例如：重複打卡、非該班學員）
+        setMessage(errorDetail); // 直接顯示後端用心寫的中文提示！
+        
+        // 失敗時停頓 2.5 秒，讓管理員看清楚原因
         setTimeout(() => {
           setMessage('請對準學員的二維碼進行掃描點名');
           setIsProcessing(false);
-        }, 2000);
+        }, 2500);
       }
     } catch (err) {
       console.error("連線發生異常:", err);
@@ -84,9 +110,9 @@ function Checkin() {
   // 處理鏡頭掃描事件
   const handleScan = (detectedCodes) => {
     if (detectedCodes && detectedCodes.length > 0 && !isProcessing) {
-      const userId = detectedCodes[0].rawValue || detectedCodes[0].value;
-      if (userId) {
-        executeCheckin(userId);
+      const qrRawContent = detectedCodes[0].rawValue || detectedCodes[0].value;
+      if (qrRawContent) {
+        executeCheckin(qrRawContent);
       }
     }
   };
