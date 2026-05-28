@@ -8,6 +8,9 @@ const AttendanceAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [courseLoading, setCourseLoading] = useState(true);
 
+  // --- 🌟 漏掉的關鍵狀態：手動更新鎖 🌟 ---
+  const [isUpdating, setIsUpdating] = useState(false); 
+
   // --- 動態班級特徵狀態 ---
   const [totalDays, setTotalDays] = useState(8); 
   const [slots, setSlots] = useState([
@@ -80,23 +83,21 @@ const AttendanceAdmin = () => {
       }
     };
 
-    // A. 聽取來自掃描器端的全域自訂事件廣播 (保留原架構，同電腦多組件時連動最快)
     window.addEventListener('student-checked-in', handleGlobalRefresh);
     
-    // B. ✨ 新增核心點名連動：每 3 秒自動在背景重新抓一次資料庫狀態 (解決手機掃、電腦看的問題)
+    // ✨ 設定定時器，但如果管理員正在手動修改，就先不要背景刷新
     const attendanceInterval = setInterval(() => {
-      if (currentOfferingId) {
+      if (currentOfferingId && !isUpdating) { // 🌟 有了 isUpdating，這裡就不會再報錯了
         console.log("🔄 考勤看板正自動與伺服器同步中...");
-        fetchAttendanceData(currentOfferingId, true); // 傳入 true 讓畫面不會閃爍
+        fetchAttendanceData(currentOfferingId, true); 
       }
     }, 3000);
 
-    // C. 組件卸載或切換班級時，移除監聽與計時器防記憶體殘留
     return () => {
       window.removeEventListener('student-checked-in', handleGlobalRefresh);
       clearInterval(attendanceInterval);
     };
-  }, [currentOfferingId]);
+  }, [currentOfferingId, isUpdating]); // 🌟 依賴陣列正確追蹤鎖狀態
 
   // --- 智慧解析當前課程配置 ---
   useEffect(() => {
@@ -127,6 +128,9 @@ const AttendanceAdmin = () => {
 
   // --- 管理員手動切換打卡狀態 ---
   const handleToggleAttendance = async (userId, dayNumber, slotType, currentStatus) => {
+    if (isUpdating) return; // 🌟 點擊時如果上個請求還在跑，先攔截防止連打
+    
+    setIsUpdating(true); // 🔒 上鎖！這時候背景 3 秒輪詢會暫時歇手，不來干擾你修改
     try {
       const res = await fetch(`${API_BASE}/admin/toggle-attendance`, {
         method: 'POST',
@@ -141,10 +145,15 @@ const AttendanceAdmin = () => {
       });
 
       if (res.ok) {
-        fetchAttendanceData(currentOfferingId); 
+        // 確保拿到最新修改後的資料
+        await fetchAttendanceData(currentOfferingId, true); 
+      } else {
+        alert("同步失敗，伺服器無回應");
       }
     } catch (err) {
       alert("同步考勤失敗，請檢查網路");
+    } finally {
+      setIsUpdating(false); // 🔓 解鎖，安全恢復 3 秒自動輪詢
     }
   };
 
