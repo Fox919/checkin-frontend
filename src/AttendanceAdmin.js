@@ -22,7 +22,7 @@ const AttendanceAdmin = () => {
   // --- 學員證模組狀態 ---
   const [selectedStudent, setSelectedStudent] = useState(null); // 當前選中要單張列印的學員
   const [showBadgeModal, setShowBadgeModal] = useState(false);  // 控制單張預覽彈窗
-  const [showBatchModal, setShowBatchModal] = useState(false);  // 🌟 新增：控制「批量六宮格列印」彈窗
+  const [showBatchModal, setShowBatchModal] = useState(false);  // 控制「批量六宮格列印」彈窗
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
@@ -219,70 +219,75 @@ const AttendanceAdmin = () => {
   return (
     <div style={{ padding: '15px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
       
-      {/* 🌟 核心：注入列印專用的 CSS 強大排版控制 🌟 */}
+      {/* 🌟 修正版：列印專用 CSS 控制（徹底解決預覽空白問題） 🌟 */}
       <style>{`
-        /* 網頁上看到的排版微調 */
-        .badge-grid-container {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          grid-gap: 15px;
-          max-width: 760px;
-          margin: 0 auto;
-        }
-
-        /* 🖨️ 當按下瀏覽器列印時的終極變身 */
+        /* 🖨️ 當按下瀏覽器列印時的精準樣式覆蓋 */
         @media print {
-          /* 隱藏網頁上所有不相干的背景、按鈕、導航欄 */
-          body * { 
-            visibility: hidden; 
-            background: none !important;
-            box-shadow: none !important;
+          /* 1. 先把網頁最外層的主體版面全數隱藏 */
+          body > div:not(.print-root-ignore) {
+            display: none !important;
           }
           
-          /* 只允許特定的列印區域顯示 */
-          #printable-badge-area, 
-          #printable-badge-area *, 
-          .printable-batch-area, 
-          .printable-batch-area * { 
-            visibility: visible; 
+          /* 2. 確保彈窗背景變成完全透明，不遮擋內容 */
+          .print-modal-overlay {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: none !important;
+            display: block !important;
           }
 
-          /* 批量六宮格滿頁排版設定 */
+          /* 3. 去除彈窗原本在網頁上的白色小方塊框架和陰影，直接釋放內容 */
+          .print-modal-content {
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: none !important;
+            width: 100% !important;
+          }
+
+          /* 4. 批量六宮格滿頁排版設定 */
           .printable-batch-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100vw;
+            display: block !important;
           }
 
-          /* 強制每 6 個人的這一頁完結時，自動換到下一張 A4 紙 */
+          /* 強制每 6 個人的 A4 完結時自動換頁 */
           .print-page-break {
             page-break-after: always !important;
             break-after: page !important;
             display: grid !important;
-            grid-template-columns: repeat(2, 1fr) !important; /* 兩欄 */
-            grid-template-rows: repeat(3, 1fr) !important;    /* 三列 */
-            grid-gap: 0 !important;
-            width: 210mm !important;                          /* 標準 A4 寬度 */
-            height: 297mm !important;                         /* 標準 A4 高度 */
+            grid-template-columns: repeat(2, 1fr) !important; 
+            grid-template-rows: repeat(3, 1fr) !important;    
+            grid-gap: 5mm !important;
+            width: 210mm !important;                          
+            height: 297mm !important;                         
             box-sizing: border-box !important;
-            padding: 10mm !important;                         /* A4 安全外邊距 */
+            padding: 10mm 5mm !important;                         
+            background: #fff !important;
           }
 
           /* 裁切線與區塊精準尺寸 */
           .print-card-box {
             width: 95mm !important;
             height: 90mm !important;
-            border: 1px dashed #bbb !important;               /* 淡淡的虛線，手動裁切用 */
+            border: 1px dashed #94a3b8 !important;               
             box-sizing: border-box !important;
             padding: 15px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
             align-items: center !important;
+            background: #fff !important;
+            -webkit-print-color-adjust: exact !important; /* 強制 Chrome 打印虛線 */
+            print-color-adjust: exact !important;
           }
 
-          .no-print { display: none !important; }
+          /* 隱藏彈窗內的按鈕、標題等不該印出的文字 */
+          .no-print { 
+            display: none !important; 
+          }
         }
       `}</style>
 
@@ -328,7 +333,6 @@ const AttendanceAdmin = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 style={{ margin: 0 }}>📊 課程考勤動態看板</h3>
         
-        {/* 🌟 新增：批量列印 6 宮格按鈕 🌟 */}
         {enrollments.length > 0 && (
           <button
             onClick={() => setShowBatchModal(true)}
@@ -449,9 +453,9 @@ const AttendanceAdmin = () => {
 
       {/* --- 彈窗 A：單張學員證預覽與列印 --- */}
       {showBadgeModal && selectedStudent && (
-        <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', textAlign: 'center', width: '360px' }}>
-            <h4 style={{ margin: '0 0 15px 0', color: '#333' }}>🪪 學員證預覽 (單張)</h4>
+        <div className="print-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="print-modal-content" style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', textAlign: 'center', width: '360px' }}>
+            <h4 className="no-print" style={{ margin: '0 0 15px 0', color: '#333' }}>🪪 學員證預覽 (單張)</h4>
             
             <div id="printable-badge-area" style={{ 
               width: '280px', 
@@ -465,8 +469,7 @@ const AttendanceAdmin = () => {
               flexDirection: 'column',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: '#fff',
-              background: 'linear-gradient(to bottom, #f8fbfd 0%, #ffffff 100%)'
+              backgroundColor: '#fff'
             }}>
               <div style={{ textAlign: 'center', width: '100%' }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#e67e22', letterSpacing: '1px' }}>{currentCourseTitle}</div>
@@ -497,7 +500,7 @@ const AttendanceAdmin = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }} className="no-print">
               <button onClick={handlePrint} style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>🖨️ 立即列印</button>
               <button onClick={() => { setShowBadgeModal(false); setSelectedStudent(null); }} style={{ backgroundColor: '#95a5a6', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>關閉</button>
             </div>
@@ -505,12 +508,12 @@ const AttendanceAdmin = () => {
         </div>
       )}
 
-      {/* --- 🌟 彈窗 B：新增 2x3 六宮格批量列印預覽系統 🌟 --- */}
+      {/* --- 彈窗 B：2x3 六宮格批量列印預覽系統 --- */}
       {showBatchModal && (
-        <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#f1f5f9', padding: '25px', borderRadius: '12px', width: '85vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+        <div className="print-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="print-modal-content" style={{ backgroundColor: '#f1f5f9', padding: '25px', borderRadius: '12px', width: '85vw', maxHeight: '90vh', overflowY: 'auto' }}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #cbd5e1', paddingBottom: '10px' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #cbd5e1', paddingBottom: '10px' }}>
               <h3 style={{ margin: 0, color: '#1e293b' }}>🖨️ 全班學員證批量列印預覽 (每頁 6 張 A4 版面)</h3>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={handlePrint} style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '10px 25px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -522,8 +525,8 @@ const AttendanceAdmin = () => {
               </div>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '20px' }}>
-              💡 排版提示：下方為模擬 A4 效果。虛線為**裁切輔助線**，手動裁切時看著虛線割開即可。列印時請在瀏覽器設定中勾選 <strong>「列印背景圖片/顏色」</strong> 以取得最佳質感。
+            <p className="no-print" style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '20px' }}>
+              💡 排版提示：下方為模擬 A4 效果。虛線為<strong>裁切輔助線</strong>。列印時請務必勾選 <strong>「列印背景圖片/顏色」</strong>。
             </p>
 
             {/* 批量列印網格容器 */}
@@ -532,7 +535,6 @@ const AttendanceAdmin = () => {
                 <div key={pageIdx} className="print-page-break" style={{ 
                   backgroundColor: '#fff', 
                   border: '1px solid #94a3b8', 
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                   marginBottom: '30px',
                   padding: '20px',
                   display: 'grid',
@@ -554,8 +556,7 @@ const AttendanceAdmin = () => {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         minHeight: '260px',
-                        backgroundColor: '#fafxfb',
-                        background: 'linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%)'
+                        backgroundColor: '#fff'
                       }}>
                         {/* 頂部班級名稱 */}
                         <div style={{ textAlign: 'center', width: '100%' }}>
@@ -592,7 +593,7 @@ const AttendanceAdmin = () => {
                     );
                   })}
                   
-                  {/* 如果最後一頁不滿 6 個人，用空白格子補齊，防止排版走樣 */}
+                  {/* 空白格子補齊 */}
                   {pageStudents.length < 6 && Array.from({ length: 6 - pageStudents.length }).map((_, emptyIdx) => (
                     <div key={`empty-${emptyIdx}`} className="print-card-box" style={{ border: '1px dashed #e2e8f0', visibility: 'hidden' }}></div>
                   ))}
