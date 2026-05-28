@@ -39,6 +39,22 @@ const AttendanceAdmin = () => {
     return trimmed;
   };
 
+  // --- 核心：讀取選定班級的考勤流水帳 (獨立抽出來以便隨時呼叫) ---
+  const fetchAttendanceData = async (offeringId) => {
+    if (!offeringId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/course-attendance/${offeringId}`);
+      const data = await res.json();
+      setEnrollments(data);
+    } catch (err) {
+      console.error("讀取考勤失敗:", err);
+      setEnrollments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- 初始化：撈取所有開班期次 ---
   useEffect(() => {
     fetch(`${API_BASE}/api/offerings`)
@@ -53,6 +69,24 @@ const AttendanceAdmin = () => {
       .catch(err => console.error("撈取下拉選單班級失敗:", err))
       .finally(() => setCourseLoading(false));
   }, []);
+
+  // --- 🌟 跨網頁/組件點名全域事件監聽：當掃描器那邊點名成功，這裡免刷新自動連動更新 ---
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      console.log("📢 偵測到全域學生簽到成功事件！看板即時同步資料中...");
+      if (currentOfferingId) {
+        fetchAttendanceData(currentOfferingId);
+      }
+    };
+
+    // 聽取來自掃描器端的全域自訂事件廣播
+    window.addEventListener('student-checked-in', handleGlobalRefresh);
+    
+    // 組件卸載時，移除監聽防記憶體殘留
+    return () => {
+      window.removeEventListener('student-checked-in', handleGlobalRefresh);
+    };
+  }, [currentOfferingId]);
 
   // --- 智慧解析當前課程配置 ---
   useEffect(() => {
@@ -80,21 +114,6 @@ const AttendanceAdmin = () => {
 
     fetchAttendanceData(currentOfferingId);
   }, [currentOfferingId, offerings]);
-
-  // --- 核心：讀取選定班級的考勤流水帳 ---
-  const fetchAttendanceData = async (offeringId) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/admin/course-attendance/${offeringId}`);
-      const data = await res.json();
-      setEnrollments(data);
-    } catch (err) {
-      console.error("讀取考勤失敗:", err);
-      setEnrollments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // --- 管理員手動切換打卡狀態 ---
   const handleToggleAttendance = async (userId, dayNumber, slotType, currentStatus) => {
@@ -240,7 +259,6 @@ const AttendanceAdmin = () => {
               <tr>
                 <th style={{ ...tableHeaderStyle, width: '160px', textAlign: 'left' }}>學員姓名 / 證件</th>
                 <th style={{ ...tableHeaderStyle, width: '90px' }}>目前出勤率</th>
-                {/* 動態生成對應天數的表頭 */}
                 {Array.from({ length: totalDays }).map((_, i) => (
                   <th key={i} style={{ ...tableHeaderStyle, minWidth: '100px' }}>Day {i + 1}</th>
                 ))}
@@ -255,7 +273,6 @@ const AttendanceAdmin = () => {
 
                 return (
                   <tr key={student.user_id} style={{ backgroundColor: student.certificate_no ? '#f1fcf6' : '#fff' }}>
-                    {/* 姓名與學員證列印快捷鍵 */}
                     <td style={{ ...tableCellStyle, textAlign: 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontWeight: 'bold' }}>{finalDisplayName}</span>
@@ -269,7 +286,6 @@ const AttendanceAdmin = () => {
                       </div>
                     </td>
                     
-                    {/* 出勤率 */}
                     <td style={{ ...tableCellStyle, fontWeight: 'bold', color: isEligible ? '#28a745' : '#dc3545' }}>
                       {rate}%
                     </td>
@@ -282,6 +298,7 @@ const AttendanceAdmin = () => {
                         <td key={dayIdx} style={{ ...tableCellStyle, backgroundColor: '#fdfdfd' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
                             {slots.map(slot => {
+                              // 檢查此格是否已被點名
                               const hasAttended = student.records?.some(
                                 r => r.day_number === dayNum && r.slot_type === slot.id
                               );
@@ -289,7 +306,8 @@ const AttendanceAdmin = () => {
                               return (
                                 <button
                                   key={slot.id}
-                                  title={`第 ${dayNum} 天 - ${slot.label}`}
+                                  // 🌟 優化：將 title 改得更詳細，方便你滑鼠放上去核對 Day 和 Slot 設定！
+                                  title={`學員: ${finalDisplayName} | Day: ${dayNum} | 節次: ${slot.id} (${slot.label})`}
                                   onClick={() => handleToggleAttendance(student.user_id, dayNum, slot.id, hasAttended)}
                                   style={{
                                     width: '95%',
@@ -313,7 +331,6 @@ const AttendanceAdmin = () => {
                       );
                     })}
 
-                    {/* 畢業證書 */}
                     <td style={tableCellStyle}>
                       {student.certificate_no ? (
                         <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '0.75rem' }}>
@@ -344,7 +361,6 @@ const AttendanceAdmin = () => {
           <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', textAlign: 'center', width: '360px' }}>
             <h4 style={{ margin: '0 0 15px 0', color: '#333' }}>🪪 學員證預覽</h4>
             
-            {/* 學員證樣式模板區塊 */}
             <div id="printable-badge-area" style={{ 
               width: '280px', 
               height: '420px', 
@@ -361,7 +377,6 @@ const AttendanceAdmin = () => {
               background: 'linear-gradient(to bottom, #f8fbfd 0%, #ffffff 100%)',
               boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
             }}>
-              {/* 模板頭部 */}
               <div style={{ textAlign: 'center', width: '100%' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#e67e22', letterSpacing: '2px', marginBottom: '4px' }}>OFFICIAL STUDENT ID</div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2c3e50', borderBottom: '2px solid #e67e22', paddingBottom: '8px' }}>
@@ -369,7 +384,6 @@ const AttendanceAdmin = () => {
                 </div>
               </div>
 
-              {/* 核心：動態帶入格式化姓名 */}
               <div style={{ textAlign: 'center', margin: '15px 0' }}>
                 <div style={{ fontSize: '0.8rem', color: '#7f8c8d', marginBottom: '2px' }}>學員姓名</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a252f' }}>
@@ -378,7 +392,6 @@ const AttendanceAdmin = () => {
                 <div style={{ fontSize: '0.75rem', color: '#95a5a6', marginTop: '4px' }}>ID: {selectedStudent.user_id}</div>
               </div>
 
-              {/* ⚡ 完美解決 React 19 編譯器崩潰：改用原生非同步高解析度圖像二維碼接口 */}
               <div style={{ padding: '8px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '126px', height: '126px', boxSizing: 'border-box' }}>
                 <img 
                   src={`https://quickchart.io/qr?text=${qrDataString}&size=110&margin=1&ecLevel=H`} 
@@ -387,13 +400,11 @@ const AttendanceAdmin = () => {
                 />
               </div>
 
-              {/* 模板尾部 */}
               <div style={{ fontSize: '0.65rem', color: '#bdc3c7', textAlign: 'center', width: '100%' }}>
                 憑本證件至各打卡處掃描登記
               </div>
             </div>
 
-            {/* 操作按鈕 */}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button 
                 onClick={handlePrintBadge}

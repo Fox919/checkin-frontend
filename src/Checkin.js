@@ -38,7 +38,7 @@ function Checkin() {
       setIsProcessing(true);
       setMessage(`⌛ 正在智慧解析二維碼並驗證中...`);
 
-      // 🌟 核心修正一：在前端就先智慧判定並解析 JSON 格式
+      // 🌟 在前端就先智慧判定並解析 JSON 格式
       let payload = {};
       
       if (rawData.startsWith('{')) {
@@ -60,7 +60,7 @@ function Checkin() {
         };
       }
 
-      // 🌟 核心修正二：必須改打 /api/course-checkin 新路由，並且用 Body 把 JSON 發過去
+      // 🌟 改打 /api/course-checkin 新路由，並且用 Body 把 JSON 發過去
       const response = await fetch(`${API_BASE}/api/course-checkin`, {
         method: 'POST',
         headers: { 
@@ -83,7 +83,10 @@ function Checkin() {
       if (response.ok && data.success === true) {
         // ✨ 點名成功
         setMessage(data.message || `✅ 點名成功！`);
-        
+
+        // 🌟 向全域發送打卡成功廣播，通知考勤看板即時刷新數據
+        window.dispatchEvent(new CustomEvent('student-checked-in'));
+
         // ⏱️ 1.5 秒後解除鎖定，準備掃下一個學員
         setTimeout(() => {
           setMessage('請對準學員的二維碼進行掃描點名');
@@ -92,7 +95,7 @@ function Checkin() {
       } else {
         // ❌ 點名失敗 (重複簽到、非本班學員、時間不對等)
         const errorDetail = data.message || data.error || "簽到失敗";
-        setMessage(errorDetail); // 直接顯示後端用心寫的中文提示！
+        setMessage(errorDetail); // 直接顯示後端精心編寫的中文提示！
         
         // 失敗時停頓 2.5 秒，讓管理員看清楚原因
         setTimeout(() => {
