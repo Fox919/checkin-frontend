@@ -272,11 +272,15 @@ const AdminList = () => {
     const matchesStatus = viewMode === 'all' || user.status === viewMode;
 
     let matchesDate = true;
-    const todayStr = new Date().toLocaleDateString('en-CA'); 
-    const rawDate = viewMode === 'checked-in' ? user.last_checkin_time : user.created_at;
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); 
+    const rawDate = viewMode === 'checked-in'
+      ? (user.last_checkin_date || user.last_checkin_time)
+      : user.created_at;
 
     if (rawDate) {
-      const targetIsoDate = new Date(rawDate).toLocaleDateString('en-CA');
+      const targetIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(String(rawDate))
+        ? String(rawDate)
+        : new Date(rawDate).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
       if (selectedDate) {
         matchesDate = targetIsoDate === selectedDate;
       } else if (viewMode === 'checked-in') {
