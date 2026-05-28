@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 // ✨ 完美補齊來源對照表，與前端登記頁面完全對齊
@@ -72,10 +72,11 @@ const AdminList = () => {
     });
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}`);
+      const statusDateParam = selectedDate ? `&date=${encodeURIComponent(selectedDate)}` : '';
+      const res = await fetch(`https://checkin-system-production-2a74.up.railway.app/admin/users?t=${Date.now()}${statusDateParam}`);
       const data = await res.json();
       
       // 🚨 【超級核心除錯】 🚨
@@ -108,7 +109,7 @@ const AdminList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate]);
 
   // 🌟 處理身分轉換的後台發送邏輯
   const handleUpdateUserType = async (userId, currentName, newType) => {
@@ -156,7 +157,7 @@ const AdminList = () => {
 
   useEffect(() => {
     if (authorized) fetchUsers();
-  }, [authorized]);
+  }, [authorized, fetchUsers]);
 
   const handleReceptionistChange = async (userId, name) => {
     try {
