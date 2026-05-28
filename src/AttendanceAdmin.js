@@ -8,9 +8,6 @@ const AttendanceAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [courseLoading, setCourseLoading] = useState(true);
 
-  // --- 手動更新鎖 ---
-  const [isUpdating, setIsUpdating] = useState(false); 
-
   // --- 動態班級特徵狀態 ---
   const [totalDays, setTotalDays] = useState(8); 
   const [slots, setSlots] = useState([
@@ -21,7 +18,6 @@ const AttendanceAdmin = () => {
 
   // --- 學員證模組狀態 ---
   const [selectedStudent, setSelectedStudent] = useState(null); // 當前選中要單張列印的學員
-  const [showBadgeModal, setShowBadgeModal] = useState(false);  // 控制單張預覽彈窗
 
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
@@ -42,7 +38,7 @@ const AttendanceAdmin = () => {
     return trimmed;
   };
 
-  // --- 讀取選定班級的考勤流水帳 ---
+  // --- 核心：讀取選定班級的考勤流水帳 ---
   const fetchAttendanceData = async (offeringId, isSilent = false) => {
     if (!offeringId) return;
     if (!isSilent) setLoading(true);
@@ -73,7 +69,7 @@ const AttendanceAdmin = () => {
       .finally(() => setCourseLoading(false));
   }, []);
 
-  // --- 背景自動輪詢同步 ---
+  // --- 背景自動輪詢同步（移除干擾鎖，讓數據維持最新） ---
   useEffect(() => {
     const handleGlobalRefresh = () => {
       if (currentOfferingId) fetchAttendanceData(currentOfferingId);
@@ -81,16 +77,16 @@ const AttendanceAdmin = () => {
     window.addEventListener('student-checked-in', handleGlobalRefresh);
     
     const attendanceInterval = setInterval(() => {
-      if (currentOfferingId && !isUpdating) { 
+      if (currentOfferingId) { 
         fetchAttendanceData(currentOfferingId, true); 
       }
-    }, 3000);
+    }, 4000); // 稍微拉長到 4 秒，減少修改時與後端寫入衝突的機率
 
     return () => {
       window.removeEventListener('student-checked-in', handleGlobalRefresh);
       clearInterval(attendanceInterval);
     };
-  }, [currentOfferingId, isUpdating]);
+  }, [currentOfferingId]);
 
   // --- 智慧解析當前課程配置 ---
   useEffect(() => {
@@ -116,21 +112,32 @@ const AttendanceAdmin = () => {
     fetchAttendanceData(currentOfferingId);
   }, [currentOfferingId, offerings]);
 
-  // --- 管理員手動切換打卡狀態 ---
+  // ========================================================
+  // ⚡ 優化版：管理員直接修改考勤紀錄（不再需要先刪除別人的紀錄） ⚡
+  // ========================================================
   const handleToggleAttendance = async (userId, dayNumber, slotType, currentStatus) => {
-    if (isUpdating) return;
-    setIsUpdating(true);
     try {
+      // 直接發送狀態切換請求，不設定複雜的前端阻擋鎖
       const res = await fetch(`${API_BASE}/admin/toggle-attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, offeringId: currentOfferingId, dayNumber, slotType, status: !currentStatus })
+        body: JSON.stringify({ 
+          userId, 
+          offeringId: currentOfferingId, 
+          dayNumber, 
+          slotType, 
+          status: !currentStatus  // 如果原本是 false (未考勤)，點擊直接轉為 true (新增考勤)
+        })
       });
-      if (res.ok) await fetchAttendanceData(currentOfferingId, true);
+      
+      if (res.ok) {
+        // 修改成功後，立即強制更新當前看板數據，確保畫面同步
+        await fetchAttendanceData(currentOfferingId, true);
+      } else {
+        console.error("後端拒絕修改考勤");
+      }
     } catch (err) {
-      alert("同步考勤失敗");
-    } finally {
-      setIsUpdating(false);
+      console.error("網路連線異常，無法修改考勤", err);
     }
   };
 
@@ -168,80 +175,32 @@ const AttendanceAdmin = () => {
 
   const currentCourseTitle = offerings.find(o => String(o.id) === String(currentOfferingId))?.title || "健身班";
 
-  // ========================================================
-  // 🔥 核心修復：全新「新開分頁獨立列印機制（100% 不會空白）」🔥
-  // ========================================================
+  // --- 批量新開分頁列印機制 ---
   const handlePrintBatchBadges = () => {
     if (enrollments.length === 0) return;
-
-    // 1. 切割 6 宮格數據
     const batchPages = chunkEnrollments(enrollments, 6);
-
-    // 2. 打開一個完全空白的全新瀏覽器視窗 (Pop-up Window)
     const printWindow = window.open('', '_blank', 'width=900,height=900');
     if (!printWindow) {
-      alert("⚠️ 您的瀏覽器封鎖了彈出視窗，請允許此網站彈出視窗以完成列印！");
+      alert("⚠️ 請允許此網站彈出視窗以完成列印！");
       return;
     }
 
-    // 3. 建構純淨的 HTML 與 CSS 內容，塞進這個新視窗中
     let htmlContent = `
       <html>
       <head>
         <title>列印學員證 - ${currentCourseTitle}</title>
         <style>
-          body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #fff;
-          }
-          /* A4 紙張與 2x3 六宮格排版 */
-          .a4-page {
-            width: 210mm;
-            height: 294mm;
-            box-sizing: border-box;
-            padding: 12mm 8mm;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 2 欄 */
-            grid-template-rows: repeat(3, 1fr);    /* 3 列 */
-            grid-gap: 5mm;
-            page-break-after: always;
-            break-after: page;
-            background: #fff;
-          }
-          /* 單張卡片樣式與手動裁切虛線 */
-          .card-box {
-            width: 94mm;
-            height: 88mm;
-            border: 1px dashed #94a3b8; /* 裁切線 */
-            box-sizing: border-box;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            background: #fff;
-          }
-          /* 列印時強制顯示色彩與邊框 */
-          @media print {
-            body { background: #fff; }
-            .a4-page { page-break-after: always !important; break-after: page !important; }
-            .card-box {
-              border: 1px dashed #94a3b8 !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-          }
+          body { margin: 0; padding: 0; font-family: sans-serif; background-color: #fff; }
+          .a4-page { width: 210mm; height: 294mm; box-sizing: border-box; padding: 12mm 8mm; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); grid-gap: 5mm; page-break-after: always; break-after: page; background: #fff; }
+          .card-box { width: 94mm; height: 88mm; border: 1px dashed #94a3b8; box-sizing: border-box; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #fff; }
+          @media print { body { background: #fff; } .a4-page { page-break-after: always !important; break-after: page !important; } .card-box { border: 1px dashed #94a3b8 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
         </style>
       </head>
       <body>
     `;
 
-    // 4. 跑迴圈生成六宮格卡片結構
     batchPages.forEach((pageStudents) => {
       htmlContent += `<div class="a4-page">`;
-      
       pageStudents.forEach((student) => {
         const studentName = formatStudentName(student.name);
         const qrDataString = encodeURIComponent(JSON.stringify({ userId: student.user_id, offeringId: currentOfferingId }));
@@ -252,19 +211,16 @@ const AttendanceAdmin = () => {
             <div style="text-align: center; width: 100%;">
               <div style="font-size: 14px; font-weight: bold; color: #e67e22; letter-spacing: 1px;">${currentCourseTitle}</div>
               <div style="font-size: 10px; color: #7f8c8d; margin: 1px 0;">Health & Happiness Retreat</div>
-              <div style="border-bottom: 1px solid #f1f5f9; width: 100%; marginTop: 4px;"></div>
+              <div style="border-bottom: 1px solid #f1f5f9; width: 100%; margin-top: 4px;"></div>
             </div>
-
             <div style="text-align: center; margin: 5px 0;">
               <div style="font-size: 11px; color: #94a3b8;">學員姓名</div>
               <div style="font-size: 20px; font-weight: bold; color: #1e293b;">${studentName}</div>
               <div style="font-size: 11px; color: #94a3b8;">ID: ${student.user_id}</div>
             </div>
-
             <div style="padding: 4px; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 6px;">
               <img src="${qrImageUrl}" style="width: 90px; height: 90px; display: block;" />
             </div>
-
             <div style="text-align: center; width: 100%;">
               <div style="font-size: 12px; font-weight: bold; color: #334155;">洛杉磯菩提禪堂</div>
               <div style="font-size: 9px; color: #94a3b8;">Los Angeles Bodhi Meditation Center</div>
@@ -273,39 +229,30 @@ const AttendanceAdmin = () => {
           </div>
         `;
       });
-
-      // 如果人數不滿 6 個，用透明格子補齊版面
       if (pageStudents.length < 6) {
         const emptyCount = 6 - pageStudents.length;
         for (let i = 0; i < emptyCount; i++) {
           htmlContent += `<div class="card-box" style="visibility: hidden;"></div>`;
         }
       }
-
       htmlContent += `</div>`;
     });
 
     htmlContent += `
         <script>
-          // 確保 QR Code 圖片載入完成後，自動叫起列印視窗，印完自動關閉分頁
           window.onload = function() {
-            setTimeout(function() {
-              window.print();
-              window.close();
-            }, 300);
+            setTimeout(function() { window.print(); window.close(); }, 300);
           };
         </script>
       </body>
       </html>
     `;
-
-    // 5. 寫入並渲染新視窗
     printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
 
-  // 單張列印比照辦理
+  // --- 單張列印機制 ---
   const handlePrintSingleBadge = (student) => {
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     if (!printWindow) return;
@@ -319,12 +266,8 @@ const AttendanceAdmin = () => {
       <head>
         <title>列印學員證 - ${studentName}</title>
         <style>
-          body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #fff; }
-          .badge-box {
-            width: 74mm; height: 105mm; border: 2px solid #2c3e50; border-radius: 12px;
-            padding: 20px; box-sizing: border-box; display: flex; flex-direction: column;
-            justify-content: space-between; align-items: center; background: #fff;
-          }
+          body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #fff; font-family: sans-serif; }
+          .badge-box { width: 74mm; height: 105mm; border: 2px solid #2c3e50; border-radius: 12px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #fff; }
         </style>
       </head>
       <body>
@@ -345,13 +288,11 @@ const AttendanceAdmin = () => {
           <div style="text-align: center; width: 100%;">
             <div style="font-size: 12px; font-weight: bold; color: #2c3e50;">洛杉磯菩提禪堂</div>
             <div style="font-size: 9px; color: #95a5a6;">Los Angeles Bodhi Meditation Center</div>
-            <div style="font-size: 10px; color: #e67e22; font-weight: bold; marginTop: 2px;">626-457-5316</div>
+            <div style="font-size: 10px; color: #e67e22; font-weight: bold; margin-top: 2px;">626-457-5316</div>
           </div>
         </div>
         <script>
-          window.onload = function() {
-            setTimeout(function() { window.print(); window.close(); }, 300);
-          };
+          window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 300); };
         </script>
       </body>
       </html>
@@ -413,7 +354,6 @@ const AttendanceAdmin = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 style={{ margin: 0 }}>📊 課程考勤動態看板</h3>
         
-        {/* 🚀 點擊直接開啟乾淨分頁列印，完美避免空白 */}
         {enrollments.length > 0 && (
           <button
             onClick={handlePrintBatchBadges}
@@ -423,7 +363,7 @@ const AttendanceAdmin = () => {
           </button>
         )}
       </div>
-      <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>💡 提示：點擊右上方按鈕，系統會新開獨立分頁自動為您排好 2x3 六宮格 A4 尺寸並呼叫列印，保證內容完整不空白。</p>
+      <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>💡 提示：點擊任何考勤格子（例如：上簽、下簽），可以直接新增或取消該紀錄，無需再預先刪除其他儲存格。</p>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d', fontWeight: 'bold' }}>🔄 正在載入該班級考勤名單...</div>
