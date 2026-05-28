@@ -40,9 +40,10 @@ const AttendanceAdmin = () => {
   };
 
   // --- 核心：讀取選定班級的考勤流水帳 (獨立抽出來以便隨時呼叫) ---
-  const fetchAttendanceData = async (offeringId) => {
+  const fetchAttendanceData = async (offeringId, isSilent = false) => {
     if (!offeringId) return;
-    setLoading(true);
+    // 🌟 優化：如果是背景輪詢刷新 (isSilent = true)，就不顯示遮罩 Loading，防止畫面閃爍
+    if (!isSilent) setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/admin/course-attendance/${offeringId}`);
       const data = await res.json();
@@ -51,7 +52,7 @@ const AttendanceAdmin = () => {
       console.error("讀取考勤失敗:", err);
       setEnrollments([]);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -70,7 +71,7 @@ const AttendanceAdmin = () => {
       .finally(() => setCourseLoading(false));
   }, []);
 
-  // --- 🌟 跨網頁/組件點名全域事件監聽：當掃描器那邊點名成功，這裡免刷新自動連動更新 ---
+  // --- 🌟 跨網頁/組件點名全域事件監聽 + 🛠️ 動態跨裝置智慧定時輪詢 (雙重同步系統) ---
   useEffect(() => {
     const handleGlobalRefresh = () => {
       console.log("📢 偵測到全域學生簽到成功事件！看板即時同步資料中...");
@@ -79,12 +80,21 @@ const AttendanceAdmin = () => {
       }
     };
 
-    // 聽取來自掃描器端的全域自訂事件廣播
+    // A. 聽取來自掃描器端的全域自訂事件廣播 (保留原架構，同電腦多組件時連動最快)
     window.addEventListener('student-checked-in', handleGlobalRefresh);
     
-    // 組件卸載時，移除監聽防記憶體殘留
+    // B. ✨ 新增核心點名連動：每 3 秒自動在背景重新抓一次資料庫狀態 (解決手機掃、電腦看的問題)
+    const attendanceInterval = setInterval(() => {
+      if (currentOfferingId) {
+        console.log("🔄 考勤看板正自動與伺服器同步中...");
+        fetchAttendanceData(currentOfferingId, true); // 傳入 true 讓畫面不會閃爍
+      }
+    }, 3000);
+
+    // C. 組件卸載或切換班級時，移除監聽與計時器防記憶體殘留
     return () => {
       window.removeEventListener('student-checked-in', handleGlobalRefresh);
+      clearInterval(attendanceInterval);
     };
   }, [currentOfferingId]);
 
@@ -306,7 +316,6 @@ const AttendanceAdmin = () => {
                               return (
                                 <button
                                   key={slot.id}
-                                  // 🌟 優化：將 title 改得更詳細，方便你滑鼠放上去核對 Day 和 Slot 設定！
                                   title={`學員: ${finalDisplayName} | Day: ${dayNum} | 節次: ${slot.id} (${slot.label})`}
                                   onClick={() => handleToggleAttendance(student.user_id, dayNum, slot.id, hasAttended)}
                                   style={{
