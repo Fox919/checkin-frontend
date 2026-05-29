@@ -36,23 +36,7 @@ const AdminList = () => {
   // 🔤 智慧姓名格式化：將英文的「姓 在 前」優雅轉換為「名 在 前」
   const formatStudentName = (rawName) => {
     if (!rawName) return '無';
-    const trimmed = rawName.trim();
-    
-    // 檢查是否包含空格，且主要由英文字母組成
-    const hasSpace = trimmed.includes(' ');
-    const isEnglish = /^[A-Za-z\s,.-]+$/.test(trimmed);
-
-    if (hasSpace && isEnglish) {
-      // 將字串依空格拆開
-      const nameParts = trimmed.split(/\s+/);
-      if (nameParts.length > 1) {
-        const [lastName, ...firstNameParts] = nameParts;
-        // 重新組合：名在前 (firstNameParts)，姓在後 (lastName)
-        return `${firstNameParts.join(' ')} ${lastName}`;
-      }
-    }
-    // 中文名或單一單字維持原樣
-    return trimmed;
+    return rawName.trim();
   };
 
   // ⏰ 強化的格式化時間函數 — 完美校正為洛杉磯當地時間

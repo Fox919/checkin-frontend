@@ -24,18 +24,7 @@ const AttendanceAdmin = () => {
   // 🔤 智慧姓名格式化：名在前、姓在後
   const formatStudentName = (rawName) => {
     if (!rawName) return '無';
-    const trimmed = rawName.trim();
-    const hasSpace = trimmed.includes(' ');
-    const isEnglish = /^[A-Za-z\s,.-]+$/.test(trimmed);
-
-    if (hasSpace && isEnglish) {
-      const nameParts = trimmed.split(/\s+/);
-      if (nameParts.length > 1) {
-        const [lastName, ...firstNameParts] = nameParts;
-        return `${firstNameParts.join(' ')} ${lastName}`;
-      }
-    }
-    return trimmed;
+    return rawName.trim();
   };
 
   // --- 核心：讀取選定班級的考勤流水帳 ---

@@ -27,19 +27,7 @@ const AttendanceAdmin = () => {
   // 🔤 智慧姓名格式化：名在前、姓在後（修復英文切分邏輯）
   const formatStudentName = (rawName) => {
     if (!rawName) return '無';
-    const trimmed = rawName.trim();
-    const hasSpace = trimmed.includes(' ');
-    const isEnglish = /^[A-Za-z\s,.-]+$/.test(trimmed);
-
-    if (hasSpace && isEnglish) {
-      const nameParts = trimmed.split(/\s+/);
-      if (nameParts.length > 1) {
-        const lastName = nameParts[nameParts.length - 1];
-        const firstNameParts = nameParts.slice(0, nameParts.length - 1);
-        return `${firstNameParts.join(' ')} ${lastName}`;
-      }
-    }
-    return trimmed;
+    return rawName.trim();
   };
 
   // --- 初始化：撈取所有開班期次 ---
