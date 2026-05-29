@@ -22,7 +22,13 @@ const AttendanceAdmin = () => {
   const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 
   // 🔤 智慧姓名格式化：名在前、姓在後
-  const formatStudentName = (rawName) => {
+  const formatStudentName = (rawName, person = {}) => {
+    const last = String(person?.last_name || '').trim();
+    const first = String(person?.first_name || '').trim();
+    if (last || first) {
+      const hasCjkName = /[\u3400-\u9FFF\uF900-\uFAFF]/.test(`${last}${first}`);
+      return hasCjkName ? `${last}${first}`.trim() : [first, last].filter(Boolean).join(' ');
+    }
     if (!rawName) return '無';
     return rawName.trim();
   };
@@ -131,15 +137,15 @@ const AttendanceAdmin = () => {
   };
 
   // --- 一鍵生成畢業證書 ---
-  const handleGraduate = async (userId, rawName) => {
-    const displayName = formatStudentName(rawName);
+  const handleGraduate = async (student) => {
+    const displayName = formatStudentName(student.name, student);
     const confirmGrad = window.confirm(`確定要為學員「${displayName}」生成畢業證書號嗎？`);
     if (!confirmGrad) return;
     try {
       const res = await fetch(`${API_BASE}/admin/evaluate-graduation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, offeringId: currentOfferingId })
+        body: JSON.stringify({ userId: student.user_id, offeringId: currentOfferingId })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -205,7 +211,7 @@ const AttendanceAdmin = () => {
     batchPages.forEach((pageStudents) => {
       htmlContent += `<div class="a4-page">`;
       pageStudents.forEach((student) => {
-        const studentName = formatStudentName(student.name);
+        const studentName = formatStudentName(student.name, student);
         const qrDataString = encodeURIComponent(JSON.stringify({ userId: student.user_id, offeringId: currentOfferingId }));
         const qrImageUrl = `https://quickchart.io/qr?text=${qrDataString}&size=90&margin=1&ecLevel=H`;
 
@@ -256,7 +262,7 @@ const AttendanceAdmin = () => {
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     if (!printWindow) return;
 
-    const studentName = formatStudentName(student.name);
+    const studentName = formatStudentName(student.name, student);
     const qrDataString = encodeURIComponent(JSON.stringify({ userId: student.user_id, offeringId: currentOfferingId }));
     const qrImageUrl = `https://quickchart.io/qr?text=${qrDataString}&size=110&margin=1&ecLevel=H`;
 
@@ -400,7 +406,7 @@ const AttendanceAdmin = () => {
               {enrollments.map(student => {
                 const rate = parseFloat(student.attendance_rate || 0);
                 const isEligible = rate >= 85.0;
-                const finalDisplayName = formatStudentName(student.name);
+                const finalDisplayName = formatStudentName(student.name, student);
 
                 return (
                   <tr key={student.user_id} style={{ backgroundColor: student.certificate_no ? '#f1fcf6' : '#fff' }}>
@@ -450,7 +456,7 @@ const AttendanceAdmin = () => {
                         <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '0.75rem' }}>🎓 {student.certificate_no}</span>
                       ) : isEligible ? (
                         <button 
-                          onClick={() => handleGraduate(student.user_id, student.name)}
+                          onClick={() => handleGraduate(student)}
                           style={{ backgroundColor: '#007bff', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           🎓 點此畢業

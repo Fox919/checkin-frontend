@@ -34,7 +34,13 @@ const AdminList = () => {
   const [selectedSourceFilter, setSelectedSourceFilter] = useState(null);
 
   // 🔤 智慧姓名格式化：將英文的「姓 在 前」優雅轉換為「名 在 前」
-  const formatStudentName = (rawName) => {
+  const formatStudentName = (rawName, person = {}) => {
+    const last = String(person?.last_name || '').trim();
+    const first = String(person?.first_name || '').trim();
+    if (last || first) {
+      const hasCjkName = /[\u3400-\u9FFF\uF900-\uFAFF]/.test(`${last}${first}`);
+      return hasCjkName ? `${last}${first}`.trim() : [first, last].filter(Boolean).join(' ');
+    }
     if (!rawName) return '無';
     return rawName.trim();
   };
@@ -246,7 +252,7 @@ const AdminList = () => {
     const searchStr = searchTerm.toLowerCase();
     
     // 🌟 搜尋時同時支援配對原本名字與調整後的名字
-    const adjustedName = formatStudentName(user.name);
+    const adjustedName = formatStudentName(user.name, user);
     const matchesSearch = 
       user.name?.toLowerCase().includes(searchStr) || 
       adjustedName.toLowerCase().includes(searchStr) ||
@@ -305,7 +311,7 @@ const AdminList = () => {
       const headers = ["姓名", "性別", "電話", "Email", "身份", "狀態", "語言", "來源", "介紹人", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
-        const formattedCSVName = formatStudentName(u.name);
+        const formattedCSVName = formatStudentName(u.name, u);
         const genderLabel = u.gender === 'Male' ? '男' : u.gender === 'Female' ? '女' : u.gender === 'Other' ? '其他' : '';
         const statusLabel = u.status === 'active' ? '啟用' : u.status === 'checked-in' ? '已簽到' : u.status || '';
         return [
@@ -498,7 +504,7 @@ const AdminList = () => {
             <tbody>
               {filteredList.map(user => {
                 const displaySource = getDisplaySourceText(user.discovery_source);
-                const finalDisplayName = formatStudentName(user.name);
+                const finalDisplayName = formatStudentName(user.name, user);
 
                 return (
                   <tr key={user.id}>
@@ -520,7 +526,7 @@ const AdminList = () => {
                     <td style={tableCellStyle}>
                       <select
                         value={user.user_type || 'Visitor'} 
-                        onChange={(e) => handleUpdateUserType(user.id, user.name, e.target.value)}
+                        onChange={(e) => handleUpdateUserType(user.id, finalDisplayName, e.target.value)}
                         style={{
                           padding: '4px 6px',
                           fontSize: '0.8rem',
@@ -620,7 +626,7 @@ const AdminList = () => {
       {selectedQrId && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 5000 }} onClick={() => setSelectedQrId(null)}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>{formatStudentName(users.find(u => u.id === selectedQrId)?.name)} 的 QR Code</h3>
+            <h3 style={{ marginTop: 0 }}>{formatStudentName(users.find(u => u.id === selectedQrId)?.name, users.find(u => u.id === selectedQrId))} 的 QR Code</h3>
             <QRCodeCanvas 
               value={String(selectedQrId || '')} 
               size={200} 
