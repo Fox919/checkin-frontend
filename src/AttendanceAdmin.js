@@ -190,13 +190,27 @@ const AttendanceAdmin = () => {
       <head>
         <title>列印學員證 - ${currentCourseTitle}</title>
         <style>
-          body { margin: 0; padding: 0; font-family: sans-serif; background-color: #fff; }
-          .a4-page { width: 210mm; height: 294mm; box-sizing: border-box; padding: 12mm 8mm; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); grid-gap: 5mm; page-break-after: always; break-after: page; background: #fff; }
+          body { margin: 0; padding: 0; font-family: sans-serif; background-color: #f1f5f9; }
+          .preview-toolbar { position: sticky; top: 0; z-index: 10; height: 56px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); }
+          .preview-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+          .preview-actions { display: flex; gap: 10px; }
+          .preview-button { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 14px; background: #fff; color: #334155; cursor: pointer; font-weight: 700; }
+          .preview-button.primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+          .preview-shell { padding: 18px 0; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+          .a4-page { width: 210mm; height: 294mm; box-sizing: border-box; padding: 12mm 8mm; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); grid-gap: 5mm; page-break-after: always; break-after: page; background: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16); }
           .card-box { width: 94mm; height: 88mm; border: 1px dashed #94a3b8; box-sizing: border-box; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #fff; }
-          @media print { body { background: #fff; } .a4-page { page-break-after: always !important; break-after: page !important; } .card-box { border: 1px dashed #94a3b8 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+          @media print { body { background: #fff; } .preview-toolbar { display: none !important; } .preview-shell { padding: 0; display: block; } .a4-page { box-shadow: none; page-break-after: always !important; break-after: page !important; } .card-box { border: 1px dashed #94a3b8 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
         </style>
       </head>
       <body>
+        <div class="preview-toolbar">
+          <div class="preview-title">Badge Preview - ${currentCourseTitle}</div>
+          <div class="preview-actions">
+            <button class="preview-button primary" onclick="window.print()">Print</button>
+            <button class="preview-button" onclick="window.close()">Close</button>
+          </div>
+        </div>
+        <div class="preview-shell">
     `;
 
     batchPages.forEach((pageStudents) => {
@@ -239,11 +253,7 @@ const AttendanceAdmin = () => {
     });
 
     htmlContent += `
-        <script>
-          window.onload = function() {
-            setTimeout(function() { window.print(); window.close(); }, 300);
-          };
-        </script>
+        </div>
       </body>
       </html>
     `;
@@ -266,11 +276,26 @@ const AttendanceAdmin = () => {
       <head>
         <title>列印學員證 - ${studentName}</title>
         <style>
-          body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #fff; font-family: sans-serif; }
+          body { margin: 0; min-height: 100vh; background: #f1f5f9; font-family: sans-serif; }
+          .preview-toolbar { position: sticky; top: 0; z-index: 10; height: 56px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); }
+          .preview-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+          .preview-actions { display: flex; gap: 10px; }
+          .preview-button { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 14px; background: #fff; color: #334155; cursor: pointer; font-weight: 700; }
+          .preview-button.primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+          .preview-shell { min-height: calc(100vh - 56px); display: flex; justify-content: center; align-items: center; padding: 24px; box-sizing: border-box; }
           .badge-box { width: 74mm; height: 105mm; border: 2px solid #2c3e50; border-radius: 12px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #fff; }
+          @media print { body { background: #fff; } .preview-toolbar { display: none !important; } .preview-shell { min-height: auto; padding: 0; } }
         </style>
       </head>
       <body>
+        <div class="preview-toolbar">
+          <div class="preview-title">Badge Preview - ${studentName}</div>
+          <div class="preview-actions">
+            <button class="preview-button primary" onclick="window.print()">Print</button>
+            <button class="preview-button" onclick="window.close()">Close</button>
+          </div>
+        </div>
+        <div class="preview-shell">
         <div class="badge-box">
           <div style="text-align: center; width: 100%;">
             <div style="font-size: 14px; font-weight: bold; color: #e67e22;">${currentCourseTitle}</div>
@@ -291,9 +316,7 @@ const AttendanceAdmin = () => {
             <div style="font-size: 10px; color: #e67e22; font-weight: bold; margin-top: 2px;">626-457-5316</div>
           </div>
         </div>
-        <script>
-          window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 300); };
-        </script>
+        </div>
       </body>
       </html>
     `;
