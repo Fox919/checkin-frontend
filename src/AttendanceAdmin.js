@@ -320,6 +320,60 @@ const AttendanceAdmin = () => {
     printWindow.document.close();
   };
 
+  const exportToCsv = () => {
+    if (enrollments.length === 0) {
+      alert("目前沒有資料可匯出！");
+      return;
+    }
+
+    const currentCourse = offerings.find(o => String(o.id) === String(currentOfferingId));
+    const courseTitle = currentCourse ? currentCourse.title : "課程";
+    const fileName = `${courseTitle}_考勤報表_${new Date().toISOString().split('T')[0]}.csv`;
+    const headers = ["學員 ID", "姓名", "電話", "身份", "出勤率", "畢業證書號"];
+
+    for (let d = 1; d <= totalDays; d++) {
+      slots.forEach(slot => {
+        headers.push(`Day ${d}-${slot.label}`);
+      });
+    }
+
+    const rows = enrollments.map(student => {
+      const finalDisplayName = formatStudentName(student.name, student);
+      const certNo = student.certificate_no || "未畢業";
+      const rowData = [
+        student.user_id,
+        `"${String(finalDisplayName).replace(/"/g, '""')}"`,
+        `"${String(student.phone || '').replace(/"/g, '""')}"`,
+        `"${String(student.user_type || '').replace(/"/g, '""')}"`,
+        `${student.attendance_rate || 0}%`,
+        `"${String(certNo).replace(/"/g, '""')}"`
+      ];
+
+      for (let d = 1; d <= totalDays; d++) {
+        slots.forEach(slot => {
+          const hasAttended = student.records?.some(
+            r => r.day_number === d && r.slot_type === slot.id
+          );
+          rowData.push(hasAttended ? "已簽到" : "");
+        });
+      }
+
+      return rowData.join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const totalStudents = enrollments.length;
   const graduatedCount = enrollments.filter(s => s.certificate_no).length;
   const highAttendanceCount = enrollments.filter(s => parseFloat(s.attendance_rate || 0) >= 85.0).length;
@@ -373,12 +427,20 @@ const AttendanceAdmin = () => {
         <h3 style={{ margin: 0 }}>📊 課程考勤動態看板</h3>
         
         {enrollments.length > 0 && (
-          <button
-            onClick={handlePrintBatchBadges}
-            style={{ backgroundColor: '#e67e22', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
-          >
-            🖨️ 一鍵批量列印全班學員證 (A4 六宮格版)
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              onClick={exportToCsv}
+              style={{ backgroundColor: '#28a745', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
+            >
+              匯出 CSV
+            </button>
+            <button
+              onClick={handlePrintBatchBadges}
+              style={{ backgroundColor: '#e67e22', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
+            >
+              🖨️ 一鍵批量列印全班學員證 (A4 六宮格版)
+            </button>
+          </div>
         )}
       </div>
       <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>💡 提示：點擊任何考勤格子（例如：上簽、下簽），可以直接新增或取消該紀錄，無需再預先刪除其他儲存格。</p>
