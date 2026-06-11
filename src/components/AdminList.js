@@ -45,6 +45,25 @@ const AdminList = () => {
     return rawName.trim();
   };
 
+  const splitStudentName = (user = {}) => {
+    const last = String(user.last_name || '').trim();
+    const first = String(user.first_name || '').trim();
+    if (last || first) return { lastName: last, firstName: first };
+
+    const fullName = String(user.name || '').trim();
+    if (!fullName) return { lastName: '', firstName: '' };
+
+    const parts = fullName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return {
+        lastName: parts[parts.length - 1],
+        firstName: parts.slice(0, -1).join(' ')
+      };
+    }
+
+    return { lastName: fullName, firstName: '' };
+  };
+
   // ⏰ 強化的格式化時間函數 — 完美校正為洛杉磯當地時間
   const formatTime = (timeStr) => {
     if (!timeStr || String(timeStr) === 'undefined' || String(timeStr) === 'null') return '-';
@@ -510,17 +529,22 @@ const AdminList = () => {
         `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`
       )).join('');
 
-      const callRows = dayNewcomers.map(user => [
-        user.languageGroup,
-        formatStudentName(user.name, user),
-        user.phone || '',
-        user.email || '',
-        getDisplaySourceText(user.discovery_source),
-        user.referrer_name || '',
-        formatTime(user.created_at),
-        user.receptionist_name || '',
-        user.notes || ''
-      ]);
+      const callRows = dayNewcomers.map(user => {
+        const { lastName, firstName } = splitStudentName(user);
+        return [
+          user.languageGroup,
+          lastName,
+          firstName,
+          formatStudentName(user.name, user),
+          user.phone || '',
+          user.email || '',
+          getDisplaySourceText(user.discovery_source),
+          user.referrer_name || '',
+          formatTime(user.created_at),
+          user.receptionist_name || '',
+          user.notes || ''
+        ];
+      });
 
       const englishCount = dayNewcomers.filter(user => user.languageGroup === 'English').length;
       const chineseCount = dayNewcomers.filter(user => user.languageGroup === '中文').length;
@@ -543,7 +567,7 @@ const AdminList = () => {
             </table>
             <br />
             <table>
-              <tr><th>語言分組</th><th>姓名</th><th>電話</th><th>Email</th><th>來源</th><th>介紹人</th><th>登記時間</th><th>接待人員</th><th>備註</th></tr>
+              <tr><th>語言分組</th><th>姓</th><th>名</th><th>完整姓名</th><th>電話</th><th>Email</th><th>來源</th><th>介紹人</th><th>登記時間</th><th>接待人員</th><th>備註</th></tr>
               ${renderRows(callRows)}
             </table>
           </body>
