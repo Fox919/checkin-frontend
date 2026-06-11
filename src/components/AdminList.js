@@ -535,7 +535,6 @@ const AdminList = () => {
           user.languageGroup,
           lastName,
           firstName,
-          formatStudentName(user.name, user),
           user.phone || '',
           user.email || '',
           getDisplaySourceText(user.discovery_source),
@@ -567,7 +566,7 @@ const AdminList = () => {
             </table>
             <br />
             <table>
-              <tr><th>語言分組</th><th>姓</th><th>名</th><th>完整姓名</th><th>電話</th><th>Email</th><th>來源</th><th>介紹人</th><th>登記時間</th><th>接待人員</th><th>備註</th></tr>
+              <tr><th>語言分組</th><th>姓</th><th>名</th><th>電話</th><th>Email</th><th>來源</th><th>介紹人</th><th>登記時間</th><th>接待人員</th><th>備註</th></tr>
               ${renderRows(callRows)}
             </table>
           </body>
