@@ -610,6 +610,34 @@ const AdminList = () => {
         </select>
         <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px' }} />
         <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all'); setSelectedSourceFilter(null);}}>重置</button>
+        <button
+          onClick={exportNewcomerStatsToExcel}
+          disabled={statTotal === 0}
+          style={{
+            padding: '10px 14px',
+            backgroundColor: statTotal === 0 ? '#adb5bd' : '#198754',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: statTotal === 0 ? 'not-allowed' : 'pointer'
+          }}
+        >
+          📥 匯出新人統計
+        </button>
+        <button
+          onClick={exportCallListToExcel}
+          disabled={callListExportCount === 0}
+          style={{
+            padding: '10px 14px',
+            backgroundColor: callListExportCount === 0 ? '#adb5bd' : '#0d6efd',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: callListExportCount === 0 ? 'not-allowed' : 'pointer'
+          }}
+        >
+          ☎️ 匯出新人電話名單
+        </button>
       </div>
 
       <div style={{ 
