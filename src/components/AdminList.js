@@ -62,6 +62,53 @@ const AdminList = () => {
     });
   };
 
+  const getIsoDatePart = (value) => {
+    if (!value || String(value) === 'undefined' || String(value) === 'null') return '';
+    const str = String(value).trim();
+    const directMatch = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (directMatch) return directMatch[1];
+
+    const date = new Date(str);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  };
+
+  const getSelectedStatsDate = () => (
+    selectedDate || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+  );
+
+  const getLanguageGroup = (lang) => {
+    const value = String(lang || '').trim().toLowerCase();
+    if (value.startsWith('en')) return 'English';
+    if (value.startsWith('zh')) return '中文';
+    return '未標記';
+  };
+
+  const getStatsNewcomers = () => {
+    const targetDate = getSelectedStatsDate();
+
+    return users.filter(user => {
+      if (!user.created_at || !user.user_type?.toLowerCase().includes('newcomer')) return false;
+      return getIsoDatePart(user.created_at) === targetDate;
+    });
+  };
+
+  const getEventNewcomers = () => {
+    const targetDate = getSelectedStatsDate();
+
+    return users.filter(user => {
+      if (!user.created_at || !user.user_type?.toLowerCase().includes('newcomer')) return false;
+      return getIsoDatePart(user.created_at) === targetDate;
+    });
+  };
+
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -193,13 +240,7 @@ const AdminList = () => {
   };
 
   const getSourceStats = () => {
-    const targetDate = selectedDate || new Date().toLocaleDateString('en-CA');
-    
-    const dayNewcomers = users.filter(user => {
-      if (!user.created_at || !user.user_type?.toLowerCase().includes('newcomer')) return false;
-      const userDate = new Date(user.created_at).toLocaleDateString('en-CA');
-      return userDate === targetDate;
-    });
+    const dayNewcomers = getStatsNewcomers();
 
     const totalCount = dayNewcomers.length;
 
@@ -247,6 +288,11 @@ const AdminList = () => {
   };
 
   const { totalCount: statTotal, statsMap: statData } = getSourceStats();
+  const callListExportCount = getEventNewcomers()
+    .filter(user => {
+      const languageGroup = getLanguageGroup(user.lang);
+      return languageGroup === 'English' || languageGroup === '中文';
+    }).length;
 
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
@@ -269,9 +315,7 @@ const AdminList = () => {
       : user.created_at;
 
     if (rawDate) {
-      const targetIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(String(rawDate))
-        ? String(rawDate)
-        : new Date(rawDate).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+      const targetIsoDate = getIsoDatePart(rawDate);
       if (selectedDate) {
         matchesDate = targetIsoDate === selectedDate;
       } else if (viewMode === 'checked-in') {
@@ -286,7 +330,6 @@ const AdminList = () => {
     let matchesSourceFilter = true;
     if (selectedSourceFilter) {
       const currentSrcText = getDisplaySourceText(user.discovery_source);
-      
       if (selectedSourceFilter === '禪堂新人') {
         matchesSourceFilter = currentSrcText === '禪堂新人' || (!user.discovery_source && user.user_type === 'Hall-Newcomer');
       } else if (selectedSourceFilter === '網路平台 (Google/FB/IG)') {
@@ -308,7 +351,7 @@ const AdminList = () => {
         return;
       }
 
-      const headers = ["姓名", "性別", "電話", "Email", "身份", "狀態", "語言", "來源", "介紹人", "登記時間", "最後簽到", "接待人員", "備註"];
+      const headers = ["姓名", "性別", "電話", "Email", "身份", "狀態", "語言", "來源", "介紹人", "是否皈依", "登記時間", "最後簽到", "接待人員", "備註"];
       
       const csvRows = filteredList.map(u => {
         const formattedCSVName = formatStudentName(u.name, u);
@@ -322,8 +365,8 @@ const AdminList = () => {
           `"${u.user_type || ''}"`,
           `"${statusLabel}"`,
           `"${u.lang || ''}"`,
-          `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
           `"${getDisplaySourceText(u.discovery_source)}"`, 
+          `"${(u.referrer_name || '').replace(/"/g, '""')}"`,
           `"${u.is_blessed ? '是' : '否'}"`, 
           `"${formatTime(u.created_at)}"`, 
           `"${formatTime(u.last_checkin_time)}"`, 
@@ -350,6 +393,178 @@ const AdminList = () => {
     } catch (err) {
       console.error("匯出過程出錯:", err);
       alert("匯出失敗");
+    }
+  };
+
+  const exportNewcomerStatsToExcel = () => {
+    try {
+      const targetDate = getSelectedStatsDate();
+      const dayNewcomers = getStatsNewcomers();
+
+      if (dayNewcomers.length === 0) {
+        alert("該日期沒有新人統計資料可匯出");
+        return;
+      }
+
+      const summaryRows = Object.entries(statData)
+        .filter(([, count]) => count > 0)
+        .map(([sourceName, count]) => ({
+          sourceName,
+          count,
+          percentage: `${((count / statTotal) * 100).toFixed(1)}%`
+        }));
+
+      const renderRows = (rows) => rows.map(row => (
+        `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`
+      )).join('');
+
+      const summaryTable = `
+        <table>
+          <tr><th>日期</th><th>統計範圍</th><th>總人數</th></tr>
+          <tr><td>${escapeHtml(targetDate)}</td><td>所有到場新人</td><td>${statTotal}</td></tr>
+        </table>
+        <br />
+        <table>
+          <tr><th>來源管道</th><th>人數</th><th>比例</th></tr>
+          ${renderRows(summaryRows.map(row => [row.sourceName, row.count, row.percentage]))}
+        </table>
+      `;
+
+      const detailRows = dayNewcomers.map(user => [
+        formatStudentName(user.name, user),
+        user.gender === 'Male' ? '男' : user.gender === 'Female' ? '女' : user.gender === 'Other' ? '其他' : '',
+        user.phone || '',
+        user.email || '',
+        user.user_type || '',
+        getDisplaySourceText(user.discovery_source),
+        user.referrer_name || '',
+        formatTime(user.created_at),
+        user.receptionist_name || '',
+        user.notes || ''
+      ]);
+
+      const detailsTable = `
+        <table>
+          <tr><th>姓名</th><th>性別</th><th>電話</th><th>Email</th><th>身份</th><th>來源</th><th>介紹人</th><th>登記時間</th><th>接待人員</th><th>備註</th></tr>
+          ${renderRows(detailRows)}
+        </table>
+      `;
+
+      const workbookHtml = `
+        <html>
+          <head>
+            <meta charset="UTF-8" />
+            <style>
+              table { border-collapse: collapse; }
+              th, td { border: 1px solid #999; padding: 6px 10px; mso-number-format:"\\@"; }
+              th { background: #eaf3ff; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <h3>${escapeHtml(targetDate)} 新人來源統計</h3>
+            ${summaryTable}
+            <br />
+            <h3>${escapeHtml(targetDate)} 新人明細</h3>
+            ${detailsTable}
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob(["\ufeff" + workbookHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `新人來源統計_${targetDate}.xls`);
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error("匯出新人統計 Excel 失敗:", err);
+      alert("匯出新人統計 Excel 失敗");
+    }
+  };
+
+  const exportCallListToExcel = () => {
+    try {
+      const targetDate = getSelectedStatsDate();
+      const dayNewcomers = getEventNewcomers()
+        .map(user => ({ ...user, languageGroup: getLanguageGroup(user.lang) }))
+        .filter(user => user.languageGroup === 'English' || user.languageGroup === '中文')
+        .sort((a, b) => {
+          const groupOrder = { English: 1, '中文': 2 };
+          const groupDiff = groupOrder[a.languageGroup] - groupOrder[b.languageGroup];
+          if (groupDiff !== 0) return groupDiff;
+          return formatStudentName(a.name, a).localeCompare(formatStudentName(b.name, b), 'zh-Hant');
+        });
+
+      if (dayNewcomers.length === 0) {
+        alert("該日期沒有英文或中文新人電話名單可匯出");
+        return;
+      }
+
+      const renderRows = (rows) => rows.map(row => (
+        `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`
+      )).join('');
+
+      const callRows = dayNewcomers.map(user => [
+        user.languageGroup,
+        formatStudentName(user.name, user),
+        user.phone || '',
+        user.email || '',
+        getDisplaySourceText(user.discovery_source),
+        user.referrer_name || '',
+        formatTime(user.created_at),
+        user.receptionist_name || '',
+        user.notes || ''
+      ]);
+
+      const englishCount = dayNewcomers.filter(user => user.languageGroup === 'English').length;
+      const chineseCount = dayNewcomers.filter(user => user.languageGroup === '中文').length;
+
+      const workbookHtml = `
+        <html>
+          <head>
+            <meta charset="UTF-8" />
+            <style>
+              table { border-collapse: collapse; }
+              th, td { border: 1px solid #999; padding: 6px 10px; mso-number-format:"\\@"; }
+              th { background: #eaf3ff; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <h3>${escapeHtml(targetDate)} 所有來源新人電話導入名單</h3>
+            <table>
+              <tr><th>日期</th><th>範圍</th><th>English</th><th>中文</th><th>總人數</th></tr>
+              <tr><td>${escapeHtml(targetDate)}</td><td>所有來源新人</td><td>${englishCount}</td><td>${chineseCount}</td><td>${dayNewcomers.length}</td></tr>
+            </table>
+            <br />
+            <table>
+              <tr><th>語言分組</th><th>姓名</th><th>電話</th><th>Email</th><th>來源</th><th>介紹人</th><th>登記時間</th><th>接待人員</th><th>備註</th></tr>
+              ${renderRows(callRows)}
+            </table>
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob(["\ufeff" + workbookHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `所有來源新人電話導入名單_${targetDate}.xls`);
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error("匯出新人電話名單失敗:", err);
+      alert("匯出新人電話名單失敗");
     }
   };
 
@@ -413,19 +628,53 @@ const AdminList = () => {
             </span>
           </h4>
           
-          {selectedSourceFilter && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '0.85rem', color: '#007bff', fontWeight: 'bold' }}>
-                🔍 正在過濾：{selectedSourceFilter}
-              </span>
-              <button 
-                onClick={() => setSelectedSourceFilter(null)}
-                style={{ padding: '3px 8px', fontSize: '0.8rem', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-              >
-                顯示全部
-              </button>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={exportNewcomerStatsToExcel}
+              disabled={statTotal === 0}
+              style={{
+                padding: '7px 14px',
+                fontSize: '0.85rem',
+                backgroundColor: statTotal === 0 ? '#adb5bd' : '#198754',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: statTotal === 0 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              📥 匯出統計 Excel
+            </button>
+
+            <button
+              onClick={exportCallListToExcel}
+              disabled={callListExportCount === 0}
+              style={{
+                padding: '7px 14px',
+                fontSize: '0.85rem',
+                backgroundColor: callListExportCount === 0 ? '#adb5bd' : '#0d6efd',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: callListExportCount === 0 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              ☎️ 匯出新人電話名單
+            </button>
+
+            {selectedSourceFilter && (
+              <>
+                <span style={{ fontSize: '0.85rem', color: '#007bff', fontWeight: 'bold' }}>
+                  🔍 正在過濾：{selectedSourceFilter}
+                </span>
+                <button 
+                  onClick={() => setSelectedSourceFilter(null)}
+                  style={{ padding: '3px 8px', fontSize: '0.8rem', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  顯示全部
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {statTotal === 0 ? (
