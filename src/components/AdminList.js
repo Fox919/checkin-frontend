@@ -312,6 +312,7 @@ const AdminList = () => {
       const languageGroup = getLanguageGroup(user.lang);
       return languageGroup === 'English' || languageGroup === '中文';
     }).length;
+  const checkedInTotal = users.filter(user => user.status === 'checked-in').length;
 
   const filteredList = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
@@ -629,7 +630,7 @@ const AdminList = () => {
         <input type="text" placeholder="🔍 搜尋姓名、電話、接待..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ padding: '10px', width: '250px' }} />
         <select value={viewMode} onChange={(e) => setViewMode(e.target.value)} style={{ padding: '10px' }}>
           <option value="all">顯示全部</option>
-          <option value="checked-in">今日已簽到</option>
+          <option value="checked-in">{selectedDate ? '該日已簽到' : '今日已簽到'}</option>
         </select>
         <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '10px' }} />
         <button onClick={() => {setSearchTerm(''); setSelectedDate(''); setViewMode('all'); setSelectedSourceFilter(null);}}>重置</button>
@@ -661,6 +662,26 @@ const AdminList = () => {
         >
           ☎️ 匯出新人電話名單
         </button>
+      </div>
+
+      <div style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '12px 18px',
+        marginBottom: '20px',
+        backgroundColor: '#fff7e6',
+        border: '1px solid #ffd591',
+        borderLeft: '5px solid #fa8c16',
+        borderRadius: '6px',
+        color: '#5c3b00'
+      }}>
+        <span style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>
+          👥 {selectedDate ? `${selectedDate} 簽到總人數` : '今日簽到總人數'}
+        </span>
+        <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#d46b08' }}>
+          {checkedInTotal}
+        </span>
       </div>
 
       <div style={{ 
