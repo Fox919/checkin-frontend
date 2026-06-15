@@ -88,7 +88,7 @@ const Kiosk = () => {
     try {
       // 同時發送多筆簽到請求給後端
       const checkinPromises = selectedUserIds.map(userId =>
-        fetch(`${API_BASE}/checkin/${userId}`, { method: 'POST' })
+        fetch(`${API_BASE}/checkin/${userId}${urlType ? `?type=${encodeURIComponent(urlType)}` : ''}`, { method: 'POST' })
           .then(res => {
             if (!res.ok) throw new Error('Network response was not ok');
             return res.json();
