@@ -91,12 +91,15 @@ const Register = ({ autoCheckin }) => {
   // 語言預設為繁體中文 'zh-TW'
   const [lang, setLang] = useState(localStorage.getItem('userLang') || 'zh-TW');
   const eventSource = searchParams.get('source');
+  const getInitialDiscoverySource = (source) => (
+    source === 'Hall-Newcomer' ? '' : (source || '')
+  );
 
   const [formData, setFormData] = useState({
     lastName: '', firstName: '', 
     phone: '', email: '', 
     contact_method: [], 
-    discovery_source: eventSource || '', 
+    discovery_source: getInitialDiscoverySource(eventSource), 
     referrer_name: '',        
     other_source_text: '',    
     is_blessed: false, 
@@ -116,7 +119,7 @@ const Register = ({ autoCheckin }) => {
     setFormData(prev => ({ 
         ...prev, 
         user_type: typeFromUrl || 'Visitor',
-        discovery_source: sourceFromUrl || '',
+        discovery_source: getInitialDiscoverySource(sourceFromUrl),
         referrer_name: '',    
         other_source_text: '' 
     }));
@@ -187,7 +190,7 @@ const Register = ({ autoCheckin }) => {
           phone: '', 
           email: '', 
           contact_method: [], 
-          discovery_source: eventSource || '', 
+          discovery_source: getInitialDiscoverySource(eventSource), 
           referrer_name: '',
           other_source_text: '',
           is_blessed: false, 
@@ -339,7 +342,6 @@ const Register = ({ autoCheckin }) => {
               </label>
               <select name="discovery_source" value={formData.discovery_source} onChange={handleChange} required style={inputStyle}>
                 <option value="">{translations.selectPlaceholder}</option>
-                <option value="Hall-Newcomer">🏛️ {translations.hallNewcomer}</option>
                 <option value="Outreach-Flyer">📄 {translations.outreachFlyer}</option>
                 <option value="Poster">🖼️ {translations.poster}</option>
                 <option value="Performance">🎭 {translations.performance}</option>
