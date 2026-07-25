@@ -28,6 +28,7 @@ const t = {
     outreachFlyer: "外出發票",
     poster: "通過海報來的",
     performance: "來禪堂參加表演的",
+    eventbrite: "eventbrite 訂票",
     langLabel: "🌐 請選擇您的主要溝通語言 / Select Language"
   },
   'zh-CN': {
@@ -54,6 +55,7 @@ const t = {
     outreachFlyer: "外出发票",
     poster: "通过海报来的",
     performance: "来禅堂参加表演的",
+    eventbrite: "eventbrite 订票",
     langLabel: "🌐 请选择您的主要沟通语言 / Select Language"
   },
   'en-US': {
@@ -80,6 +82,7 @@ const t = {
     outreachFlyer: "Outreach Flyer",
     poster: "Via Poster",
     performance: "Performance Guest",
+    eventbrite: "Eventbrite Ticket",
     langLabel: "🌐 Please select your primary language / 溝通語言"
   }
 };
@@ -345,6 +348,7 @@ const Register = ({ autoCheckin }) => {
                 <option value="Outreach-Flyer">📄 {translations.outreachFlyer}</option>
                 <option value="Poster">🖼️ {translations.poster}</option>
                 <option value="Performance">🎭 {translations.performance}</option>
+                <option value="Eventbrite">🎟️ {translations.eventbrite}</option>
                 <option value="expo" style={{ color: '#e67e22', fontWeight: 'bold' }}>📍 {translations.expoSource}</option>
                 <option value="Google/YouTube">{translations.google}</option>
                 <option value="Facebook/IG">{translations.facebook}</option>
