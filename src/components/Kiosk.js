@@ -102,15 +102,26 @@ const Kiosk = () => {
       const results = await Promise.all(checkinPromises);
       
       const successList = results.filter(res => res.success);
-      const failedList = results.filter(res => !res.success);
+      const alreadyCheckedList = results.filter(res =>
+        !res.success && /已完成簽到|重複掃描/.test(String(res.message || ''))
+      );
+      const failedList = results.filter(res =>
+        !res.success && !/已完成簽到|重複掃描/.test(String(res.message || ''))
+      );
 
       if (successList.length > 0) {
         const successNames = successList.map(res => res.name).join(', ');
         setMessage(`✅ 簽到成功！歡迎：${successNames}`);
       }
 
+      if (alreadyCheckedList.length > 0) {
+        const alreadyMessages = alreadyCheckedList.map(res => res.message).join('\n');
+        alert(`ℹ️ 以下成員今天已簽到，系統已略過：\n${alreadyMessages}`);
+      }
+
       if (failedList.length > 0) {
-        alert(`⚠️ 有 ${failedList.length} 位成員簽到失敗，請再試一次。`);
+        const failedMessages = failedList.map(res => res.message || res.name || '未知成員').join('\n');
+        alert(`⚠️ 有 ${failedList.length} 位成員簽到失敗，請再試一次：\n${failedMessages}`);
         setIsProcessing(false); // 讓義工可以重新操作
         return; 
       }
