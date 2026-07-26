@@ -11,6 +11,8 @@ const sourceMap = {
   'Poster': '通過海報來的',
   'Performance': '來禪堂參加表演的',
   'Eventbrite': 'eventbrite 訂票',
+  'Radio1300': '1300電臺',
+  'BoothVendor': '來擺攤的',
   'Friend': '朋友 / 親戚', 
   'Google/YouTube': '谷歌 / YouTube',
   'Facebook/IG': '臉書 / Instagram',
@@ -271,6 +273,8 @@ const AdminList = () => {
       '通過海報來的': 0,
       '來禪堂參加表演的': 0,
       'eventbrite 訂票': 0,
+      '1300電臺': 0,
+      '來擺攤的': 0,
       '朋友 / 親戚': 0,
       '網路平台 (Google/FB/IG)': 0,
       '其他 / 未知': 0
@@ -297,6 +301,10 @@ const AdminList = () => {
         statsMap['來禪堂參加表演的']++;
       } else if (src === 'Eventbrite') {
         statsMap['eventbrite 訂票']++;
+      } else if (src === 'Radio1300') {
+        statsMap['1300電臺']++;
+      } else if (src === 'BoothVendor') {
+        statsMap['來擺攤的']++;
       } else if (src === 'Friend') {
         statsMap['朋友 / 親戚']++;
       } else if (/google|youtube|facebook|ig/i.test(src)) {
@@ -769,6 +777,8 @@ const AdminList = () => {
                 if (sourceName === '通過海報來的') barColor = '#20c997'; 
                 if (sourceName === '來禪堂參加表演的') barColor = '#17a2b8'; 
                 if (sourceName === 'eventbrite 訂票') barColor = '#f05537'; 
+                if (sourceName === '1300電臺') barColor = '#722ed1'; 
+                if (sourceName === '來擺攤的') barColor = '#795548'; 
                 if (sourceName === '朋友 / 親戚') barColor = '#e83e8c'; 
                 if (sourceName.includes('網路平台')) barColor = '#6f42c1'; 
 

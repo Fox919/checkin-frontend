@@ -29,6 +29,8 @@ const t = {
     poster: "通過海報來的",
     performance: "來禪堂參加表演的",
     eventbrite: "eventbrite 訂票",
+    radio1300: "1300電臺",
+    boothVendor: "來擺攤的",
     langLabel: "🌐 請選擇您的主要溝通語言 / Select Language"
   },
   'zh-CN': {
@@ -56,6 +58,8 @@ const t = {
     poster: "通过海报来的",
     performance: "来禅堂参加表演的",
     eventbrite: "eventbrite 订票",
+    radio1300: "1300电台",
+    boothVendor: "来摆摊的",
     langLabel: "🌐 请选择您的主要沟通语言 / Select Language"
   },
   'en-US': {
@@ -83,6 +87,8 @@ const t = {
     poster: "Via Poster",
     performance: "Performance Guest",
     eventbrite: "Eventbrite Ticket",
+    radio1300: "1300 Radio",
+    boothVendor: "Booth Vendor",
     langLabel: "🌐 Please select your primary language / 溝通語言"
   }
 };
@@ -349,6 +355,8 @@ const Register = ({ autoCheckin }) => {
                 <option value="Poster">🖼️ {translations.poster}</option>
                 <option value="Performance">🎭 {translations.performance}</option>
                 <option value="Eventbrite">🎟️ {translations.eventbrite}</option>
+                <option value="Radio1300">📻 {translations.radio1300}</option>
+                <option value="BoothVendor">🏷️ {translations.boothVendor}</option>
                 <option value="expo" style={{ color: '#e67e22', fontWeight: 'bold' }}>📍 {translations.expoSource}</option>
                 <option value="Google/YouTube">{translations.google}</option>
                 <option value="Facebook/IG">{translations.facebook}</option>
