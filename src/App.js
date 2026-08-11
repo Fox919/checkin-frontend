@@ -77,9 +77,9 @@ const Navbar = () => {
         >
           <option value="" disabled>📝 登記入口</option>
           <option value="/on-site?type=Visitor">一般訪客</option>
-          <option value="/on-site?source=expo&type=Expo-Newcomer">外展新人</option>
           <option value="/on-site?source=Hall-Newcomer&type=Hall-Newcomer">禪堂新人</option>
           <option value="/kiosk">⚡ 快速簽到</option>
+          <option value="/on-site?source=expo&type=Expo-Newcomer">外展現場登記</option>
           <option value="/book">🗓️ 課程預約</option>
         </select>
 

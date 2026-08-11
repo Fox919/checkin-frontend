@@ -49,8 +49,9 @@ const Navbar = () => {
         >
           <option value="" disabled>📝 登記入口</option>
           <option value="/register?type=Visitor">一般訪客登記</option>
-          <option value="/register?source=expo&type=Expo-Newcomer">外展新人登記</option>
           <option value="/register?source=Hall-Newcomer&type=Hall-Newcomer">禪堂新人登記</option>
+          <option value="/kiosk">⚡ 快速簽到</option>
+          <option value="/register?source=expo&type=Expo-Newcomer">外展現場登記</option>
         </select>
 
         {/* 區塊二：管理工具 */}
