@@ -54,7 +54,10 @@ const Kiosk = () => {
 
   // 根據輸入動態篩選出的一家人名單
   const filtered = phoneQuery.length >= 3 
-    ? list.filter(item => item.phone?.replace(/\D/g, '').endsWith(phoneQuery))
+    ? list.filter(item => (
+        !item.checked_in_today &&
+        item.phone?.replace(/\D/g, '').endsWith(phoneQuery)
+      ))
     : [];
 
   // 🌟 自動預選：當查出新的一家人時，預設幫所有人打勾
@@ -93,9 +96,10 @@ const Kiosk = () => {
             if (!res.ok) throw new Error('Network response was not ok');
             return res.json();
           })
+          .then(data => ({ ...data, userId }))
           .catch(err => {
             console.error(`用戶 ${userId} 簽到錯誤:`, err);
-            return { success: false, name: '未知成員' };
+            return { success: false, name: '未知成員', userId };
           })
       );
 
@@ -124,6 +128,15 @@ const Kiosk = () => {
         alert(`⚠️ 有 ${failedList.length} 位成員簽到失敗，請再試一次：\n${failedMessages}`);
         setIsProcessing(false); // 讓義工可以重新操作
         return; 
+      }
+
+      const completedUserIds = [...successList, ...alreadyCheckedList].map(res => res.userId);
+      if (completedUserIds.length > 0) {
+        setList(prev => prev.map(item =>
+          completedUserIds.includes(item.id)
+            ? { ...item, checked_in_today: 1 }
+            : item
+        ));
       }
       
       // 全數成功後，清空輸入框與狀態
