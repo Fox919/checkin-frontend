@@ -173,9 +173,11 @@ const Register = ({ autoCheckin }) => {
     e.preventDefault();
     const hasName = formData.lastName.trim() && formData.firstName.trim();
     const hasPhone = formData.phone.trim().length > 0;
+    const currentReceptionist = String(localStorage.getItem('currentReceptionist') || '').trim();
 
     if (!hasName) { alert("Please enter both Last Name and First Name."); return; }
     if (!hasPhone && formData.user_type !== 'Volunteer') { alert("Please provide Phone."); return; }
+    if (!currentReceptionist) { alert("請先在上方登入接待人員姓名。"); return; }
 
     setIsSubmitting(true);
     try {
@@ -185,7 +187,12 @@ const Register = ({ autoCheckin }) => {
       const response = await fetch('https://checkin-system-production-2a74.up.railway.app/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, lang: backendLang, autoCheckin }),
+        body: JSON.stringify({
+          ...formData,
+          lang: backendLang,
+          autoCheckin,
+          receptionist_name: currentReceptionist
+        }),
       });
       const data = await response.json();
 

@@ -1,4 +1,4 @@
-import React from 'react'; 
+import React, { useState } from 'react'; 
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import CourseListAdmin from './components/CourseListAdmin'; // ✨ 新增這行
 // 導入核心考勤與開班組件
@@ -18,6 +18,9 @@ const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
 // 獨立出來的導航欄組件
 const Navbar = () => {
   const navigate = useNavigate();
+  const [currentReceptionist, setCurrentReceptionist] = useState(
+    () => localStorage.getItem('currentReceptionist') || ''
+  );
 
   const navStyle = {
     padding: '8px 12px', 
@@ -61,12 +64,81 @@ const Navbar = () => {
     padding: '4px 0'
   };
 
+  const handleReceptionistLogin = () => {
+    const input = window.prompt('請輸入接待人員姓名：', currentReceptionist || '');
+    if (input === null) return;
+
+    const name = input.trim();
+    if (!name) {
+      alert('接待人員姓名不能空白。');
+      return;
+    }
+
+    localStorage.setItem('currentReceptionist', name);
+    setCurrentReceptionist(name);
+  };
+
+  const handleReceptionistLogout = () => {
+    localStorage.removeItem('currentReceptionist');
+    setCurrentReceptionist('');
+  };
+
   return (
     <nav style={navStyle}>
       {/* 第一行：標題 */}
       <button onClick={() => navigate('/')} style={homeButtonStyle}>
         🏠 菩提簽到系統
       </button>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        flexWrap: 'wrap',
+        fontSize: '0.9rem'
+      }}>
+        <span style={{
+          padding: '4px 10px',
+          borderRadius: '999px',
+          backgroundColor: currentReceptionist ? '#155724' : '#6c757d',
+          color: '#fff',
+          fontWeight: 'bold'
+        }}>
+          接待：{currentReceptionist || '未登入'}
+        </span>
+        <button
+          type="button"
+          onClick={handleReceptionistLogin}
+          style={{
+            padding: '5px 10px',
+            borderRadius: '5px',
+            border: '1px solid #fff',
+            backgroundColor: '#fff',
+            color: '#2c3e50',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          {currentReceptionist ? '換人' : '接待登入'}
+        </button>
+        {currentReceptionist && (
+          <button
+            type="button"
+            onClick={handleReceptionistLogout}
+            style={{
+              padding: '5px 10px',
+              borderRadius: '5px',
+              border: '1px solid rgba(255,255,255,0.7)',
+              backgroundColor: 'transparent',
+              color: '#fff',
+              cursor: 'pointer'
+            }}
+          >
+            登出
+          </button>
+        )}
+      </div>
 
       {/* 第二行：兩個下拉選單並排 */}
       <div style={menuContainerStyle}>
