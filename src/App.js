@@ -76,11 +76,13 @@ const Navbar = () => {
 
     localStorage.setItem('currentReceptionist', name);
     setCurrentReceptionist(name);
+    window.dispatchEvent(new Event('receptionistChanged'));
   };
 
   const handleReceptionistLogout = () => {
     localStorage.removeItem('currentReceptionist');
     setCurrentReceptionist('');
+    window.dispatchEvent(new Event('receptionistChanged'));
   };
 
   return (
@@ -143,7 +145,13 @@ const Navbar = () => {
       {/* 第二行：兩個下拉選單並排 */}
       <div style={menuContainerStyle}>
         <select 
-          style={selectStyle} 
+          style={{
+            ...selectStyle,
+            backgroundColor: currentReceptionist ? '#fff' : '#d6d8db',
+            color: currentReceptionist ? '#333' : '#6c757d',
+            cursor: currentReceptionist ? 'pointer' : 'not-allowed'
+          }} 
+          disabled={!currentReceptionist}
           onChange={(e) => navigate(e.target.value)}
           value="" // 強制每次選完重置，否則無法重複點選同一個路由
         >

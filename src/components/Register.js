@@ -119,8 +119,12 @@ const Register = ({ autoCheckin }) => {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDuplicateCard, setShowDuplicateCard] = useState(false);
+  const [currentReceptionist, setCurrentReceptionist] = useState(
+    () => localStorage.getItem('currentReceptionist') || ''
+  );
 
   const translations = t[lang] || t['zh-TW'];
+  const receptionistLocked = !currentReceptionist;
 
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
@@ -133,6 +137,19 @@ const Register = ({ autoCheckin }) => {
         other_source_text: '' 
     }));
   }, [searchParams]);
+
+  useEffect(() => {
+    const syncReceptionist = () => {
+      setCurrentReceptionist(localStorage.getItem('currentReceptionist') || '');
+    };
+
+    window.addEventListener('receptionistChanged', syncReceptionist);
+    window.addEventListener('storage', syncReceptionist);
+    return () => {
+      window.removeEventListener('receptionistChanged', syncReceptionist);
+      window.removeEventListener('storage', syncReceptionist);
+    };
+  }, []);
 
   // 抽離出統一的語系切換函數，確保 localStore 跟狀態同步
   const handleLangChange = (newLang) => {
@@ -173,11 +190,11 @@ const Register = ({ autoCheckin }) => {
     e.preventDefault();
     const hasName = formData.lastName.trim() && formData.firstName.trim();
     const hasPhone = formData.phone.trim().length > 0;
-    const currentReceptionist = String(localStorage.getItem('currentReceptionist') || '').trim();
+    const receptionistName = String(currentReceptionist || '').trim();
 
     if (!hasName) { alert("Please enter both Last Name and First Name."); return; }
     if (!hasPhone && formData.user_type !== 'Volunteer') { alert("Please provide Phone."); return; }
-    if (!currentReceptionist) { alert("請先在上方登入接待人員姓名。"); return; }
+    if (!receptionistName) { alert("請先在上方登入接待人員姓名。"); return; }
 
     setIsSubmitting(true);
     try {
@@ -191,7 +208,7 @@ const Register = ({ autoCheckin }) => {
           ...formData,
           lang: backendLang,
           autoCheckin,
-          receptionist_name: currentReceptionist
+          receptionist_name: receptionistName
         }),
       });
       const data = await response.json();
@@ -260,8 +277,36 @@ const Register = ({ autoCheckin }) => {
       <h2 style={{ color: getHeaderColor(), marginBottom: '10px' }}>{autoCheckin ? translations.checkinTitle : translations.title}</h2>
       <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '20px' }}>Bodhi Meditation ({formData.user_type})</p>
 
+      {receptionistLocked && !qrValue && (
+        <div style={{
+          marginBottom: '15px',
+          padding: '12px',
+          borderRadius: '8px',
+          border: '1px solid #ced4da',
+          backgroundColor: '#f1f3f5',
+          color: '#495057',
+          fontWeight: 'bold',
+          textAlign: 'center'
+        }}>
+          請先在上方點選「接待登入」，登記表才可填寫。
+        </div>
+      )}
+
       {!qrValue ? (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
+          <fieldset
+            disabled={receptionistLocked || isSubmitting}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '15px',
+              padding: 0,
+              margin: 0,
+              border: 'none',
+              opacity: receptionistLocked ? 0.45 : 1,
+              filter: receptionistLocked ? 'grayscale(1)' : 'none'
+            }}
+          >
           <div style={{ display: 'flex', gap: '10px' }}>
             <input name="lastName" placeholder={translations.lastName} value={formData.lastName} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
             <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
@@ -396,9 +441,10 @@ const Register = ({ autoCheckin }) => {
             </div>
           )}
 
-          <button type="submit" disabled={isSubmitting} style={{ padding: '15px', background: getHeaderColor(), color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}>
+          <button type="submit" disabled={receptionistLocked || isSubmitting} style={{ padding: '15px', background: receptionistLocked ? '#adb5bd' : getHeaderColor(), color: 'white', border: 'none', borderRadius: '8px', cursor: receptionistLocked ? 'not-allowed' : 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}>
             {isSubmitting ? '...' : translations.submit}
           </button>
+          </fieldset>
         </form>
       ) : (
         <div style={{ marginTop: '10px', padding: '20px', border: '2px dashed #28a745', borderRadius: '15px', background: '#f8fff8' }}>
