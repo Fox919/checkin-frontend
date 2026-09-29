@@ -125,6 +125,12 @@ const Register = ({ autoCheckin }) => {
 
   const translations = t[lang] || t['zh-TW'];
   const receptionistLocked = !currentReceptionist;
+  const getPhoneDigits = (value) => String(value || '').replace(/\D/g, '');
+  const requiresTenDigitPhone = (type) => {
+    const normalizedType = String(type || '').toLowerCase();
+    return normalizedType === 'visitor' || normalizedType.includes('newcomer');
+  };
+  const phoneRequiresTenDigits = requiresTenDigitPhone(formData.user_type);
 
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
@@ -159,7 +165,8 @@ const Register = ({ autoCheckin }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const nextValue = name === 'phone' ? getPhoneDigits(value).slice(0, 10) : value;
+    setFormData(prev => ({ ...prev, [name]: nextValue }));
     if (showDuplicateCard) setShowDuplicateCard(false);
   };
 
@@ -189,11 +196,16 @@ const Register = ({ autoCheckin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const hasName = formData.lastName.trim() && formData.firstName.trim();
-    const hasPhone = formData.phone.trim().length > 0;
+    const phoneDigits = getPhoneDigits(formData.phone);
+    const hasPhone = phoneDigits.length > 0;
     const receptionistName = String(currentReceptionist || '').trim();
 
     if (!hasName) { alert("Please enter both Last Name and First Name."); return; }
     if (!hasPhone && formData.user_type !== 'Volunteer') { alert("Please provide Phone."); return; }
+    if (requiresTenDigitPhone(formData.user_type) && phoneDigits.length !== 10) {
+      alert("請輸入正確的電話號碼：訪客和新人電話必須是 10 位數字。");
+      return;
+    }
     if (!receptionistName) { alert("請先在上方登入接待人員姓名。"); return; }
 
     setIsSubmitting(true);
@@ -312,7 +324,19 @@ const Register = ({ autoCheckin }) => {
             <input name="firstName" placeholder={translations.firstName} value={formData.firstName} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
           </div>
 
-          <input name="phone" type="tel" placeholder={translations.phone} value={formData.phone} onChange={handleChange} onBlur={checkUserExists} style={inputStyle} />
+          <input
+            name="phone"
+            type="tel"
+            inputMode="numeric"
+            pattern={phoneRequiresTenDigits ? "\\d{10}" : undefined}
+            maxLength={10}
+            placeholder={phoneRequiresTenDigits ? `${translations.phone} (10位數字)` : translations.phone}
+            title={phoneRequiresTenDigits ? "請輸入正確的電話號碼：10 位數字" : undefined}
+            value={formData.phone}
+            onChange={handleChange}
+            onBlur={checkUserExists}
+            style={inputStyle}
+          />
           <input name="email" type="email" placeholder={translations.email} value={formData.email} onChange={handleChange} style={inputStyle} />
 
           {/* 聯繫偏好 */}
