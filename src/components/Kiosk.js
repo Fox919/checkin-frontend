@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 // 1. 在組件外部定義深色函數（保持不變）
 const getDarkerColor = (hex) => {
@@ -13,6 +13,9 @@ const getDarkerColor = (hex) => {
   return darkenMap[hex] || '#333';
 };
 
+const API_BASE = 'https://checkin-system-production-2a74.up.railway.app';
+const isCheckedInToday = value => value === true || value === 1 || value === '1' || value === 'true';
+
 const Kiosk = () => {
   const [phoneQuery, setPhoneQuery] = useState('');
   const [list, setList] = useState([]);
@@ -23,7 +26,38 @@ const Kiosk = () => {
   // 🌟 新增：記錄勾選哪些用戶 ID 的狀態
   const [selectedUserIds, setSelectedUserIds] = useState([]);
 
-  const API_BASE = "https://checkin-system-production-2a74.up.railway.app";
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const requestRef = useRef(null);
+
+  const loadUsers = useCallback(async () => {
+    if (requestRef.current) requestRef.current.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setIsLoading(true);
+    setLoadError('');
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(`${API_BASE}/users`, {
+        signal: controller.signal,
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error('Unable to load users');
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('Invalid user list');
+      if (requestRef.current === controller) setList(data);
+    } catch (error) {
+      if (requestRef.current === controller) {
+        setLoadError('⚠️ 名單載入失敗，請點「重新載入名單」再試一次。');
+      }
+    } finally {
+      clearTimeout(timeout);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
   const typeStyles = {
     'volunteer': { bg: '#FF9800', label: '義工', icon: '🧡' },
@@ -46,28 +80,29 @@ const Kiosk = () => {
       setPhoneQuery(query.replace(/\D/g, '').slice(0, 4));
     }
 
-    fetch(`${API_BASE}/users`)
-      .then(res => res.json())
-      .then(data => setList(Array.isArray(data) ? data : []))
-      .catch(err => setMessage('⚠️ 系統載入失敗'));
-  }, []); // 👈 這裡改成空白陣列 [] 即可完美解決 ESLint 警告！
+  }, []);
 
-  // 根據輸入動態篩選出的一家人名單
-  const filtered = phoneQuery.length >= 3 
-    ? list.filter(item => (
-        !item.checked_in_today &&
-        item.phone?.replace(/\D/g, '').endsWith(phoneQuery)
-      ))
-    : [];
+  const completedQuery = phoneQuery.length === 4 ? phoneQuery : '';
 
-  // 🌟 自動預選：當查出新的一家人時，預設幫所有人打勾
+  // 每次完成四碼輸入都更新名單，避免使用開頁時的舊資料。
   useEffect(() => {
-    if (filtered.length > 0) {
-      setSelectedUserIds(filtered.map(user => user.id));
-    } else {
-      setSelectedUserIds([]);
-    }
-  }, [phoneQuery, list]); // 當輸入字數改變或大名單更新時觸發
+    loadUsers();
+    return () => {
+      const controller = requestRef.current;
+      requestRef.current = null;
+      controller?.abort();
+    };
+  }, [loadUsers, completedQuery]);
+
+  const matchingUsers = useMemo(() => phoneQuery.length >= 3
+    ? list.filter(item => String(item.phone ?? '').replace(/\D/g, '').endsWith(phoneQuery))
+    : [], [list, phoneQuery]);
+  const filtered = useMemo(() => matchingUsers.filter(item => !isCheckedInToday(item.checked_in_today)), [matchingUsers]);
+  const alreadyCheckedCount = matchingUsers.length - filtered.length;
+
+  useEffect(() => {
+    setSelectedUserIds(filtered.map(user => user.id));
+  }, [filtered]);
 
   // 切換單個成員的勾選狀態
   const handleToggleSelect = (userId) => {
@@ -166,9 +201,22 @@ const Kiosk = () => {
         border: message.includes('⚠️') ? '1px solid #ffeeba' : '1px solid #eee',
         transition: 'all 0.3s ease'
       }}>
-        {message}
+        {isLoading ? '⌛ 正在載入最新名單，請稍候…' : loadError || message}
       </div>
       
+      <button type="button" onClick={loadUsers} disabled={isLoading || isProcessing}>
+        重新載入名單
+      </button>
+      {!isLoading && !loadError && phoneQuery.length === 4 && (
+        <p role="status">
+          {matchingUsers.length === 0
+            ? '找不到符合的人員，請確認電話後 4 碼；若剛完成登記，請重新載入名單。'
+            : alreadyCheckedCount > 0
+              ? `有 ${alreadyCheckedCount} 位符合的人員今天已簽到，已自動略過。`
+              : ''}
+        </p>
+      )}
+
       {/* 後 4 碼輸入框 */}
       {!isProcessing && (
         <div style={{ position: 'relative', marginTop: '25px' }}>
@@ -208,7 +256,7 @@ const Kiosk = () => {
 
       {/* 搜尋名單渲染區 */}
       <div style={{ marginTop: '20px' }}>
-      {filtered.map(item => {
+      {!isLoading && !loadError && filtered.map(item => {
   const rawTypeFromDB = item.user_type || item.usertype || item.type || item.role || "";
   const finalType = (urlType || rawTypeFromDB).toString().trim().toLowerCase();
 
@@ -304,7 +352,7 @@ const Kiosk = () => {
 })}
 
         {/* 🌟 修正：一鍵批量簽到按鈕，必須放在 map 迴圈的外面 */}
-        {filtered.length > 0 && (
+        {!isLoading && !loadError && filtered.length > 0 && (
           <button
             onClick={handleBatchCheckin}
             disabled={isProcessing || selectedUserIds.length === 0}
